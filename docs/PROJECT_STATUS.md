@@ -14,7 +14,7 @@ Alembic 基线已对齐到 `0001_init`。下一个里程碑是 **M0 骨架收尾
 | 里程碑 | 状态 | 备注 |
 | --- | --- | --- |
 | 阶段 0 | ✅ 完成 | 6 项交付物齐备，见 §2 |
-| M0 骨架收尾 | ⬜ 未开始 | 需 NAS 上的 Docker + PostgreSQL |
+| M0 骨架收尾 | 🔄 进行中 | 0.1/0.2/0.4 已在本地 Docker 上验证；0.3/0.5/0.6/0.7 未做 |
 | M1 认证 | ⬜ | |
 | M2 档案域 | ⬜ | |
 | M3 批次域 | ⬜ | |
@@ -67,11 +67,12 @@ Alembic 基线已对齐到 `0001_init`。下一个里程碑是 **M0 骨架收尾
 
 | # | 问题 | 影响 | 当前处置 | 状态 |
 | --- | --- | --- | --- | --- |
-| K1 | 本机无 Docker | 无法本地验证 `docker compose`、镜像构建、迁移自动执行 | 交付时附 NAS 上逐步验证清单；M0 在 NAS 上首次验证 | ⚠️ 已知 |
+| K1 | ~~本机无 Docker~~ | — | **已解决**：Docker Desktop 4.98.0（引擎 29.9.2 / Compose v5.6.1）可用；`docker compose up -d --build` 37 秒构建成功，两容器 healthy，`/health` 返回 `db:true`，容器内 Alembic `0001_init (head)`、25 表、8 条验收断言通过 | ✅ 已关闭 |
 | K2 | ~~本机 PostgreSQL 无法由 agent 进程安装~~ | — | **已解决**：用户在终端执行 `brew install postgresql@16` 成功，服务已启动（`pg_isready` → accepting connections），库 `freshkeep` 建好并在真库上跑通验收脚本 | ✅ 已关闭 |
 | K3 | ~~`pg_trgm` 未在真 PG 验证~~ | — | **已解决**：真库中 `trgm_idx=2`；`EXPLAIN` 在 `enable_seqscan=off` 下命中 `Bitmap Index Scan on ix_ingredients_name_trgm`；中文/拼音/首字母检索均返回正确结果 | ✅ 已关闭 |
 | K4 | 前端依赖未安装 | `frontend/dist` 不存在，后端静态托管不生效，网页会 404 | `cd frontend && npm ci && npm run build`（镜像与命令见 environment.md） | ⚠️ 已知 |
-| K5 | 无 Xcode | 不能本地出 IPA | 用户提供 Xcode 16+ 后本地 `xcodebuild`；备用 GitHub Actions macOS runner | ⚠️ 已知 |
+| K5 | ~~无 Xcode~~ | — | **已解决**：Xcode 27.2 装在外接盘且可用（`xcodebuild -version`、`xcrun swiftc` 编译运行均通过）。**注意**：外接盘未挂载时整套工具链失效 | ✅ 已关闭 |
+| K9 | 无 iOS 模拟器运行时 | 不能跑 `npx cap run ios` 模拟器调试 | 根卷只剩 16 GiB，iOS runtime 约 7~9 GB。建议用真机调试（`xcodebuild` + 自签），需要模拟器时先腾空间再 `xcodebuild -downloadPlatform iOS` | ⚠️ 已知 |
 | K6 | 旧文档与最终方案不一致 | `docs/architecture.md`（Passkey）、`docs/implementation-plan.md`（Node/SQLite）、`docs/prd-alignment.md`（双通道认证）已是历史版本 | 三个文件头部均已标注"被取代"，以 `ARCHITECTURE.md` 与 `PRD.md` 为准 | ✅ 已标注 |
 | K7 | ~~无 CI~~ | — | **已解决**：`.github/workflows/ci.yml` 三个 job（后端含真 PG 迁移与验收、前端构建、文档检查） | ✅ 已关闭 |
 | K8 | 手动 `psql -f` 建库后 `alembic_version` 为空 | 之后 `alembic upgrade head` 会重复建表并报 `relation already exists` | 已 `alembic stamp 0001_init` 补齐基线；`scripts/db-init.sh` 把这个步骤自动化 | ✅ 已修复（新增脚本防复发） |
@@ -87,8 +88,8 @@ Alembic 基线已对齐到 `0001_init`。下一个里程碑是 **M0 骨架收尾
 | npm | ✅ 可用 | `npm view` 正常，镜像可选 |
 | PostgreSQL 本地 | ✅ 16.15 运行中 | 库 `freshkeep`，25 表 / 2 视图 / 37 外键 / 2 trgm 索引，Alembic `0001_init (head)` |
 | PGlite（PG16 WASM） | ✅ | 用于无 PG 环境下验证 DDL 与 SQL 语义 |
-| Docker | ❌ 未安装 | 影响 compose 验证 |
-| Xcode | ❌ 未安装 | 影响 iOS 出包 |
+| Docker | ✅ 4.98.0（引擎 29.9.2） | CLI 原不在 PATH，已写入 `~/.zshrc`；`docker compose up` 已实测通过 |
+| Xcode | ✅ 27.2（27B52） | 装在外接盘 `/Volumes/移动硬盘/XcodeApps/Xcode.app`，`/Applications/Xcode.app` 为符号链接；swiftc 编译实测通过；**无 iOS 模拟器运行时** |
 | Node 22.22 | ✅ | 满足 Vite 8 / Capacitor 8 要求 |
 
 ---
@@ -141,25 +142,25 @@ psql -d freshkeep -c "\dt" | wc -l                  # 期望 25+ 行
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-08 23:25 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-09 00:50 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `71e9518` |
-| 工作区 | 19 个未提交改动，未跟踪 12 个 |
+| 分支 / HEAD | `main` / `e8f0596` |
+| 工作区 | 4 个未提交改动，未跟踪 0 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0001_init`，25 张表 |
-| 后端测试 | 4 passed, 1 warning in 0.63s |
+| 后端测试 | 4 passed, 1 warning in 0.81s |
 | 前端产物 | 不存在 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+e8f0596 2026-11-08 fix(scripts): 变量紧邻中文导致 unbound variable；表数排除 alembic_version
+dacc7a6 2026-11-08 chore: 状态留痕文件入库 + 钩子逐项输出
+217e753 2026-11-08 chore: 建立上下文管理与状态持久化机制
 71e9518 2026-11-08 docs: 重整为 6 个根级文件的自足文档体系 + 环境手册与脚本
 ef47d78 2026-11-08 chore: 阶段 0 —— 项目准备（文档、规则、骨架、数据库评审）
-9f02d60 2026-11-08 docs: 最终开发方案定稿（8 处冲突全部定案）
-c685cf1 2026-11-08 docs: PRD V1.0 对齐分析（换产品而非补功能）
-1616d6a 2026-11-08 docs: 功能实现方案与技术选型（认证定为配对码）
 ```
 <!-- AUTO:STATUS:END -->

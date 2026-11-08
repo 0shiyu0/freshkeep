@@ -213,14 +213,66 @@ npm config get registry        # 验证
 
 ---
 
-## 5. 什么时候才真正需要 Docker / Xcode
+## 5. Docker 与 Xcode（2026-11-09 实测）
 
-| 工具 | 不需要它的工作 | 必须它的工作 |
+### 5.1 Docker：已可用，但 CLI 原本不在 PATH
+
+| 项 | 值 |
+| --- | --- |
+| Docker Desktop | 4.98.0 |
+| 引擎 / 客户端 | 29.9.2（client = server） |
+| Compose | v5.6.1（内置插件） |
+| 守护进程 | 运行中（`com.docker.backend`，10 CPU / 8 GB 分配给 VM） |
+| 实际可用性 | `docker run hello-world` 成功；本项目 `docker compose up -d --build` 37 秒完成，两容器 healthy |
+
+**当时遇到的问题**：`docker: command not found`。原因不是没装，而是 CLI 只在
+`/Applications/Docker.app/Contents/Resources/bin/` 与 `~/.docker/bin/`（后者是指向 app 的符号链接），
+两者都不在 `PATH`，也没有 `/usr/local/bin/docker`。
+
+**修复**（已写入 `~/.zshrc`，删掉那三行即可撤销）：
+
+```sh
+if [ -d "$HOME/.docker/bin" ]; then export PATH="$HOME/.docker/bin:$PATH"; fi
+```
+
+验证：新开窗口执行 `which docker && docker --version` → 应输出 `~/.docker/bin/docker` 与版本号。
+
+**其他注意点**：
+
+- 根卷（`/System/Volumes/Data`）只剩 **16 GiB**，`docker compose build` 与镜像会占 1~3 GB，空间偏紧。
+- `docker compose config` 会因缺少 `.env` 的 `POSTGRES_PASSWORD` 报错，这是设计如此：
+  先 `cp .env.example .env` 并填随机密码（`openssl rand -base64 24`）。
+
+### 5.2 Xcode：已可用，装在外接盘，没有模拟器运行时
+
+| 项 | 值 |
+| --- | --- |
+| 版本 | Xcode **27.2**（Build 27B52） |
+| 实际路径 | `/Volumes/移动硬盘/XcodeApps/Xcode.app` |
+| `xcode-select -p` | `/Volumes/移动硬盘/XcodeApps/Xcode.app/Contents/Developer` ✅ |
+| `/Applications/Xcode.app` | 指向外接盘的**符号链接**（兼容只认该路径的工具） |
+| 首次启动 | `xcodebuild -checkFirstLaunchStatus` 退出码 0（已完成） |
+| SDK | macOS.sdk、iPhoneOS27.2.sdk、iPhoneSimulator27.2.sdk |
+| 工具链 | `xcrun swiftc` 编译并运行成功（3.8 秒） |
+| 代码签名 | `Authority=Software Signing / Apple Code Signing Certification Authority`（正版） |
+| 外接卷格式 | APFS，挂载参数 `local, nodev, nosuid, journaled, noowners` |
+| 隔离属性 | 无 `com.apple.quarantine`（只有 `com.apple.macl` / `provenance`，不影响运行） |
+
+**结论：不存在权限或授权问题。** 三点依据：
+
+1. `noowners` 表示忽略磁盘上的属主记录，一律按当前用户解释 → 不会有"文件属于别人"的读写拒绝；
+2. 没有 `noexec`，可执行权限正常 → `swiftc` 产物与 Xcode 内部二进制都能跑（已实测）；
+3. 没有 quarantine → 不会被 Gatekeeper 拦；`codesign` 验签正常。
+
+**真正需要注意的两个风险**：
+
+| 风险 | 后果 | 应对 |
 | --- | --- | --- |
-| Docker | 后端/前端开发、pytest、DDL 验证 | 验证 `docker compose up`、镜像构建、迁移自动执行 |
-| Xcode | 全部后端与 Web 工作 | 本地出未签名 IPA（iOS 真机自签） |
+| 外接盘未挂载/被拔出 | `xcodebuild`、`xcrun` 全部失效，`/Applications/Xcode.app` 变悬空链接 | 构建前先 `xcode-select -p` 确认路径可访问；不要在做 CI/出包时拔盘 |
+| **没有 iOS 模拟器运行时**（`xcrun simctl list runtimes` 为空，Disk Images 0） | 不能 `npx cap run ios` 跑模拟器 | 根卷只剩 16 GiB，而 iOS runtime 约 7~9 GB。**建议直接用真机**（`xcodebuild` 出未签名 IPA + 自签）；确实要模拟器就先腾空间再 `xcodebuild -downloadPlatform iOS` |
 
-两者缺失都不阻塞 M0~M8，只影响 M9（iOS 出包）与部署验证。
+> 附：模拟器数据默认在 `~/Library/Developer/CoreSimulator`（内建盘），不占外接盘；
+> DerivedData 同理在 `~/Library/Developer/Xcode/DerivedData`，也不在外接盘。
 
 ---
 

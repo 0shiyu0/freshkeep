@@ -31,6 +31,21 @@
 - 手动执行 `database/001_init.sql` 后 `alembic_version` 为空，会让后续 `alembic upgrade head`
   重复建表并报 `relation already exists`；已 `alembic stamp 0001_init` 补齐，并纳入 `db-init.sh`。
 
+### 验证（2026-11-09）
+
+- **Docker 可用**：Docker Desktop 4.98.0 / 引擎 29.9.2 / Compose 5.6.1；`docker run hello-world` 通过；
+  本项目 `docker compose up -d --build` 37 秒构建成功，`freshkeep-api` 与 `freshkeep-db` 均 healthy。
+  `/health` → `{"status":"ok","db":true}`；容器内 `alembic current` → `0001_init (head)`；
+  25 张表；`database/002_acceptance_check.sql` 8 条断言全部通过。
+- **Docker CLI 修复**：原 `docker` 不在 PATH（只在 `~/.docker/bin` 与 app 包内），已向 `~/.zshrc` 追加 PATH 行，
+  新开 shell 验证 `which docker` 命中 `~/.docker/bin/docker`。
+- **Xcode 可用**：27.2（27B52），`xcode-select -p` 指向外接盘 `/Volumes/移动硬盘/XcodeApps/Xcode.app/Contents/Developer`；
+  `/Applications/Xcode.app` 为符号链接；`-checkFirstLaunchStatus` 退出码 0；iOS 27.2 SDK 齐备；
+  `xcrun swiftc` 编译并运行成功。外接卷 APFS（`noowners`、无 `noexec`、无 quarantine）→ 无权限问题。
+- **发现缺口**：iOS 模拟器运行时为 0（`simctl list runtimes` 空），根卷仅剩 16 GiB，暂不下载（约 7~9 GB），
+  改为真机出包路线。
+- 本地生成 `.env`（随机 `POSTGRES_PASSWORD`），`docker compose config` 校验通过；`.env` 已在 `.gitignore` 中。
+
 ### 数据库
 
 - 无 DDL 变更；新增 `alembic_version` 表（值为 `0001_init`），仅记录版本，不改变业务结构。
