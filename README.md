@@ -2,7 +2,8 @@
 
 > NAS 私有部署 · 原生 App + Web · 批次级库存 · 成本核算 · 营养估算
 
-**当前状态：阶段 0（项目准备）已完成。** 代码尚未开始，先交付了 PRD、数据库设计与评审、API 契约、开发规则。
+**当前状态：阶段 1（项目初始化）已完成。** 三个容器可一键起全：前端页面能打开、后端 API 可访问、
+连得上 PostgreSQL、库重启数据不丢、Alembic 迁移在干净库上可跑通。业务功能尚未开始。
 
 | 文档 | 内容 |
 | --- | --- |
@@ -25,13 +26,18 @@ PRD 的 9 条验收用例中成本与营养两条已用真库断言（消耗成�
 ## 仓库里有什么
 
 ```
-backend/          FastAPI 服务（app/ + alembic/ + tests/）
-frontend/         Vue 3 SPA（同一份 dist 供 Web 与 Capacitor 使用）
-database/         001_init.sql（DDL 唯一真相）+ 002 验收自检
-deploy/           NAS 部署手册 + 备份/恢复脚本
-docs/             PRD、方案、数据库设计、ER 图、API 契约
+docker-compose.yml   三容器：db(PostgreSQL) / api(FastAPI) / web(nginx)
+backend/             FastAPI 服务：app/ + migrations/ + tests/
+frontend/            Vue 3 + TS SPA：src/ + Dockerfile + nginx.conf
+database/            001_init.sql（DDL 唯一真相）+ 002 验收自检
+storage/             运行时上传/导出/日志（内容不入库，只留 .gitkeep）
+backups/             数据库与文件备份落盘位置
+deploy/              NAS 部署手册 + 备份/恢复脚本
+docs/                PRD、架构、开发计划、状态、变更、API、数据库、ER 图
 index.html js/ css/  早期纯前端演示版（可独立打开，仅作交互参考）
 ```
+
+**端口约定**：只对外暴露 `web` 的 **8080**；`api` 在容器内 8000、`db` 在 5432，均不可从宿主机直连。
 
 > 纯前端演示版的说明保留在本文后续章节（"为什么是这个形态"至"自检"），
 > 它现在是**设计参考**，不是交付形态。

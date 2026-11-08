@@ -1,7 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 // 路由与 docs/final-plan.md §1 的页面结构对应
-const routes = [
+const routes: RouteRecordRaw[] = [
   { path: '/pair', name: 'pair', component: () => import('@/views/PairView.vue') },
   { path: '/', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
   { path: '/inventory', name: 'inventory', component: () => import('@/views/InventoryView.vue') },

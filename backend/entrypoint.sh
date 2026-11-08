@@ -24,5 +24,5 @@ PY
 echo "[entrypoint] 执行数据库迁移…"
 alembic upgrade head
 
-echo "[entrypoint] 启动服务 :8080"
-exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers "${WORKERS:-2}" --proxy-headers
+echo "[entrypoint] 启动服务 :${PORT:-8000}"
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --workers "${WORKERS:-2}" --proxy-headers --access-log

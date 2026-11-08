@@ -26,3 +26,11 @@ data/
 
 # 但状态留痕文件要入库（覆盖上面的 *.log）
 !docs/state/commits.log
+
+# 运行时产物目录：只保留占位文件，内容不入库
+storage/uploads/*
+storage/exports/*
+storage/logs/*
+backups/*
+!storage/**/.gitkeep
+!backups/.gitkeep

@@ -11,8 +11,22 @@
 | Docker | 24+，Compose v2 | `docker compose version` |
 | 内存 | ≥ 1 GB 可用（PG 约 150 MB、api 约 150 MB） | `free -m` |
 | 磁盘 | ≥ 2 GB（镜像 + 数据库 + 备份） | `df -h` |
-| 端口 | 8080 空闲 | `ss -lntp \| grep 8080` |
+| 端口 | 8080 空闲（只暴露 web） | `ss -lntp \| grep 8080` |
 | 权限 | 能把目录 chown 给容器用户 | — |
+
+---
+
+## 1.5 三个容器与端口
+
+| 容器 | 镜像 | 监听 | 对外 | 职责 |
+| --- | --- | --- | --- | --- |
+| `freshkeep-web` | nginx + 构建后的 dist | 80 | **8080:80** | 托管前端、反代 `/api/`、透传 `/health` |
+| `freshkeep-api` | python:3.12-slim + FastAPI | 8000 | 否 | API、启动时自动 `alembic upgrade head` |
+| `freshkeep-db` | postgres:16-alpine | 5432 | 否 | 数据落 `./pgdata` |
+
+启动顺序由 `depends_on: condition: service_healthy` 串起来：db healthy → api 启动并迁移 → api healthy → web 启动。
+
+日志：api 输出 JSON 到 `./storage/logs/api.log`（同时打到容器 stdout）；`docker compose logs -f api` 看实时输出。
 
 ---
 
@@ -34,12 +48,14 @@ sed -i '' "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -base64 24)|
 # 4) 构建并启动（首次会装依赖 + 跑迁移，约 3~5 分钟）
 docker compose up -d --build
 
-# 5) 看健康状态
+# 5) 看健康状态（三容器都应是 healthy）
 docker compose ps
 curl -s http://127.0.0.1:8080/health
+curl -s http://127.0.0.1:8080/api/v1/system/db
 ```
 
-`/health` 期望返回 `{"status":"ok","db":true,"version":"0.1.0"}`。
+`/health` 期望 `{"status":"ok","db":true,"version":"0.1.0"}`；
+`/api/v1/system/db` 期望 `success=true` 且 `data.tables=25`、`data.migration="0001_init"`。
 
 > 迁移由 `api` 容器的入口脚本自动执行（`alembic upgrade head`），无需手动建表。
 > 若想手动确认：`docker compose exec api alembic current` 应显示 `0001_init (head)`。
@@ -124,7 +140,9 @@ docker compose logs -f api    # 确认启动正常
 | --- | --- |
 | `api` 反复重启 | `docker compose logs api`；多为 `POSTGRES_PASSWORD` 为空或 `db` 未 healthy |
 | `/health` 返回 `db:false` | `docker compose exec db pg_isready -U freshkeep`；检查 `.env` 密码与 `pgdata` 权限 |
-| 网页 404 / 白屏 | `frontend/dist` 未构建：`cd frontend && npm ci && npm run build`，再 `docker compose restart api` |
+| 网页 404 / 白屏 | 先看 `docker compose logs web`；前端已由 web 容器托管，若改过代码需 `docker compose build web && docker compose up -d web` |
+| 网页能开但接口 502 | api 未 healthy：`docker compose logs api`，多为 DB 未就绪或迁移失败 |
+| 页面显示"无法连接后端" | 打开浏览器控制台看请求；确认 `/api/v1/system/db` 返回 `success:true`（信封结构） |
 | 配对码无效 | 已过期（10 分钟）或用过；重新执行 `python -m app.cli pair` |
 | 手机连不上但电脑能开 | 手机不在同一网段、未连组网，或源 IP 不在 `ALLOW_CIDR` |
 | App 白屏 | 未配 `usesCleartextTraffic` / ATS 例外 / `androidScheme:'http'`（见 `final-plan.md` §3.3） |

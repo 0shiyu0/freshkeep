@@ -1,26 +1,28 @@
-"""FastAPI 应用装配。
+"""FastAPI 装配。
 
-职责边界（AGENTS.md §2）：
-- 本文件只做：中间件、异常处理、路由挂载、静态托管；
-- 业务逻辑一律在 app/api/v1 → app/services 里。
+职责边界（AGENTS.md §2）：本文件只做中间件、异常处理、路由挂载、静态托管；
+业务逻辑在 app/api/v1 → app/services。
 """
 from __future__ import annotations
 
+import time
 import uuid
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
+from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.errors import ApiError
-from app.db.session import engine, ping as db_ping
+from app.core.logging import get_logger, log_exception, setup_logging
+
+setup_logging()
+log = get_logger("app.main")
 
 API_PREFIX = "/api/v1"
 
@@ -46,78 +48,130 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def add_request_id(request: Request, call_next):
-    """为每个请求生成 request_id，写进响应头与日志，便于按 id 反查。"""
-    request.state.request_id = uuid.uuid4().hex
-    response = await call_next(request)
-    response.headers["X-Request-Id"] = request.state.request_id
+async def request_context(request: Request, call_next):
+    """生成 request_id、记录访问日志、兜底未处理异常。
+
+    访问日志字段 method/path/status/duration_ms/client/request_id 与异常日志同一套 formatter，
+    可按 request_id 把一次请求的所有日志串起来。
+    """
+    request_id = request.headers.get("X-Request-Id") or uuid.uuid4().hex
+    request.state.request_id = request_id
+    started = time.perf_counter()
+
+    try:
+        response = await call_next(request)
+    except Exception as exc:  # noqa: BLE001 - 兜底，仍需返回统一错误结构
+        cost = (time.perf_counter() - started) * 1000
+        log_exception(
+            log,
+            exc,
+            request_id=request_id,
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "status": 500,
+                "duration_ms": round(cost, 2),
+                "client": request.client.host if request.client else None,
+            },
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": {"code": "INTERNAL_ERROR", "message": "服务内部错误，请查看服务端日志"},
+                "request_id": request_id,
+            },
+            headers={"X-Request-Id": request_id},
+        )
+
+    cost = (time.perf_counter() - started) * 1000
+    response.headers["X-Request-Id"] = request_id
+    if settings.access_log:
+        log.info(
+            "%s %s %s %.1fms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            cost,
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "duration_ms": round(cost, 2),
+                "client": request.client.host if request.client else None,
+            },
+        )
     return response
 
 
 # ---------------------------------------------------------------- 异常处理
 
 
+def _fail(request: Request, status: int, code: str, message: str, details: dict | None = None) -> JSONResponse:
+    body: dict = {
+        "success": False,
+        "error": {"code": code, "message": message},
+        "request_id": getattr(request.state, "request_id", ""),
+    }
+    if details:
+        body["error"]["details"] = details
+    return JSONResponse(status_code=status, content=body)
+
+
 @app.exception_handler(ApiError)
 async def handle_api_error(request: Request, exc: ApiError) -> JSONResponse:
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "success": False,
-            "error": exc.to_dict(),
+    # 业务异常属预期内的失败，info 级别记录，不写堆栈
+    log.info(
+        "业务异常 %s: %s",
+        exc.code,
+        exc.message,
+        extra={
             "request_id": getattr(request.state, "request_id", ""),
+            "code": exc.code,
+            "path": request.url.path,
+            "status": exc.status_code,
         },
     )
+    return _fail(request, exc.status_code, exc.code, exc.message, exc.details)
 
 
 @app.exception_handler(RequestValidationError)
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
-    """把 Pydantic 的字段错误压平成 details.fields，客户端不用解析嵌套结构。"""
     fields = [
         {"loc": ".".join(str(x) for x in e.get("loc", [])), "msg": e.get("msg", "")}
         for e in exc.errors()
     ]
-    return JSONResponse(
-        status_code=400,
-        content={
-            "success": False,
-            "error": {"code": "VALIDATION_ERROR", "message": "参数不合法", "details": {"fields": fields}},
-            "request_id": getattr(request.state, "request_id", ""),
-        },
+    log.info(
+        "参数校验失败 %s: %s",
+        request.url.path,
+        fields[:3],
+        extra={"request_id": getattr(request.state, "request_id", ""), "status": 400},
     )
+    return _fail(request, 400, "VALIDATION_ERROR", "参数不合法", {"fields": fields})
 
 
-# ---------------------------------------------------------------- 基础接口
+@app.exception_handler(StarletteHTTPException)
+async def handle_http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    mapping = {401: "UNAUTHORIZED", 403: "FORBIDDEN", 404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED"}
+    return _fail(request, exc.status_code, mapping.get(exc.status_code, "HTTP_ERROR"), str(exc.detail))
 
 
-@app.get("/health", tags=["system"])
-def health() -> dict:
-    """容器健康检查。db 为 false 时整机不可用，但仍返回 200 让编排器看到具体原因。"""
-    db_ok = db_ping()
-    return {"status": "ok" if db_ok else "degraded", "db": db_ok, "version": __version__}
+# ---------------------------------------------------------------- 路由
 
 
-@app.get(f"{API_PREFIX}/ping", tags=["system"])
-def ping() -> dict:
-    """客户端探测：确认是鲜度的服务、是否需要配对、服务器时间。"""
-    initialized: bool | None = None
-    if db_ping():
-        try:
-            with engine.connect() as conn:
-                initialized = bool(conn.execute(text("SELECT 1 FROM devices LIMIT 1")).first())
-        except Exception:  # noqa: BLE001 - 表尚未建时视为未初始化
-            initialized = False
-    now = datetime.now(timezone.utc)
-    return {
-        "name": "freshkeep",
-        "version": __version__,
-        "api": 1,
-        "initialized": initialized,
-        "needs_pair": False if initialized is None else (not initialized),
-        "server_time": now.astimezone(ZoneInfo(settings.tz_biz)).isoformat(),
-    }
+@app.get("/health", include_in_schema=False)
+def root_health() -> dict:
+    """容器探针走最短路径（也可用 /api/v1/health）。"""
+    from app.db.session import ping as db_ping
+
+    ok = db_ping()
+    return {"status": "ok" if ok else "degraded", "db": ok, "version": __version__}
 
 
-# ---------------------------------------------------------------- 静态托管
-# 必须放在所有 API 路由之后：/ 的挂载会兜住其余路径
-if settings.static_dir.is_dir():
+app.include_router(api_router, prefix=API_PREFIX)
+
+# 本地开发用：SERVE_STATIC=1 时由 FastAPI 托管前端产物（生产由 nginx 托管）
+if settings.serve_static and settings.static_dir.is_dir():
     app.mount("/", StaticFiles(directory=str(settings.static_dir), html=True), name="web")
+    log.info("已启用内置静态托管：%s", settings.static_dir)

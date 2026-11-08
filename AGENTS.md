@@ -43,13 +43,15 @@
 
 ```
 backend/app/{core,db,models,schemas,services,api/v1,tasks}   # 后端，按职责分层
-backend/alembic/versions/                                     # 迁移（只登记版本，不写 DDL）
+backend/migrations/versions/                                  # Alembic 迁移（只登记版本，不写 DDL）
 backend/tests/{unit,api,acceptance}/                          # 单测、接口测试、验收用例
-frontend/src/{views,components,stores,api,router,styles}/      # 前端
+frontend/src/{views,layouts,components,stores,api,utils,router,styles}/  # 前端
 frontend/{android,ios}/                                       # Capacitor 原生工程（提交入库）
 database/                                                     # DDL 与自检脚本
+storage/{uploads,exports,logs}/                               # 运行时文件与日志（内容不入库，只留 .gitkeep）
+backups/                                                      # 数据库与文件备份落盘位置（内容不入库）
 deploy/                                                       # 部署脚本、备份脚本、NAS 手册
-docs/                                                         # 文档
+docs/                                                         # 文档（含 docs/state 状态留痕）
 ```
 
 **分层铁律**：`api/v1/*.py`（HTTP 层）→ `services/*.py`（业务）→ `models/`（ORM）。

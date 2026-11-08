@@ -4,7 +4,8 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    TZ=Asia/Shanghai
+    TZ=Asia/Shanghai \
+    PORT=8000
 
 WORKDIR /app
 
@@ -17,16 +18,16 @@ RUN pip install --no-cache-dir --prefer-binary \
       --index-url "${PIP_INDEX_URL}" -r requirements.txt
 
 COPY backend/app ./app
-COPY backend/alembic ./alembic
+COPY backend/migrations ./migrations
 COPY backend/alembic.ini .
 COPY backend/entrypoint.sh .
 # 迁移要读取 database/001_init.sql（DDL 的唯一真相），必须一起打进镜像
 COPY database ./database
 
-RUN chmod +x entrypoint.sh && mkdir -p /data
+RUN chmod +x entrypoint.sh && mkdir -p /data/logs /data/storage/uploads /data/storage/exports /data/backups
 
-EXPOSE 8080
+EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).status==200 else 1)"
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)"
 
 ENTRYPOINT ["./entrypoint.sh"]

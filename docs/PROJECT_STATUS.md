@@ -1,20 +1,21 @@
 # 项目状态
 
-> 快照时间：2026-11-08 23:30（Asia/Shanghai）
+> 快照时间：2026-11-09 01:25（Asia/Shanghai）
 > 维护规则：每个里程碑结束、每次数据库结构变化、每次发现已知问题，都要更新本文与 `CHANGELOG.md`。
 
 ---
 
 ## 1. 一句话现状
 
-**阶段 0（项目准备）已完成并推送，开发环境已就绪**（PostgreSQL 16.15 已在本机运行并通过全部验收用例）。
-代码尚未开始。数据库结构（25 表 / 2 视图 / 37 外键 / 2 条 trgm 索引）已在真库执行并断言通过，
-Alembic 基线已对齐到 `0001_init`。下一个里程碑是 **M0 骨架收尾**。
+**阶段 1（项目初始化）已完成**：三个容器（db / api / web）可按 `docker compose up -d` 起全，
+前端页面可打开、后端 API 可访问、后端连得上 PostgreSQL、库重启后数据仍在、Alembic 迁移在干净库上可跑通。
+业务功能尚未开始，下一个里程碑是 **M0 收尾**（CIDR 与幂等中间件、CI）。
 
 | 里程碑 | 状态 | 备注 |
 | --- | --- | --- |
 | 阶段 0 | ✅ 完成 | 6 项交付物齐备，见 §2 |
-| M0 骨架收尾 | 🔄 进行中 | 0.1/0.2/0.4 已在本地 Docker 上验证；0.3/0.5/0.6/0.7 未做 |
+| 阶段 1 | ✅ 完成 | 八项任务全绿，验收实测见 §2 |
+| M0 骨架收尾 | 🔄 进行中 | 迁移、统一响应、三容器已验证；剩 CIDR/幂等中间件与 CI |
 | M1 认证 | ⬜ | |
 | M2 档案域 | ⬜ | |
 | M3 批次域 | ⬜ | |
@@ -34,7 +35,10 @@ Alembic 基线已对齐到 `0001_init`。下一个里程碑是 **M0 骨架收尾
 
 | 交付物 | 文件 | 验证方式与结果 |
 | --- | --- | --- |
-| 项目规则 | `AGENTS.md` | 11 节，含 Decimal 铁律、库存写入五步、FEFO 加锁、提交规范、禁止事项 |
+| **三容器可运行** | `docker-compose.yml`、`backend/Dockerfile`、`frontend/Dockerfile` + `nginx.conf` | 三容器 healthy；依赖链 db→api→web 正确；`GET /` 200、SPA 回退 200、静态资源 MIME 正确 |
+| **前后端骨架** | `frontend/src/{layouts,api,utils,stores}`、`backend/app/{core,db,api}` | `npm run build` 通过；`/api/v1/{ping,system/db}` 返回统一信封 |
+| **日志与异常** | `core/logging.py`、`utils/logger.ts` | `storage/logs/api.log` 有 JSON 访问日志（含 request_id/duration/client）；前端可 POST `/system/client-logs`（202） |
+| 项目规则 | `AGENTS.md` | 12 节，含 Decimal 铁律、库存写入五步、FEFO 加锁、上下文持久化、禁止事项 |
 | 产品需求 | `PRD.md` | 范围/规则/9 条验收/原待明确项全部拍板 |
 | 系统架构 | `ARCHITECTURE.md` | 拓扑、分层、请求管线、认证、数据模型、API 总表、四算法、ADR |
 | 数据库设计 | `database/001_init.sql` + `docs/database.md` + `docs/er-diagram.md` | 25 表 / 2 视图 / 37 外键；实跑建库成功 |
@@ -70,7 +74,8 @@ Alembic 基线已对齐到 `0001_init`。下一个里程碑是 **M0 骨架收尾
 | K1 | ~~本机无 Docker~~ | — | **已解决**：Docker Desktop 4.98.0（引擎 29.9.2 / Compose v5.6.1）可用；`docker compose up -d --build` 37 秒构建成功，两容器 healthy，`/health` 返回 `db:true`，容器内 Alembic `0001_init (head)`、25 表、8 条验收断言通过 | ✅ 已关闭 |
 | K2 | ~~本机 PostgreSQL 无法由 agent 进程安装~~ | — | **已解决**：用户在终端执行 `brew install postgresql@16` 成功，服务已启动（`pg_isready` → accepting connections），库 `freshkeep` 建好并在真库上跑通验收脚本 | ✅ 已关闭 |
 | K3 | ~~`pg_trgm` 未在真 PG 验证~~ | — | **已解决**：真库中 `trgm_idx=2`；`EXPLAIN` 在 `enable_seqscan=off` 下命中 `Bitmap Index Scan on ix_ingredients_name_trgm`；中文/拼音/首字母检索均返回正确结果 | ✅ 已关闭 |
-| K4 | 前端依赖未安装 | `frontend/dist` 不存在，后端静态托管不生效，网页会 404 | `cd frontend && npm ci && npm run build`（镜像与命令见 environment.md） | ⚠️ 已知 |
+| K4 | ~~前端依赖未安装~~ | — | **已解决**：`npm install` 完成（247 包），`npm run build` 通过（vue-tsc 无错），`dist/` 由 web 容器托管 | ✅ 已关闭 |
+| K10 | 容器内 npm 直连 registry 出现 ECONNRESET | `web` 镜像构建失败 | 默认改用 `registry.npmmirror.com`（`NPM_REGISTRY` 可覆盖）；`npm ci` 因 lockfile 缺 linux-musl 可选依赖失败 → 改 `npm install` | ✅ 已修复 |
 | K5 | ~~无 Xcode~~ | — | **已解决**：Xcode 27.2 装在外接盘且可用（`xcodebuild -version`、`xcrun swiftc` 编译运行均通过）。**注意**：外接盘未挂载时整套工具链失效 | ✅ 已关闭 |
 | K9 | 无 iOS 模拟器运行时 | 不能跑 `npx cap run ios` 模拟器调试 | 根卷只剩 16 GiB，iOS runtime 约 7~9 GB。建议用真机调试（`xcodebuild` + 自签），需要模拟器时先腾空间再 `xcodebuild -downloadPlatform iOS` | ⚠️ 已知 |
 | K6 | 旧文档与最终方案不一致 | `docs/architecture.md`（Passkey）、`docs/implementation-plan.md`（Node/SQLite）、`docs/prd-alignment.md`（双通道认证）已是历史版本 | 三个文件头部均已标注"被取代"，以 `ARCHITECTURE.md` 与 `PRD.md` 为准 | ✅ 已标注 |
@@ -85,7 +90,8 @@ Alembic 基线已对齐到 `0001_init`。下一个里程碑是 **M0 骨架收尾
 | --- | --- | --- |
 | Python 3.13 + venv | ✅ | 依赖已装（`backend/.venv`），`pytest` 可用 |
 | pip | ✅ 可用（已加速） | 默认源 6 分 33 秒 → 镜像 + `--only-binary` 24.7 秒 → uv 1.3 秒；`scripts/dev-setup.sh` 已内置优先 uv |
-| npm | ✅ 可用 | `npm view` 正常，镜像可选 |
+| npm（宿主机） | ✅ 可用 | `npm view` 正常；安装 247 包耗时约 6.5 分钟，可换 npmmirror |
+| 前端依赖与产物 | ✅ 已装并已构建 | `frontend/node_modules` + `dist/`；`npm run build` 通过（vue-tsc 无错） |
 | PostgreSQL 本地 | ✅ 16.15 运行中 | 库 `freshkeep`，25 表 / 2 视图 / 37 外键 / 2 trgm 索引，Alembic `0001_init (head)` |
 | PGlite（PG16 WASM） | ✅ | 用于无 PG 环境下验证 DDL 与 SQL 语义 |
 | Docker | ✅ 4.98.0（引擎 29.9.2） | CLI 原不在 PATH，已写入 `~/.zshrc`；`docker compose up` 已实测通过 |
@@ -126,41 +132,38 @@ psql -d freshkeep -c "\dt" | wc -l                  # 期望 25+ 行
 
 ---
 
-## 7. 下一步（M0 的具体动作）
+## 7. 下一步（M0 收尾，剩余三项）
 
-本机已具备条件（PG 就绪、依赖已装），以下可立即开工：
+阶段 1 已把「跑起来」这件事做完，M0 只剩补强：
 
-1. 补 `ALLOW_CIDR` 中间件与幂等中间件，用 `curl` 覆盖「非白名单 403」与「重复 `Idempotency-Key`」两条分支；
-2. 让后端连上本地库（`DATABASE_URL=postgresql+psycopg://shiyu@127.0.0.1:5432/freshkeep`），
-   把 `/health` 的 `db` 从 `false` 变 `true`；
-3. `cd frontend && npm ci && npm run build`，确认 `/` 返回 SPA 且 `/api/v1/*` 不被静态托管兜住；
-4. 建立 `backend/tests/acceptance/`，把 `database/002` 的 8 条断言平移成 pytest；
-5. 在 NAS 上首次 `docker compose up -d --build`（唯一还缺的验证环节，本机无 Docker）。
+1. `ALLOW_CIDR` 中间件（非白名单 403）与幂等中间件（同 key 同 body 返回原响应），各配一条 curl 用例；
+2. 建立 `backend/tests/acceptance/`，把 `database/002` 的 8 条断言平移成 pytest，并在 CI 里跑；
+3. 在 NAS 上首次 `docker compose up -d --build`（本机已验证通过，NAS 是最后一处环境差异）。
 
 ---
 
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-09 00:50 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-09 01:25 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `e8f0596` |
-| 工作区 | 4 个未提交改动，未跟踪 0 个 |
+| 分支 / HEAD | `main` / `0d5d3ff` |
+| 工作区 | 41 个未提交改动，未跟踪 19 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0001_init`，25 张表 |
-| 后端测试 | 4 passed, 1 warning in 0.81s |
-| 前端产物 | 不存在 |
+| 后端测试 | 7 passed, 1 warning in 0.96s |
+| 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+0d5d3ff 2026-11-09 docs: Docker 与 Xcode 环境验证结论
 e8f0596 2026-11-08 fix(scripts): 变量紧邻中文导致 unbound variable；表数排除 alembic_version
 dacc7a6 2026-11-08 chore: 状态留痕文件入库 + 钩子逐项输出
 217e753 2026-11-08 chore: 建立上下文管理与状态持久化机制
 71e9518 2026-11-08 docs: 重整为 6 个根级文件的自足文档体系 + 环境手册与脚本
-ef47d78 2026-11-08 chore: 阶段 0 —— 项目准备（文档、规则、骨架、数据库评审）
 ```
 <!-- AUTO:STATUS:END -->

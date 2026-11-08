@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-11-09 · 阶段 1：项目初始化
+
+### 新增
+
+- **三容器架构**：`db`（PostgreSQL 16）/ `api`（FastAPI，容器内 8000，不对外）/ `web`（nginx 托管 dist 并反代 `/api`，对外 8080）。
+- `frontend/Dockerfile`（node 构建 → nginx）、`frontend/nginx.conf`（gzip、静态长缓存、SPA 回退、`/api` 反代、`/health` 透传）。
+- 后端：`core/logging.py`（JSON/纯文本双格式、按 request_id 串联、滚动文件）、`api/v1/system.py`
+  （`/health`、`/ping`、`/system/db`、`/system/client-logs`）、`api/v1/router.py`、连接池参数化。
+- 前端：`api/http.ts`（Axios 实例 + 请求 id + 统一错误 + 401 出口）、`api/index.ts`、
+  `utils/logger.ts`（全局异常捕获 + 批量上报）、`utils/notify.ts`（Naive UI 离散提示）、
+  `layouts/AppLayout.vue`（顶部栏 + 桌面侧边栏 + 移动底部导航）、`stores/app.ts`。
+- 目录：`storage/{uploads,exports,logs}`、`backups/`（只留 `.gitkeep`，内容不入库）。
+
+### 变更
+
+- `backend/alembic/` → **`backend/migrations/`**（按约定命名），`alembic.ini` 的 `script_location` 同步。
+- API 端口从 8080 改为 **8000**（仅容器内）；对外统一走 web 容器的 8080。
+- `/api/v1/*` 响应统一为 `{success, data, message, request_id}` 信封（此前 `/ping`、`/health` 返回裸对象，
+  导致前端取 `data` 为空并误报"无法连接后端"）。
+- 连接池状态字段由 `overflow`（会变负、语义歧义）改为 `max_overflow`（配置上限）。
+- `.env.example` 补齐日志、连接池、端口等变量。
+
+### 修复
+
+- 前端 `vue-tsc` 两处类型错误：路由数组缺 `RouteRecordRaw[]` 标注；Vite 8 的 `manualChunks` 只接受函数形式。
+- 容器内 `npm ci` 因 macOS 生成的 lockfile 缺少 linux-musl 可选依赖而失败 → 改用 `npm install`；
+  同时容器内直连 registry.npmjs.org 出现 ECONNRESET → 默认改用 npmmirror（可用 `NPM_REGISTRY` 覆盖）。
+
+### 数据库
+
+- 无结构变更（仍为 25 表 / 2 视图 / `0001_init`）。验证：干净库 `alembic upgrade head` → 25 表 + `0001_init`。
+
+---
+
 ## [Unreleased]
 
 ### 新增

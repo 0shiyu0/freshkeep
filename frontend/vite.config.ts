@@ -21,8 +21,13 @@ export default defineConfig({
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
-        // ECharts 体积大，单独切块，避免首屏 JS 过大
-        manualChunks: { echarts: ['echarts'], vendor: ['vue', 'vue-router', 'pinia'] },
+        // ECharts 体积大，单独切块，避免首屏 JS 过大。
+        // Vite 8 的类型只接受函数形式（对象形式已废弃）。
+        manualChunks(id: string) {
+          if (id.includes('node_modules/echarts') || id.includes('node_modules/zrender')) return 'echarts'
+          if (id.includes('node_modules')) return 'vendor'
+          return undefined
+        },
       },
     },
   },

@@ -10,7 +10,8 @@
 | 阶段 | 内容 | 估时 | 状态 |
 | --- | --- | --- | --- |
 | 阶段 0 | 项目准备：文档、规则、骨架、数据库评审 | 2 | ✅ 完成 |
-| M0 | 骨架收尾：迁移在真库跑通、中间件、统一响应验证 | 3 | ⬜ 未开始 |
+| 阶段 1 | 项目初始化：三容器可运行、前后端骨架、日志与错误处理 | 2 | ✅ 完成 |
+| M0 | 骨架收尾：CIDR/幂等中间件、静态托管验证、CI | 1.5 | 🔄 进行中（迁移与统一响应已验证） |
 | M1 | 认证：配对码 → 设备令牌（Cookie + Bearer 双通道） | 1.5 | ⬜ |
 | M2 | 档案域：分类 / 单位 / 位置 / 食材 / 条码 / 文件 | 3.5 | ⬜ |
 | M3 | 批次域：入库建批次、批次查询、状态流转 | 4 | ⬜ |
@@ -41,7 +42,29 @@ P2（AI 识别 + 采购清单 + 菜谱 + 对账告警 + TLS）≈ 14 人日。
 
 ---
 
-## M0 · 骨架收尾（下一个里程碑）
+
+## 阶段 1 · 项目初始化（已完成）
+
+目标：能跑起来、能连上库、能看见日志。不做业务页面。
+
+| # | 任务 | 交付物 | 完成判据 | 状态 |
+| --- | --- | --- | --- | --- |
+| 1.1 | Vue3 + TS + Vite 初始化 | `frontend/`、`vite.config.ts`、`tsconfig.json`、`src/main.ts` | `npm run build` 通过（vue-tsc 无错） | ✅ |
+| 1.2 | FastAPI + SQLAlchemy + Pydantic 初始化 | `backend/app/{main,core,db,api}` | `/api/v1/ping` 可访问，OpenAPI 可打开 | ✅ |
+| 1.3 | PostgreSQL 配置与连接池 | `db/session.py`、`/api/v1/system/db` | 返回 connected/tables/migration/pool | ✅ |
+| 1.4 | Alembic 迁移 | `backend/migrations/`（`alembic.ini` 指向它） | 干净库 `upgrade head` → 25 表 + `0001_init` | ✅ |
+| 1.5 | Docker 三容器 | `docker-compose.yml`、`backend/Dockerfile`、`frontend/Dockerfile` + `nginx.conf` | 三容器 healthy，依赖链 db→api→web | ✅ |
+| 1.6 | 基础布局 | `layouts/AppLayout.vue`、`styles/main.css` | 桌面有侧边栏、移动有底部导航、顶部栏常驻 | ✅ |
+| 1.7 | Axios 与统一错误处理 | `api/http.ts`、`api/index.ts`、`utils/notify.ts` | 统一 `{success,data}` 解析、错误弹提示、401 统一出口 | ✅ |
+| 1.8 | 前后端日志与异常记录 | `core/logging.py`、`utils/logger.ts`、`POST /system/client-logs` | 访问日志 JSON 落 `storage/logs/api.log`；前端错误可上报 | ✅ |
+
+**验收实测（2026-11-09）**：三容器 healthy；`GET /` 200 且资源与 SPA 回退正常；
+`/api/v1/system/db` 返回 connected=true / tables=25 / migration=0001_init；
+重启 db+api 后探针数据仍在；干净库跑 `alembic upgrade head` 成功。
+
+---
+
+## M0 · 骨架收尾
 
 | # | 任务 | 完成判据 |
 | --- | --- | --- |
