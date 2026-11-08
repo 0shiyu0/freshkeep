@@ -208,6 +208,82 @@ class IngredientNutrition(Base):
     ingredient: Mapped[Ingredient] = relationship(back_populates="nutrition")
 
 
+class Batch(Base):
+    """批次：某一次采购的库存实体（PRD §4.4）。
+
+    remaining_* 是缓存，必须可由 transaction_allocations 聚合重算（v_batch_reconcile）。
+    updated_at 由数据库触发器 trg_batches_updated 维护，ORM 不重复声明 onupdate。
+    """
+
+    __tablename__ = "batches"
+
+    id: Mapped[uuid.UUID] = _pk()
+    ingredient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ingredients.id")
+    )
+    batch_no: Mapped[str] = mapped_column(Text, nullable=False)
+    purchase_date: Mapped[date] = mapped_column(Date, nullable=False)
+    production_date: Mapped[date | None] = mapped_column(Date)
+    expiry_date: Mapped[date | None] = mapped_column(Date)
+    opened_date: Mapped[date | None] = mapped_column(Date)
+    storage_location_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("storage_locations.id")
+    )
+    initial_quantity: Mapped[Decimal] = mapped_column(QTY, default=0)
+    remaining_quantity: Mapped[Decimal] = mapped_column(QTY, default=0)
+    initial_weight: Mapped[Decimal] = mapped_column(QTY, default=0)
+    remaining_weight: Mapped[Decimal] = mapped_column(QTY, default=0)
+    purchase_cost: Mapped[Decimal] = mapped_column(MONEY, default=0)
+    remaining_cost: Mapped[Decimal] = mapped_column(MONEY, default=0)
+    status: Mapped[str] = mapped_column(Text, default="active")
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = _now()
+    updated_at: Mapped[datetime] = _now()
+
+    ingredient: Mapped[Ingredient] = relationship(lazy="joined")
+    storage_location: Mapped[StorageLocation | None] = relationship(lazy="joined")
+
+
+class InventoryTransaction(Base):
+    """库存流水：任何库存变化的唯一真相（PRD §3.3 原则 3）。"""
+
+    __tablename__ = "inventory_transactions"
+
+    id: Mapped[uuid.UUID] = _pk()
+    transaction_no: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False)
+    ingredient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ingredients.id")
+    )
+    quantity_delta: Mapped[Decimal] = mapped_column(QTY, default=0)
+    weight_delta: Mapped[Decimal] = mapped_column(QTY, default=0)
+    cost_delta: Mapped[Decimal] = mapped_column(MONEY, default=0)
+    related_object_type: Mapped[str | None] = mapped_column(Text)
+    related_object_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    reason: Mapped[str] = mapped_column(Text, default="")
+    device_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("devices.id")
+    )
+    created_at: Mapped[datetime] = _now()
+
+
+class TransactionAllocation(Base):
+    """分配：一笔流水对某个批次的作用量。Σ分配 == 流水 delta 是硬不变式。"""
+
+    __tablename__ = "transaction_allocations"
+
+    id: Mapped[uuid.UUID] = _pk()
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("inventory_transactions.id")
+    )
+    batch_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("batches.id"))
+    quantity_delta: Mapped[Decimal] = mapped_column(QTY, default=0)
+    weight_delta: Mapped[Decimal] = mapped_column(QTY, default=0)
+    cost_delta: Mapped[Decimal] = mapped_column(MONEY, default=0)
+    unit_cost: Mapped[Decimal | None] = mapped_column(NUTRI)
+    created_at: Mapped[datetime] = _now()
+
+
 class IdempotencyKey(Base):
     """写操作幂等记录：同 key 同 body 返回原响应（见 app/core/middleware.py）。"""
 

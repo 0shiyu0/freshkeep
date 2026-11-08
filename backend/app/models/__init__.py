@@ -1,6 +1,7 @@
 """模型导出。"""
 from app.models.entities import (
     Base,
+    Batch,
     Category,
     Device,
     FileAsset,
@@ -8,15 +9,18 @@ from app.models.entities import (
     IngredientBarcode,
     IdempotencyKey,
     IngredientNutrition,
+    InventoryTransaction,
     NutritionDefinition,
     PairCode,
     StorageLocation,
+    TransactionAllocation,
     Unit,
     User,
 )
 
 __all__ = [
     "Base",
+    "Batch",
     "Category",
     "Device",
     "FileAsset",
@@ -24,9 +28,11 @@ __all__ = [
     "IngredientBarcode",
     "IdempotencyKey",
     "IngredientNutrition",
+    "InventoryTransaction",
     "NutritionDefinition",
     "PairCode",
     "StorageLocation",
+    "TransactionAllocation",
     "Unit",
     "User",
 ]

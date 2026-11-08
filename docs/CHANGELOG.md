@@ -126,6 +126,61 @@
 
 ---
 
+## 2026-11-09 · M3：批次域（入库 / 查询 / 状态机）
+
+### 新增
+
+- **入库五步事务**（AGENTS.md §4.2）：`POST /batches` 在同一事务内写
+  `batches` + `inventory_transactions(type=purchase)` + `transaction_allocations`（自分配），
+  并断言 `Σ allocation == transaction.delta == batch.remaining_*`，不等即回滚。
+- 批次接口：`GET /batches`（分页 + 食材/位置/状态筛选）、`GET /batches/{id}`、
+  `GET /batches/expiring?days=7`、`GET /batches/expired`、`PUT /batches/{id}`（仅元数据）。
+- `services/inventory/state.py` 状态机：`active → depleted`（剩余归零）、
+  `depleted → active`（恢复库存），`void` 未开放（需反向流水，留 M4/M5）。
+- ORM：`Batch`、`InventoryTransaction`、`TransactionAllocation`；`schemas/batch.py`；
+  `core/time.py`（`biz_today()` / `days_until()`，统一 Asia/Shanghai 业务日期）。
+- 编号规则：批次 `yyyymmdd-NN`、流水 `TX-P-yyyymmdd-NN`（当日序号 + 唯一约束兜底）。
+- 重量单位换算：`g`→1、`kg`→×1000，统一按克入库；数量/重量单位维度校验（重量位填「包」→ 400）。
+- 前端：`api/batches.ts`；食材详情页新增批次区（剩余量/成本/临期标签）与「＋ 入库」表单，
+  双计量、数量与重量至少填一项，空态给出下一步动作。
+- 测试：`tests/api/test_batches.py`（18 项：五步事务、对账视图、双计量、kg 换算、
+  编号递增、临期/过期、禁改字段、鉴权）、`tests/unit/test_batch_state.py`（9 项状态迁移）。
+
+### 变更
+
+- `AGENTS.md §12.5` 的核心逻辑保护表：库存流水与批次分配已有 Python 断言（见下「遗留」）。
+- `GET /batches` 分页响应与阶段 2 的 `GET /ingredients` 对齐为 `data={items:[...], total, page, page_size}`。
+
+### 修复
+
+- **列表响应结构多套一层**：初版返回 `data.items.items`，前端 `PageResult` 拿到的 `items`
+  是对象而非数组 → 批次区只显示按钮、数据不渲染。由浏览器 DOM 探针发现（不是看截图猜），
+  修后端结构并同步测试断言，重建容器后 1280/390 两种宽度 DOM 探针全部 true。
+- `expiring` 查询初版只有上界没有下界，已过期批次会混进临期列表 → 补 `expiry_date >= today`。
+
+### 数据库
+
+- **无 DDL 变更**，无新迁移；迁移版本仍为 `0002_ingredient_storage (head)`。
+- 本轮只新增对既有表的 ORM 映射与写入逻辑；`v_batch_reconcile` 在容器真实入库后差异为 0。
+
+### 验证
+
+- pytest **83 passed**（原 56 + 批次接口 18 + 状态机 9）。
+- 容器真实 HTTP **18 项全过**：`POST /batches` 201、`batch_no=20261109-01`、
+  分配记录 1 条、对账 diff `0.000/0.000/0.00`、`unit_cost=0.0360`、
+  PUT 改元数据 200 / 改数量 400、幂等同 key 同 body 返回同一 id 且只落 1 条流水+1 条分配。
+- 浏览器 DOM 探针：详情页 1280 / 390 均显示批次区、批次号、剩余 500g、临期标签、¥18.00、
+  入库弹层字段齐全；横向溢出 0px、卡片越界 0 个。
+
+### 遗留
+
+- `services/inventory/` 的 Python 断言目前在 `tests/api/`，尚未平移到
+  `tests/acceptance/`（AGENTS.md §12.5 要求）；M4 消耗域时一并建立 acceptance 层。
+- 批次编号用「当日计数 + 唯一约束兜底」，并发同日入库存在极小概率冲突，未加重试；
+  单用户低频场景可接受，M4 若引入批量入库需改数据库序列。
+
+---
+
 ## [Unreleased]
 
 ### 新增

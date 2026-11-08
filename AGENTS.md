@@ -297,15 +297,17 @@ AGENTS.md → docs/PRD.md → docs/ARCHITECTURE.md → docs/DEVELOPMENT_PLAN.md 
 
 以下五块**必须**有自动化测试，且不得在测试未覆盖的情况下改动：
 
-| 核心逻辑 | 测试位置 | 现状 |
+| 核心逻辑 | 测试位置 | 现状（2026-11-09） |
 | --- | --- | --- |
 | 数据库迁移（DDL 可执行、表数正确） | `database/002_acceptance_check.sql` + CI | ✅ 已有 |
-| 库存流水（唯一写入口、符号约束） | `database/002` 的约束反向验证 | ✅ 已有 |
-| 批次分配（`transaction_allocations` 与余额一致） | `database/002` 的对账断言 | ✅ 已有 |
-| 成本核算（分摊 + 尾差 + 精度） | `database/002` 的 10.80 / 42.20 | ✅ 已有 |
-| 营养快照（冻结、不随档案变化） | `database/002` 的 495 kcal | ✅ 已有 |
+| 库存流水（唯一写入口、符号约束） | `database/002` 的约束反向验证 + `tests/api/test_batches.py` | ✅ SQL 断言 + M3 入库流水的 Python 断言 |
+| 批次分配（`transaction_allocations` 与余额一致） | `database/002` 的对账断言 + `tests/api/test_batches.py` | ✅ SQL + Python（容器真实入库后 diff 为 0） |
+| 成本核算（分摊 + 尾差 + 精度） | `database/002` 的 10.80 / 42.20 | ⚠️ 目前只有 SQL 断言；**消耗分摊尚未实现，M4 必须补 Python 验收** |
+| 营养快照（冻结、不随档案变化） | `database/002` 的 495 kcal | ⚠️ 目前只有 SQL 断言；M4 必须补 Python 验收 |
 
 后续这些逻辑搬到 Python 后，测试要**同步平移**到 `backend/tests/acceptance/`，不得只剩 SQL 断言。
+当前进度：M3 的批次/流水断言在 `tests/api/`（尚未进 acceptance），
+`tests/acceptance/` 将在 M4 消耗域建立，并把 PRD §7.1 的 9 条用例与 `database/002` 的断言一起平移进去。
 
 改核心逻辑的固定动作：
 

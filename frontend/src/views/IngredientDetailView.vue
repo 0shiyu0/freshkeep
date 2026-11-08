@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NInput, NModal } from 'naive-ui'
+import { NButton, NInput, NModal, NSelect } from 'naive-ui'
 
 import { ingredientApi, fileApi, type IngredientDetail } from '@/api/ingredients'
+import { batchApi, expiryClass, expiryText, type BatchItem } from '@/api/batches'
+import { catalogApi, type StorageLocation } from '@/api/catalog'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
 const route = useRoute()
@@ -13,6 +15,21 @@ const id = computed(() => String(route.params.id))
 const data = ref<IngredientDetail | null>(null)
 const loading = ref(false)
 const busy = ref(false)
+
+// 批次（M3）
+const batches = ref<BatchItem[]>([])
+const locations = ref<StorageLocation[]>([])
+const purchaseModal = ref(false)
+const purchasing = ref(false)
+const purchaseForm = reactive({
+  purchase_date: new Date().toISOString().slice(0, 10),
+  expiry_date: '',
+  storage_location_id: '',
+  quantity: '',
+  weight: '',
+  purchase_cost: '',
+  note: '',
+})
 
 // 图片
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -26,8 +43,59 @@ async function load() {
   loading.value = true
   try {
     data.value = await ingredientApi.detail(id.value)
+    const [b, locs] = await Promise.all([
+      batchApi.list({ ingredient_id: id.value, page_size: 50 }),
+      catalogApi.locations(),
+    ])
+    batches.value = b.items
+    locations.value = locs.items
   } finally {
     loading.value = false
+  }
+}
+
+// 批次剩余量展示：优先重量，纯数量管理只显示数量
+function remainingText(b: BatchItem): string {
+  if (b.remaining_weight !== '0.000') return `${Number(b.remaining_weight)}g`
+  if (b.remaining_quantity !== '0.000') return `${Number(b.remaining_quantity)}${data.value?.quantity_unit?.name ?? ''}`
+  return '0'
+}
+
+async function submitPurchase() {
+  if (purchasing.value) return
+  const quantity = purchaseForm.quantity.trim() || '0'
+  const weight = purchaseForm.weight.trim() || '0'
+  if (quantity === '0' && weight === '0') {
+    notifyError('数量与重量至少填一项')
+    return
+  }
+  purchasing.value = true
+  try {
+    await batchApi.create({
+      ingredient_id: id.value,
+      purchase_date: purchaseForm.purchase_date || undefined,
+      expiry_date: purchaseForm.expiry_date || null,
+      storage_location_id: purchaseForm.storage_location_id || null,
+      quantity,
+      weight,
+      purchase_cost: purchaseForm.purchase_cost.trim() || '0',
+      quantity_unit_id: data.value?.quantity_unit?.id ?? null,
+      weight_unit_id: data.value?.weight_unit?.id ?? null,
+      note: purchaseForm.note.trim(),
+    })
+    notifySuccess('入库成功，已生成批次与流水')
+    purchaseModal.value = false
+    purchaseForm.expiry_date = ''
+    purchaseForm.storage_location_id = ''
+    purchaseForm.quantity = ''
+    purchaseForm.weight = ''
+    purchaseForm.purchase_cost = ''
+    purchaseForm.note = ''
+    await load()
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : '入库失败')
+  } finally {
+    purchasing.value = false
   }
 }
 
@@ -175,6 +243,27 @@ onMounted(load)
       </div>
     </section>
 
+    <!-- 批次（M3）：入库历史与剩余 -->
+    <section class="card">
+      <div class="card__head">
+        <h2>批次（{{ batches.length }}）</h2>
+        <button class="btn" @click="purchaseModal = true">＋ 入库</button>
+      </div>
+      <div v-if="batches.length === 0" class="muted-line">还没有批次，点「入库」记录第一次采购。</div>
+      <div v-for="b in batches" :key="b.id" class="batch-row">
+        <div class="batch-row__main">
+          <span class="batch-row__no mono">{{ b.batch_no }}</span>
+          <span v-if="b.location_name" class="tag tag--muted">{{ b.location_name }}</span>
+          <span class="expiry" :class="`expiry--${expiryClass(b)}`">{{ expiryText(b) }}</span>
+        </div>
+        <div class="batch-row__nums">
+          <span>剩余 <b>{{ remainingText(b) }}</b></span>
+          <span v-if="b.remaining_cost !== '0.00'">成本 ¥{{ b.remaining_cost }}</span>
+          <span v-if="b.status === 'depleted'" class="tag tag--muted">已耗尽</span>
+        </div>
+      </div>
+    </section>
+
     <!-- 图片操作 -->
     <section class="card">
       <h2>图片</h2>
@@ -221,6 +310,35 @@ onMounted(load)
         <div style="display: flex; justify-content: flex-end; gap: 8px">
           <NButton @click="barcodeModal = false">取消</NButton>
           <NButton type="primary" @click="addBarcode">绑定</NButton>
+        </div>
+      </template>
+    </NModal>
+
+    <!-- 入库表单（M3）：双计量，数量与重量至少填一项 -->
+    <NModal v-model:show="purchaseModal" preset="card" title="采购入库" style="max-width: 420px">
+      <div class="form-grid">
+        <label>购买日期<input v-model="purchaseForm.purchase_date" type="date" /></label>
+        <label>到期日期<input v-model="purchaseForm.expiry_date" type="date" /></label>
+        <label>数量（{{ data?.quantity_unit?.name ?? '数量' }}，如 2）
+          <input v-model="purchaseForm.quantity" inputmode="decimal" placeholder="可留空" /></label>
+        <label>重量（{{ data?.weight_unit?.symbol ?? 'g' }}，如 500）
+          <input v-model="purchaseForm.weight" inputmode="decimal" placeholder="可留空" /></label>
+        <label>总价（元）<input v-model="purchaseForm.purchase_cost" inputmode="decimal" placeholder="0" /></label>
+        <label class="form-grid--full">储存位置
+          <NSelect
+            v-model:value="purchaseForm.storage_location_id"
+            :options="locations.map(l => ({ label: l.name, value: l.id }))"
+            placeholder="默认用食材的储存位置"
+            clearable
+          /></label>
+        <label class="form-grid--full">备注
+          <NInput v-model:value="purchaseForm.note" placeholder="可留空" /></label>
+      </div>
+      <p class="form-tip">至少填一项数量或重量；两者都填则同时记录（双计量）。</p>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px">
+          <NButton @click="purchaseModal = false">取消</NButton>
+          <NButton type="primary" :loading="purchasing" @click="submitPurchase">入库</NButton>
         </div>
       </template>
     </NModal>
@@ -286,4 +404,40 @@ onMounted(load)
 .img-box img { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
 .img-box__ops { display: flex; flex-direction: column; gap: 8px; }
 .img-empty { display: flex; }
+
+/* 批次 */
+.batch-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 10px 0; flex-wrap: wrap;
+}
+.batch-row + .batch-row { border-top: 1px dashed var(--line); }
+.batch-row__main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.batch-row__no { font-size: 12px; color: var(--text-3); }
+.batch-row__nums {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 12.5px; color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.batch-row__nums b { font-size: 13.5px; color: var(--text-1); }
+
+.expiry { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+.expiry--ok { background: var(--green-weak); color: var(--green); }
+.expiry--warn { background: #fdf3e2; color: #b8860b; }
+.expiry--danger { background: #fbeae8; color: var(--red); }
+.expiry--expired { background: var(--red); color: #fff; }
+.expiry--muted { background: var(--bg-weak, #f0efe9); color: var(--text-3); }
+
+/* 入库表单 */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.form-grid--full { grid-column: 1 / -1; }
+.form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-2); }
+.form-grid input {
+  height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg-card, #fff); font-size: 14px;
+}
+.form-tip { font-size: 11.5px; color: var(--text-3); margin: 10px 0 0; }
+
+@media (max-width: 720px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
 </style>

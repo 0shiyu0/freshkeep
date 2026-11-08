@@ -1,21 +1,21 @@
 {
   "BRANCH": "main",
-  "HEAD": "1a1e3be",
-  "DIRTY": 41,
-  "UNTRACKED": 34,
+  "HEAD": "1e575c0",
+  "DIRTY": 16,
+  "UNTRACKED": 8,
   "AHEAD": 0,
   "RECENT": [
+    "1e575c0 2026-11-09 chore: 补齐状态留痕（commits.log）",
+    "0c37dca 2026-11-09 docs(db): 同步 ingredients.default_storage_location_id 与迁移历史",
     "1a1e3be 2026-11-09 feat(init): 阶段 1 项目初始化 —— 三容器 + 前后端骨架 + 日志与错误处理",
     "0d5d3ff 2026-11-09 docs: Docker 与 Xcode 环境验证结论",
-    "e8f0596 2026-11-08 fix(scripts): 变量紧邻中文导致 unbound variable；表数排除 alembic_version",
-    "dacc7a6 2026-11-08 chore: 状态留痕文件入库 + 钩子逐项输出",
-    "217e753 2026-11-08 chore: 建立上下文管理与状态持久化机制"
+    "e8f0596 2026-11-08 fix(scripts): 变量紧邻中文导致 unbound variable；表数排除 alembic_version"
   ],
   "MIG": "0002_ingredient_storage",
   "TABLES": "25",
   "DB_OK": true,
-  "TESTS": "56 passed, 1 warning in 6.82s",
+  "TESTS": "83 passed, 1 warning in 6.22s",
   "BUILD": "已构建",
   "DOCS_OK": true,
-  "NOW": "2026-11-09 01:53"
+  "NOW": "2026-11-09 02:24"
 }
