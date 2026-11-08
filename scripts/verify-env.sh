@@ -38,10 +38,10 @@ if command -v psql >/dev/null 2>&1; then
   VER=$(psql --version 2>/dev/null)
   if psql -lqt 2>/dev/null | cut -d'|' -f1 | grep -qw freshkeep; then
     N=$(psql -d freshkeep -tAc "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE'" 2>/dev/null || echo 0)
-    if [ "${N:-0}" -ge 25 ]; then pass "PostgreSQL" "$VER，freshkeep 库 $N 张表"
-    else warn "PostgreSQL" "$VER，库存在但表数 $N（期望 25+）→ psql -d freshkeep -f database/001_init.sql"; fi
+    if [ "${N:-0}" -ge 25 ]; then pass "PostgreSQL" "${VER}，freshkeep 库 $N 张表"
+    else warn "PostgreSQL" "${VER}，库存在但表数 ${N}（期望 25+）→ psql -d freshkeep -f database/001_init.sql"; fi
   else
-    warn "PostgreSQL" "$VER，但库 freshkeep 不存在 → createdb freshkeep"
+    warn "PostgreSQL" "${VER}，但库 freshkeep 不存在 → createdb freshkeep"
   fi
 else
   warn "PostgreSQL" "未安装 → 见 docs/environment.md §2（或装 Docker 用容器版）"

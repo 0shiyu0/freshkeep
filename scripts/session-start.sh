@@ -45,8 +45,8 @@ git log -5 --pretty='    %h %ad %s' --date=short
 bold "2. 数据库"
 if command -v psql >/dev/null 2>&1; then
   VER=$(psql -d freshkeep -tAc "select version_num from alembic_version" 2>/dev/null || true)
-  N=$(psql -d freshkeep -tAc "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE'" 2>/dev/null || echo "?")
-  if [ -n "$VER" ]; then good "迁移版本 $VER，$N 张表"; else
+  N=$(psql -d freshkeep -tAc "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name <> 'alembic_version'" 2>/dev/null || echo "?")
+  if [ -n "$VER" ]; then good "迁移版本 ${VER}，$N 张表"; else
     warn "连不上库或 alembic_version 为空（跑 ./scripts/db-init.sh）"; fi
 else
   warn "psql 不在 PATH：export PATH=\"/opt/homebrew/opt/postgresql@16/bin:\$PATH\""

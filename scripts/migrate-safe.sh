@@ -29,7 +29,7 @@ echo "== 1/3 备份 =="
 pg_dump -d "$DB" -Fc -f "$DUMP"
 SIZE=$(wc -c < "$DUMP" | tr -d ' ')
 [ "$SIZE" -gt 1024 ] || { echo "备份文件异常（${SIZE} 字节），中止"; exit 1; }
-echo "已备份 → $DUMP（${SIZE} 字节）"
+echo "已备份 → ${DUMP}（${SIZE} 字节）"
 
 echo "== 2/3 迁移 =="
 BEFORE=$(psql -d "$DB" -tAc "select version_num from alembic_version" 2>/dev/null || echo "none")
@@ -38,7 +38,7 @@ if ! (cd backend && DATABASE_URL="$URL" .venv/bin/alembic upgrade head); then
   echo
   echo "❌ 迁移失败。回滚命令："
   echo "  pg_restore -d $DB --clean --if-exists $DUMP"
-  echo "  （或删库重建：dropdb $DB && createdb $DB && pg_restore -d $DB $DUMP）"
+  echo "  （或删库重建：dropdb $DB && createdb $DB && pg_restore -d $DB ${DUMP}）"
   exit 1
 fi
 
