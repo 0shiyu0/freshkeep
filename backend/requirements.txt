@@ -1,0 +1,14 @@
+# 鲜度 FreshKeep · 后端依赖（版本以实测可获取为准）
+fastapi==0.162.2
+uvicorn[standard]==0.54.0
+sqlalchemy==2.1.8
+alembic==1.20.1
+psycopg[binary]==3.3.8
+pydantic==2.14.3
+pypinyin==0.55.0
+apscheduler==3.11.3
+python-multipart==0.0.33
+
+# 测试
+pytest==9.2.0
+httpx==0.28.1

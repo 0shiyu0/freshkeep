@@ -1,0 +1,39 @@
+{
+  "name": "freshkeep-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "鲜度 FreshKeep · 前端（同一份产物同时供 Web 与 Capacitor 原生壳使用）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "build:only": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "cap sync",
+    "cap:android": "cap sync android && cd android && ./gradlew assembleRelease",
+    "cap:ios": "cap sync ios"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.23",
+    "echarts": "^6.1.0",
+    "naive-ui": "^2.45.3",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.45",
+    "vue-router": "^5.4.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "capacitor-secure-storage-plugin": "^0.13.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.6",
+    "vue-tsc": "^3.3.14"
+  }
+}

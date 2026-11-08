@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: freshkeep-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-freshkeep}
+      POSTGRES_USER: ${POSTGRES_USER:-freshkeep}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 里设置 POSTGRES_PASSWORD}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-freshkeep} -d ${POSTGRES_DB:-freshkeep}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # 不对宿主机暴露 5432：只有 api 容器能连
+    expose:
+      - "5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: freshkeep-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-freshkeep}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-freshkeep}
+      ALLOW_CIDR: ${ALLOW_CIDR:-192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,100.64.0.0/10,127.0.0.1/32}
+      CORS_ORIGINS: ${CORS_ORIGINS:-capacitor://localhost,http://localhost,http://localhost:5173}
+      TZ: ${TZ:-Asia/Shanghai}
+      TZ_BIZ: ${TZ_BIZ:-Asia/Shanghai}
+      DATA_DIR: /data
+      TRUST_PROXY: "${TRUST_PROXY:-0}"
+      WORKERS: "${WORKERS:-2}"
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    volumes:
+      - ./data:/data
+
+volumes: {}

@@ -1,0 +1,15 @@
+# 构建上下文排除项（保持镜像构建快、体积小）
+.git
+.gitignore
+node_modules
+**/node_modules
+backend/.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+pgdata
+data
+frontend/dist
+docs
+*.md
+!README.md

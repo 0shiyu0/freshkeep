@@ -1,19 +1,37 @@
-# 鲜度 FreshKeep · 食材库存与消耗管家
+# 鲜度 FreshKeep · 家庭食材库存与营养管理
 
-> 冰箱里有什么、还剩多少、什么时候过期——点一下 `−1` 就记完账。
-> 纯前端单页应用，零依赖、零构建、零后端，数据只存在你自己的浏览器里。
+> NAS 私有部署 · 原生 App + Web · 批次级库存 · 成本核算 · 营养估算
 
-[![无依赖](https://img.shields.io/badge/dependencies-0-17803f)](#技术说明)
-[![纯前端](https://img.shields.io/badge/backend-none-17803f)](#数据保存方式)
-[![PWA](https://img.shields.io/badge/PWA-可离线安装-17803f)](#技术说明)
+**当前状态：阶段 0（项目准备）已完成。** 代码尚未开始，先交付了 PRD、数据库设计与评审、API 契约、开发规则。
 
-| 库存 | 临期提醒 | 消耗统计 |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/1-inventory.webp" width="240" alt="库存页"> | <img src="docs/screenshots/2-expiring.webp" width="240" alt="临期提醒页"> | <img src="docs/screenshots/4-stats.webp" width="240" alt="消耗统计页"> |
-| **食材详情** | **添加食材** | |
-| <img src="docs/screenshots/3-detail.webp" width="240" alt="食材详情弹层"> | <img src="docs/screenshots/5-add.webp" width="240" alt="添加食材弹层"> | |
+| 文档 | 内容 |
+| --- | --- |
+| [docs/prd.md](docs/prd.md) | 产品需求（范围、业务规则、验收标准、已决策事项） |
+| [docs/final-plan.md](docs/final-plan.md) | 技术方案与 8 处冲突的定案 |
+| [docs/database.md](docs/database.md) | 25 张表的字段设计 |
+| [docs/er-diagram.md](docs/er-diagram.md) | ER 图与关系说明 |
+| [docs/api.md](docs/api.md) | API 契约初稿 |
+| [AGENTS.md](AGENTS.md) | 开发规则（数值精度、事务、幂等、命名、提交） |
+
+**阶段 0 验证结果**：DDL 在 PostgreSQL 16 上实跑通过（25 表 / 2 视图 / 37 外键），
+PRD 的 9 条验收用例中成本与营养两条已用真库断言（消耗成本 `10.80`、剩余 `42.20`、营养 `495 kcal`），
+对账视图三个差异为 0，负库存/重复分配/符号错误/孤儿快照四类错误均被约束拦住。
 
 ---
+
+## 仓库里有什么
+
+```
+backend/          FastAPI 服务（app/ + alembic/ + tests/）
+frontend/         Vue 3 SPA（同一份 dist 供 Web 与 Capacitor 使用）
+database/         001_init.sql（DDL 唯一真相）+ 002 验收自检
+deploy/           NAS 部署手册 + 备份/恢复脚本
+docs/             PRD、方案、数据库设计、ER 图、API 契约
+index.html js/ css/  早期纯前端演示版（可独立打开，仅作交互参考）
+```
+
+> 纯前端演示版的说明保留在本文后续章节（"为什么是这个形态"至"自检"），
+> 它现在是**设计参考**，不是交付形态。
 
 ## 为什么是这个形态
 

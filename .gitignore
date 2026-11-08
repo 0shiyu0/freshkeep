@@ -1,4 +1,25 @@
 .DS_Store
 Thumbs.db
-node_modules/
 *.log
+
+# 依赖与构建产物
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+frontend/dist/
+
+# 运行时数据（数据库与文件，绝不入库）
+pgdata/
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# 密钥与证书（绝不入库）
+.env
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
