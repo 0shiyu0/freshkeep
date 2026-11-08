@@ -7,6 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+def _repo_root() -> Path:
+    """仓库根目录（app/core/config.py → backend/app/core → 上三级）。"""
+    return Path(__file__).resolve().parents[3]
+
+
 def _env(key: str, default: str = "") -> str:
     return os.environ.get(key, default).strip()
 
@@ -47,7 +52,7 @@ class Settings:
     # 容器里由 docker-compose 指定 /data/logs；本地开发回落到仓库根的 storage/logs
     log_dir: Path = field(
         default_factory=lambda: Path(
-            _env("LOG_DIR", str(Path(__file__).resolve().parents[3] / "storage" / "logs"))
+            _env("LOG_DIR", str(_repo_root() / "storage" / "logs"))
         )
     )
     log_json: bool = field(default_factory=lambda: _env_bool("LOG_JSON", True))
@@ -67,9 +72,17 @@ class Settings:
     db_echo: bool = field(default_factory=lambda: _env_bool("DB_ECHO", False))
 
     # ---- 存储 ----
-    data_dir: Path = field(default_factory=lambda: Path(_env("DATA_DIR", "/data")))
-    storage_dir: Path = field(default_factory=lambda: Path(_env("STORAGE_DIR", "/data/storage")))
-    backup_dir: Path = field(default_factory=lambda: Path(_env("BACKUP_DIR", "/data/backups")))
+    # 容器里由 docker-compose 指定 /data/*；本地开发/测试回落到仓库内的 storage/ 与 backups/，
+    # 这样不需要 /data 目录也能启动（曾因硬编码 /data 导致上传接口 500）。
+    data_dir: Path = field(
+        default_factory=lambda: Path(_env("DATA_DIR", str(_repo_root())))
+    )
+    storage_dir: Path = field(
+        default_factory=lambda: Path(_env("STORAGE_DIR", str(_repo_root() / "storage")))
+    )
+    backup_dir: Path = field(
+        default_factory=lambda: Path(_env("BACKUP_DIR", str(_repo_root() / "backups")))
+    )
     # 生产由 nginx 托管前端；本地开发可置 1 让 FastAPI 直接托管 dist
     serve_static: bool = field(default_factory=lambda: _env_bool("SERVE_STATIC", False))
     static_dir: Path = field(

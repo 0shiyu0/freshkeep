@@ -8,6 +8,7 @@ pydantic==2.14.3
 pypinyin==0.55.0
 apscheduler==3.11.3
 python-multipart==0.0.33
+argon2-cffi==25.1.0
 
 # 测试
 pytest==9.2.0

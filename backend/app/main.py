@@ -20,6 +20,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.errors import ApiError
 from app.core.logging import get_logger, log_exception, setup_logging
+from app.core.middleware import CidrMiddleware, IdempotencyMiddleware
 
 setup_logging()
 log = get_logger("app.main")
@@ -34,14 +35,17 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-app.add_middleware(
-    CORSMiddleware,
+# 注册顺序＝执行顺序的反序（后加的先执行），因此最外层安全闸门最后加：
+#   CidrMiddleware（网段） → IdempotencyMiddleware（幂等） → 请求上下文 → CORS → 路由
+app.add_middleware(CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=False,          # App 走 Bearer，不需要带 Cookie
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
-    expose_headers=["X-Request-Id"],
+    expose_headers=["X-Request-Id", "Idempotency-Replayed"],
 )
+app.add_middleware(IdempotencyMiddleware)
+app.add_middleware(CidrMiddleware)
 
 
 # ---------------------------------------------------------------- 中间件

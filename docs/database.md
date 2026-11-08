@@ -165,6 +165,7 @@ batches.remaining_cost   = Σ transaction_allocations.cost_delta
 | `default_weight_unit_id` | uuid | 是 | — | 默认重量单位（g/斤） |
 | `default_unit_weight` | numeric(14,3) | 是 | — | 1 个数量单位 = N 克；**NULL = 禁止自动换算** |
 | `nutrition_basis_amount` / `nutrition_basis_unit_id` | — | 是 | — | **仅用于录入预填**，不参与计算（计算基准在 `ingredient_nutrition`） |
+| `default_storage_location_id` | uuid | 是 | — | → `storage_locations`；食材的默认存放位置，批次上的同名列可覆盖它（迁移 `0002` 加入） |
 | `minimum_quantity` / `minimum_weight` | numeric(14,3) | 否 | 0 | 低库存阈值 |
 | `note` | text | 否 | `''` | — |
 | `is_active` | boolean | 否 | `true` | 停用而非删除 |
@@ -278,3 +279,14 @@ batches.remaining_cost   = Σ transaction_allocations.cost_delta
 | 采购清单"已忽略项" | P2 | `shopping_list_items` 加 `dismissed_at` |
 | 多币种 | 若需要 | `batches` 加 `currency`；当前默认单一货币（PRD §12 已列入待明确） |
 | 营养项目扩展（如糖、钙） | 需要时 | 只插 `nutrition_definitions` 一行，不改表结构 |
+
+---
+
+## 迁移历史
+
+| 版本 | 内容 | 是否改表 |
+| --- | --- | --- |
+| `0001_init` | 25 表 + 2 视图 + 索引/约束/触发器 | 建表 |
+| `0002_ingredient_storage` | `ingredients` 增加 `default_storage_location_id`（FK → `storage_locations`，`ON DELETE SET NULL`）+ 部分索引 `ix_ingredients_location` | 加列 + 加索引 |
+
+> `0002` 用 `ADD COLUMN IF NOT EXISTS`，对已含该列的新库为空操作，可重复执行。

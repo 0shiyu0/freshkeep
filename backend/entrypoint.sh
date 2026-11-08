@@ -24,5 +24,8 @@ PY
 echo "[entrypoint] 执行数据库迁移…"
 alembic upgrade head
 
+echo "[entrypoint] 写入基础字典（幂等）…"
+python -m app.cli seed --if-empty
+
 echo "[entrypoint] 启动服务 :${PORT:-8000}"
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --workers "${WORKERS:-2}" --proxy-headers --access-log

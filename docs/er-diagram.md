@@ -31,7 +31,8 @@ erDiagram
   nutrition_definitions ||--o{ nutrition_targets : "1:N 目标"
   nutrition_definitions ||--o{ consumption_nutrition : "1:N 快照项目"
 
-  storage_locations ||--o{ batches : "1:N 存放"
+  storage_locations ||--o{ batches : "1:N 批次存放"
+  storage_locations ||--o{ ingredients : "1:N 默认位置"
 
   ingredients ||--o{ batches : "1:N 批次"
   ingredients ||--o{ inventory_transactions : "1:N 流水"
@@ -88,7 +89,8 @@ flowchart LR
 | 11 | `inventory_transactions ↔ consumption_records` | **1:1** | `consumption_records.transaction_id` 上有 UNIQUE |
 | 12 | `consumption_records → consumption_nutrition` | 1:N | 每个营养项目一条快照，`UNIQUE(consumption_id, nutrition_definition_id)` |
 | 13 | `consumption_records → inventory_transactions` | 1:1 可选 | `reversed_by_transaction_id` 指向冲销流水 |
-| 14 | `batches → storage_locations` | N:1 | 位置可空（未指定） |
+| 14 | `batches → storage_locations` | N:1 | 批次实际存放位置，可空（未指定） |
+| 14b | `ingredients → storage_locations` | N:1 | 食材**默认**存放位置（`default_storage_location_id`，迁移 `0002`）；批次可覆盖 |
 | 15 | `shopping_lists → shopping_list_items` | 1:N | 删除清单级联删项 |
 | 16 | `recipes → recipe_items` | 1:N | 同上 |
 
@@ -121,5 +123,7 @@ flowchart LR
 | 视图 | `v_inventory`、`v_batch_reconcile` |
 | 状态机 | `ck_*` CHECK 约束 + 服务层状态迁移函数（M3 实现） |
 
+> 迁移历史见 `docs/database.md` 的「迁移历史」小节（当前 head：`0002_ingredient_storage`）。
+>
 > 修改表结构时的顺序：先改 `001_init.sql` → 在本地库重建 → 更新本文档的 ER 图与关系表 → 再写服务层。
 > 三者不一致视为缺陷（见 `AGENTS.md` 的"文档同步"规则）。

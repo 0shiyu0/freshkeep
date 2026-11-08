@@ -138,6 +138,8 @@ CREATE TABLE ingredients (
   -- 营养基准的默认值，仅用于录入时预填，**不参与计算**（计算基准见 ingredient_nutrition）
   nutrition_basis_amount   numeric(14,3) CHECK (nutrition_basis_amount > 0),
   nutrition_basis_unit_id  uuid REFERENCES units (id) ON DELETE RESTRICT,
+  -- 食材的默认存放位置（批次可覆盖）；PRD §4.3 表 65「默认储存位置」
+  default_storage_location_id uuid REFERENCES storage_locations (id) ON DELETE SET NULL,
   minimum_quantity         numeric(14,3) NOT NULL DEFAULT 0 CHECK (minimum_quantity >= 0),
   minimum_weight           numeric(14,3) NOT NULL DEFAULT 0 CHECK (minimum_weight >= 0),
   note                     text NOT NULL DEFAULT '',

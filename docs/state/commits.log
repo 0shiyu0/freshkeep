@@ -2,3 +2,4 @@
 2026-11-08 23:25 | dacc7a6 | chore: 状态留痕文件入库 + 钩子逐项输出 |  4 文件 | docs | main
 2026-11-08 23:26 | e8f0596 | fix(scripts): 变量紧邻中文导致 unbound variable；表数排除 alembic_version |  5 文件 | docs | main
 2026-11-09 00:50 | 0d5d3ff | docs: Docker 与 Xcode 环境验证结论 |  6 文件 | docs | main
+2026-11-09 01:25 | 1a1e3be | feat(init): 阶段 1 项目初始化 —— 三容器 + 前后端骨架 + 日志与错误处理 | 49 文件 | api web deploy docs | main

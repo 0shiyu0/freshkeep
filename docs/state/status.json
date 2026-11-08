@@ -1,21 +1,21 @@
 {
   "BRANCH": "main",
-  "HEAD": "0d5d3ff",
+  "HEAD": "1a1e3be",
   "DIRTY": 41,
-  "UNTRACKED": 19,
+  "UNTRACKED": 34,
   "AHEAD": 0,
   "RECENT": [
+    "1a1e3be 2026-11-09 feat(init): 阶段 1 项目初始化 —— 三容器 + 前后端骨架 + 日志与错误处理",
     "0d5d3ff 2026-11-09 docs: Docker 与 Xcode 环境验证结论",
     "e8f0596 2026-11-08 fix(scripts): 变量紧邻中文导致 unbound variable；表数排除 alembic_version",
     "dacc7a6 2026-11-08 chore: 状态留痕文件入库 + 钩子逐项输出",
-    "217e753 2026-11-08 chore: 建立上下文管理与状态持久化机制",
-    "71e9518 2026-11-08 docs: 重整为 6 个根级文件的自足文档体系 + 环境手册与脚本"
+    "217e753 2026-11-08 chore: 建立上下文管理与状态持久化机制"
   ],
-  "MIG": "0001_init",
+  "MIG": "0002_ingredient_storage",
   "TABLES": "25",
   "DB_OK": true,
-  "TESTS": "7 passed, 1 warning in 0.96s",
+  "TESTS": "56 passed, 1 warning in 6.82s",
   "BUILD": "已构建",
   "DOCS_OK": true,
-  "NOW": "2026-11-09 01:25"
+  "NOW": "2026-11-09 01:53"
 }

@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
+import { setUnauthorizedHandler } from '@/api/http'
 import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
 const app = useAppStore()
+const auth = useAuthStore()
 
 const navItems = [
   { to: '/', label: '首页', icon: '◧', hint: '总览与营养' },
@@ -14,10 +18,18 @@ const navItems = [
   { to: '/settings', label: '设置', icon: '⚙', hint: '设备与备份' },
 ]
 
-// 配对页是独立流程，不显示侧栏与底栏
-const plain = computed(() => route.name === 'pair')
+// 登录页是独立流程，不显示侧栏与底栏
+const plain = computed(() => route.name === 'login')
+const authed = computed(() => auth.authenticated)
 
-onMounted(() => {
+// 401 的统一出口：清空登录态并跳登录页
+setUnauthorizedHandler(() => {
+  auth.me = null
+  if (route.name !== 'login') router.replace('/login')
+})
+
+onMounted(async () => {
+  if (!auth.checked) await auth.fetchMe()
   app.probe()
 })
 </script>
@@ -33,10 +45,17 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="status" :class="app.healthClass" :title="app.lastCheckedAt ? `检测于 ${app.lastCheckedAt}` : ''">
-        <i class="status__dot" />
-        <span>{{ app.healthText }}</span>
-        <em v-if="app.latencyMs">{{ app.latencyMs }}ms</em>
+      <div class="topbar__right">
+        <div
+          class="status"
+          :class="app.healthClass"
+          :title="app.lastCheckedAt ? `检测于 ${app.lastCheckedAt}` : ''"
+        >
+          <i class="status__dot" />
+          <span>{{ app.healthText }}</span>
+          <em v-if="app.latencyMs">{{ app.latencyMs }}ms</em>
+        </div>
+        <span v-if="authed" class="topbar__user">{{ auth.displayName }}</span>
       </div>
     </header>
 

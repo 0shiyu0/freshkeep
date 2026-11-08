@@ -39,6 +39,93 @@
 
 ---
 
+## 2026-11-09 · 阶段 2：基础资料管理
+
+### 新增
+
+- **认证（2.1）**：`/auth/{pair,login,logout,me,devices,password,password/set,policy}`。
+  Web 下发 HttpOnly Cookie（`fk_sid`），App 返回 Bearer 令牌；密码用 argon2id 哈希；
+  配对码一次性、10 分钟过期、只存 SHA-256；设备可吊销且即时生效。
+- **基础字典（2.2/2.3/2.4）**：分类（两级 + 排序 + 引用保护）、单位（9 个内置，维度隔离）、
+  储存位置、营养项目字典（6 项）。`python -m app.cli seed` 幂等写入，容器启动时自动执行。
+- **食材档案（2.5）**：新增/编辑/详情/停用启用；`name_pinyin` / `name_initials` 写入时生成；
+  详情返回分类路径（「肉类 · 常见食材」）、六项属性展示值与 `can_convert` 标记。
+- **图片（2.6）**：`/files/upload`（魔数校验 jpg/png/webp、≤5MB、sha256 去重）、`/files/{id}/raw`、删除。
+- **搜索（2.7）**：中文模糊 / 全拼 / 首字母三路 OR + 相关性排序；`/ingredients/search` 提供联想。
+- **条码（2.8）**：`/barcodes` 绑定/解绑，`GET /barcodes/{code}` 反查食材。
+- **换算校验**：`GET /ingredients/{id}/conversion`，无 `default_unit_weight` 时返回
+  `422 UNIT_NOT_CONVERTIBLE`，不做任何推算。
+- 前端：`LoginView`（配对码/密码双 Tab）、`InventoryView`（搜索 + 分类/位置筛选 + 停用可见性）、
+  `IngredientDetailView`（分类标签 + 启用状态 + 六项属性表 + 图片/营养/条码）、
+  `IngredientFormView`（含换算联动提示）、`SettingsView`（设备/密码/分类/单位/位置）。
+- 测试：`tests/conftest.py`（真实 PG 测试库 + 清库夹具）、`tests/api/test_stage2.py`（25 项）、
+  `tests/api/test_system.py`（6 项）、`tests/unit/test_pinyin.py`（11 项）。
+
+### 变更
+
+- 迁移目录 `backend/alembic/` → **`backend/migrations/`**（对齐约定命名）。
+- 存储路径默认值：`DATA_DIR` / `STORAGE_DIR` / `BACKUP_DIR` 未设置时回落到仓库内 `storage/`、`backups/`，
+  不再硬编码 `/data`（该硬编码曾导致本机测试时上传接口 500）。
+- 食材列表默认只返回启用项，管理端用 `include_inactive=true` 查看全部。
+- 分类 `/sort` 路由注册到 `/{category_id}` 之前（否则 "sort" 会被当作 UUID 解析而 400）。
+- 分页/数值：金额与重量仍以**字符串**传输；`Dec2/Dec3/Dec4` 的序列化改为 `when_used="json"`，
+  python 模式保留 `Decimal`（此前 `model_dump()` 返回字符串，导致 `unit_weight <= 0` 抛 TypeError）。
+
+### 修复
+
+- `IngredientIn/Update` 中可空数值字段漏写 `| None`，导致传 `null` 清空换算关系被 Pydantic 拒绝。
+- 容器内测试时 `LOG_DIR` / `STORAGE_DIR` 指向 `/data` 不存在 → 启动告警并 500。
+
+### 数据库
+
+- **新增迁移 `0002_ingredient_storage`**：`ingredients` 增加 `default_storage_location_id`
+  （FK → `storage_locations`，`ON DELETE SET NULL`）与部分索引 `ix_ingredients_location`。
+- `database/001_init.sql` 同步该列（新建库直接含此列，`0002` 为空操作）。
+- 迁移版本：`0001_init` → **`0002_ingredient_storage (head)`**。
+- 表数仍为 25（未新增表，只补列）。
+
+---
+
+## 2026-11-09 · M0 收尾：网段白名单 + 写操作幂等
+
+### 新增
+
+- `app/core/middleware.py`：两个**原生 ASGI** 中间件（不用 BaseHTTPMiddleware，避免读 body 与 call_next 冲突）。
+  - `CidrMiddleware`：按 `ALLOW_CIDR` 校验来源网段，非白名单返回 403 统一信封；
+    回环与非 IP 客户端（测试客户端、本地 socket）放行，保证 `pytest` 与健康检查不被误拦。
+  - `IdempotencyMiddleware`：写方法带 `Idempotency-Key` 时，同 key 同 body 返回原响应
+    （附 `Idempotency-Replayed: 1`），同 key 不同 body 返回 409 `DUPLICATE_REQUEST`；
+    只缓存 2xx JSON 响应，失败响应不缓存；顺带清理 24 小时前的旧记录。
+- `models.IdempotencyKey` ORM 映射；`main.py` 按 `CIDR → 幂等 → 请求上下文 → CORS → 路由` 顺序挂载。
+- `tests/api/test_middleware.py`：14 项（CIDR 判定矩阵 7 组 + 真实 ASGI 403 + 幂等四态）。
+
+### 变更
+
+- `/api/v1/*` 的 CORS `expose_headers` 增加 `Idempotency-Replayed`。
+- `docs/PROJECT_STATUS.md` 重写：里程碑表、未完成清单、已知问题（K11~K14）、三处状态交叉核对命令。
+
+### 修复
+
+- 本机 PostgreSQL 库迁移版本停在 `0001_init`（容器库已是 `0002`），在本机直连后端会缺
+  `ingredients.default_storage_location_id` 列。已用 `scripts/migrate-safe.sh` 迁移（先备份到
+  `backups/pre-migrate-freshkeep-20261109-015103.dump`），两库现均为 `0002_ingredient_storage`。
+
+### 数据库
+
+- 无 DDL 变更。`idempotency_keys` 表在 `0001_init` 中已建，本轮只新增 ORM 映射与写入逻辑。
+- 迁移版本：`0002_ingredient_storage`（本机库与容器库一致）。
+
+### 验证
+
+- pytest **56 passed**（原 42 + 中间件 14）。
+- 反向验证：把幂等命中分支临时改成 `if False:`，`test_idempotent_replay_returns_original_response`
+  立即变红，确认该测试真的在测东西；随后恢复原文件并复跑全绿。
+- 容器上 curl 实测：同 key 同 body 两次都返回 201 且 `id` 相同（第二次 `replayed=1`）；
+  同 key 不同 body 返回 409 `DUPLICATE_REQUEST`；库中 `idempotency_keys` 仅 1 条、`categories` 仅 1 条。
+- CIDR 判定（容器内）：`172.18.0.1`/`192.168.31.50`/`100.64.1.1`/`127.0.0.1` 放行，`8.8.8.8` 拒绝。
+
+---
+
 ## [Unreleased]
 
 ### 新增

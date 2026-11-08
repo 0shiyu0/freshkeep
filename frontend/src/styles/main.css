@@ -108,6 +108,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 
 .status em { font-style: normal; color: var(--text-3); font-variant-numeric: tabular-nums; }
 
+.topbar__right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.topbar__user { font-size: 12.5px; color: var(--text-2); max-width: 90px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+
 .status__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
 .status.is-up .status__dot { background: var(--green); }
 .status.is-warn .status__dot { background: var(--amber); }
