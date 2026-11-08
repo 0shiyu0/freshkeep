@@ -226,9 +226,12 @@ python3 -m http.server 8080
 | **自托管**：NAS 上 Docker 跑服务端 + SQLite，网页与手机 App 都连它 | NAS 的 SQLite 文件 | 多设备共享、外网访问、要备份 | 📐 方案已出：[docs/architecture.md](docs/architecture.md) |
 
 自托管方案覆盖：单容器部署（零 npm 依赖，构建不用联网装包）、SQLite 表结构与事务、
-账号密码 + 会话认证（无默认口令）、网段白名单（只允许局域网/组网，不开放公网）、
-IP 直连的地址规范化与多地址回退、iOS ATS / Android 明文适配、Capacitor 双端壳、
+**仅 Passkey（通行密钥）登录**（WebAuthn，服务端零依赖验签）、Tailscale sidecar 自动签发并续期证书、
+只允许局域网/组网访问（无公网入口）、Capacitor 双端壳（系统认证会话 + 一次性 code 换会话）、
 GitHub Actions 出未签名 IPA + 自签要点、备份恢复与排障。
+
+方案里另外写清了一条容易被忽略的约束：**Passkey 的 RP ID 必须是域名、且必须 HTTPS**，
+所以"App 填 IP 直连 + Passkey"在规范层面不成立，地址形态改为域名（细节见文档 §3.1）。
 
 方案还对照了 grocy 与 mealie 的建模方式，采纳了**存放位置**、**单位换算**、
 **盘点修正**三个维度，并说明了哪些做法不照搬（默认口令、食谱体系、离线同步）。
