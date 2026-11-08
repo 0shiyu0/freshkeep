@@ -171,6 +171,7 @@ freshkeep/
 ├── sw.js                   # Service Worker，离线缓存应用外壳
 ├── manifest.webmanifest    # PWA 清单，可"添加到主屏幕"
 ├── icons/                  # PWA 图标
+├── tests/selftest.html     # 数据层自检（48 条确定性用例）
 ├── docs/screenshots/       # README 用截图
 └── .nojekyll               # 让 GitHub Pages 原样发布静态文件
 ```
@@ -246,6 +247,22 @@ python3 -m http.server 8080
 | 常用食材芯片 | `js/app.js` 的 `PRESETS` |
 | 提醒规则（如按品类差异化） | `js/store.js` 的 `expiring()` |
 | 新的统计维度 | `js/store.js` 的 `stats()`，界面在 `viewStats()` |
+
+---
+
+## 自检
+
+`tests/selftest.html` 是对数据层纯逻辑的确定性用例，覆盖 9 组共 48 条断言：
+日期解析（含 `2026-02-31`、闰年）、库存扣减夹到 0、超量消耗只记实际量、
+撤销回滚、删除食材后流水快照、临期与低库存判定、统计口径（丢弃不计入消耗）、
+CSV 逗号与引号转义、以及坏数据的归一化兜底。
+
+```bash
+python3 -m http.server 8080
+# 打开 http://localhost:8080/tests/selftest.html，顶部显示 "✓ 48 / 48 通过"
+```
+
+页面无依赖、无网络请求，失败项会直接列出「实际值 / 期望值」，便于定位。
 
 ---
 

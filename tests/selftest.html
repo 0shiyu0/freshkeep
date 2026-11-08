@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>鲜度 FreshKeep · 数据层自检</title>
+<style>
+  body { font: 14px/1.6 -apple-system, "PingFang SC", sans-serif; margin: 0; padding: 24px; background: #f5f3ee; color: #1f2421; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sum { font-weight: 700; margin: 10px 0 18px; }
+  .sum.pass { color: #17803f; }
+  .sum.fail { color: #b91c1c; }
+  ul { list-style: none; padding: 0; margin: 0; max-width: 760px; }
+  li { background: #fff; border: 1px solid #e9e4da; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; gap: 10px; }
+  li b { flex: none; width: 18px; }
+  li.ok b { color: #17803f; }
+  li.no { border-color: #f6c9c3; background: #fde8e6; }
+  li.no b { color: #b91c1c; }
+  li em { color: #6d746c; font-style: normal; margin-left: auto; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<h1>鲜度 FreshKeep · 数据层自检</h1>
+<p>针对日期解析、库存扣减、撤销回滚、导入导出等纯逻辑的确定性用例（无网络、无框架）。</p>
+<div class="sum" id="sum">运行中…</div>
+<ul id="list"></ul>
+<script src="../js/store.js"></script>
+<script>
+(function () {
+  'use strict';
+  var FK = window.FreshKeep;
+  var results = [];
+
+  function eq(name, actual, expected) {
+    results.push({ name: name, ok: JSON.stringify(actual) === JSON.stringify(expected), info: '实际 ' + JSON.stringify(actual) + ' / 期望 ' + JSON.stringify(expected) });
+  }
+  function ok(name, cond, info) {
+    results.push({ name: name, ok: !!cond, info: cond ? '' : (info || '') });
+  }
+
+  function reset() {
+    localStorage.removeItem('freshkeep.v1');
+    FK.load();
+  }
+
+  /* ---------- 1. 日期解析 ---------- */
+  reset();
+  eq('daysLeft(今天) === 0', FK.daysLeft(FK.todayISO()), 0);
+  eq('daysLeft(昨天) === -1', FK.daysLeft(FK.addDays(-1)), -1);
+  eq('daysLeft(+7) === 7', FK.daysLeft(FK.addDays(7)), 7);
+  eq('daysLeft(空字符串) === null', FK.daysLeft(''), null);
+  eq('daysLeft(非法格式) === null', FK.daysLeft('2026/11/08'), null);
+  eq('parseISO 拒绝 2 月 31 日', FK.parseISO('2026-02-31'), null);
+  eq('parseISO 拒绝 13 月', FK.parseISO('2026-13-01'), null);
+  ok('parseISO 接受闰年 2 月 29 日', FK.parseISO('2028-02-29') instanceof Date);
+  eq('addDays(0) === 今天', FK.addDays(0), FK.todayISO());
+
+  /* ---------- 2. 新增归一化 ---------- */
+  reset();
+  var neg = FK.addItem({ name: '负数测试', qty: -5, unit: '个', threshold: -2 });
+  eq('负库存归一化为 0', neg.qty, 0);
+  eq('负阈值归一化为 0', neg.threshold, 0);
+  eq('数量为 0 不产生入库流水', FK.logs().length, 0);
+
+  var apple = FK.addItem({ name: '苹果', qty: 5, unit: '个', category: '水果', expiry: FK.addDays(10), threshold: 2 });
+  eq('初始入库写 1 条 restock 流水', FK.logs().length, 1);
+  eq('入库流水类型', FK.logs()[0].type, 'restock');
+
+  /* ---------- 3. 消耗与边界 ---------- */
+  var r1 = FK.consume(apple.id, 3, 'use', '做沙拉');
+  eq('5 个用掉 3 个 → 2 个', FK.item(apple.id).qty, 2);
+  eq('delta 为 -3', r1.delta, -3);
+  eq('流水 amount 取绝对值', r1.log.amount, 3);
+
+  var r2 = FK.consume(apple.id, 10, 'use', '超量');
+  eq('超量消耗被夹到 0，不会出现负库存', FK.item(apple.id).qty, 0);
+  eq('超量消耗只记实际扣减 2', r2.delta, -2);
+
+  var r3 = FK.consume(apple.id, 1, 'use', '库存已空');
+  eq('库存为 0 时再扣不产生流水', r3.log, null);
+  eq('库存仍为 0', FK.item(apple.id).qty, 0);
+
+  /* ---------- 4. 补货与撤销 ---------- */
+  var r4 = FK.consume(apple.id, 4, 'restock', '买了一袋');
+  eq('补货后 4 个', FK.item(apple.id).qty, 4);
+  eq('补货 delta 为 +4', r4.delta, 4);
+
+  FK.undoLog(r4.log.id);
+  eq('撤销补货 → 回到 0', FK.item(apple.id).qty, 0);
+
+  var r5 = FK.consume(apple.id, 5, 'restock', '');
+  var beforeLogs = FK.logs().length;
+  FK.undoLog(r5.log.id);
+  eq('撤销后库存回到 0', FK.item(apple.id).qty, 0);
+  eq('撤销后流水条数 -1', FK.logs().length, beforeLogs - 1);
+
+  var useLog = FK.logs().filter(function (l) { return l.type === 'use'; })[0];
+  var logsNow = FK.logs().length;
+  if (useLog) FK.undoLog(useLog.id);
+  eq('撤销消耗后流水条数 -1', FK.logs().length, logsNow - 1);
+
+  /* ---------- 5. 删除食材保留流水 ---------- */
+  reset();
+  var milk = FK.addItem({ name: '牛奶', qty: 2, unit: '盒', expiry: FK.addDays(3) });
+  FK.consume(milk.id, 1, 'use', '');
+  var logsBeforeDelete = FK.logs().length;
+  FK.removeItem(milk.id);
+  eq('删除后食材数 0', FK.items().length, 0);
+  eq('删除后流水仍保留', FK.logs().length, logsBeforeDelete);
+  eq('流水里名称快照仍可读', FK.logs()[0].name, '牛奶');
+
+  /* ---------- 6. 临期与低库存 ---------- */
+  reset();
+  FK.addItem({ name: '过期品', qty: 1, unit: '个', expiry: FK.addDays(-1) });
+  FK.addItem({ name: '临期品', qty: 1, unit: '个', expiry: FK.addDays(2) });
+  FK.addItem({ name: '安全品', qty: 1, unit: '个', expiry: FK.addDays(30) });
+  FK.addItem({ name: '无期限', qty: 0, unit: '个', expiry: '' });
+  var exp = FK.expiring();
+  eq('临期清单只含 2 件（不含 30 天后和无保质期）', exp.length, 2);
+  eq('临期清单按剩余天数升序', [exp[0].days, exp[1].days], [-1, 2]);
+  eq('低库存包含 0 库存项', FK.lowStock().length, 4);
+
+  /* ---------- 7. 统计 ---------- */
+  reset();
+  var rice = FK.addItem({ name: '大米', qty: 100, unit: '斤' });
+  FK.consume(rice.id, 1, 'use', '');
+  FK.consume(rice.id, 1, 'use', '');
+  FK.consume(rice.id, 1, 'waste', '受潮');
+  var st = FK.stats(7);
+  eq('统计序列长度 = 天数', st.series.length, 7);
+  eq('消耗笔数 2（丢弃不计入消耗）', st.useCount, 2);
+  eq('丢弃次数 1', st.wasteCount, 1);
+  eq('排行第一项为大米', st.top[0].name, '大米');
+  eq('排行次数 2', st.top[0].count, 2);
+  var seriesSum = st.series.reduce(function (s, p) { return s + p.uses; }, 0);
+  eq('每日笔数之和等于总笔数', seriesSum, st.useCount);
+
+  /* ---------- 8. 导入导出 ---------- */
+  var json = FK.exportJSON();
+  ok('导出 JSON 可解析', (function () { try { JSON.parse(json); return true; } catch (e) { return false; } })());
+  eq('导入非法文本被拒绝', FK.importJSON('不是 json').ok, false);
+  eq('导入缺 items 被拒绝', FK.importJSON('{"a":1}').ok, false);
+  eq('导出 CSV 首行含表头', FK.exportCSV().indexOf('类型,食材,数量,单位,时间,备注') > -1, true);
+
+  reset();
+  var tricky = FK.addItem({ name: '带,逗号的"食材"', qty: 1, unit: '个' });
+  FK.consume(tricky.id, 1, 'use', '备注,含逗号');
+  var csv = FK.exportCSV();
+  ok('CSV 对逗号与引号做了转义', csv.indexOf('"带,逗号的""食材"""') > -1, csv.split('\r\n')[1]);
+
+  /* ---------- 9. 坏数据兜底 ---------- */
+  localStorage.setItem('freshkeep.v1', JSON.stringify({
+    version: 1,
+    items: [{ name: '', qty: 1 }, { name: '存活项', qty: 2, unit: '个', expiry: '2026-02-31' }],
+    logs: [{ itemId: 'x', type: 'use', amount: 0 }, { itemId: 'y', type: 'use', amount: 2, name: 'Y', at: 1 }],
+    settings: { expiryWarnDays: 999 }
+  }));
+  FK.load();
+  eq('无名称的食材被丢弃', FK.items().length, 1);
+  eq('非法保质期被清空', FK.items()[0].expiry, '');
+  eq('amount 为 0 的流水被丢弃', FK.logs().length, 1);
+  eq('越界提醒天数被夹到 60', FK.settings().expiryWarnDays, 60);
+
+  /* ---------- 输出 ---------- */
+  reset();
+  var passed = results.filter(function (r) { return r.ok; }).length;
+  var failed = results.length - passed;
+  var sum = document.getElementById('sum');
+  sum.textContent = (failed ? '✗ ' : '✓ ') + passed + ' / ' + results.length + ' 通过' + (failed ? '，' + failed + ' 条失败' : '');
+  sum.className = 'sum ' + (failed ? 'fail' : 'pass');
+
+  document.getElementById('list').innerHTML = results.map(function (r) {
+    return '<li class="' + (r.ok ? 'ok' : 'no') + '"><b>' + (r.ok ? '✓' : '✗') + '</b>' +
+      '<span>' + r.name.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span>' +
+      (r.ok ? '' : '<em>' + r.info.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</em>') + '</li>';
+  }).join('');
+
+  document.title = 'TESTS:' + passed + '/' + results.length + (failed ? '|FAILED:' + results.filter(function (r) { return !r.ok; }).map(function (r) { return r.name; }).join(';') : '');
+})();
+</script>
+</body>
+</html>
