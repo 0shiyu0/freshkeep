@@ -225,7 +225,11 @@ python3 -m http.server 8080
 | 形态 | 数据在哪 | 适合 | 状态 |
 | --- | --- | --- | --- |
 | **纯前端**（当前仓库默认） | 浏览器 localStorage | 一个人、一台设备、不想维护服务 | ✅ 可直接用 |
-| **自托管**：NAS 上 Docker 跑服务端 + SQLite，网页与手机 App 都连它 | NAS 的 SQLite 文件 | 多设备共享、外网访问、要备份 | 📐 方案已出：[docs/architecture.md](docs/architecture.md) |
+| **自托管**：NAS 上 Docker 跑服务端 + 数据库，网页与手机浏览器连它 | NAS 上的 PostgreSQL | 多设备共享、要成本与营养统计 | 📐 方案已出：[docs/prd-alignment.md](docs/prd-alignment.md) |
+
+> 自托管版的最终范围与技术栈以 PRD 对齐文档为准（FastAPI + PostgreSQL + Vue 3，含批次、双计量、成本核算、营养统计）。
+> `docs/architecture.md` 与 `docs/implementation-plan.md` 里的容器化、IP 直连、iOS 打包等章节仍可参考，
+> 但技术选型与数据模型已被前者取代。
 
 自托管方案覆盖：单容器部署（零 npm 依赖，构建不用联网装包）、SQLite 表结构与事务、
 **配对码认证**（一次性 6 位码 → 设备令牌，服务端只存令牌哈希）、只允许局域网/组网访问（无公网入口）、
