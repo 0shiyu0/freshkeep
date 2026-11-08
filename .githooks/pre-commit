@@ -30,12 +30,16 @@ for f in $STAGED; do
   esac
 done
 
+[ "$FAILED" -eq 0 ] && ok "1/5 机密与产物检查通过"
+
 # ---------------------------------------------------------------- 2. 文档同步
 DDL_CHANGED=0
 for f in $STAGED; do
   case "$f" in database/*.sql|backend/alembic/versions/*.py) DDL_CHANGED=1 ;; esac
 done
-if [ "$DDL_CHANGED" = "1" ]; then
+if [ "$DDL_CHANGED" = "0" ]; then
+  ok "2/5 未改动 DDL"
+elif [ "$DDL_CHANGED" = "1" ]; then
   DOCS_OK=0
   for f in $STAGED; do
     case "$f" in docs/database.md|docs/er-diagram.md) DOCS_OK=$((DOCS_OK + 1)) ;; esac
@@ -49,7 +53,9 @@ fi
 
 # ---------------------------------------------------------------- 3. 浮点红线
 FLOAT_HITS=$(printf '%s\n' $STAGED | grep -E '^backend/app/(services|repo|models)/.*\.py$' 2>/dev/null || true)
-if [ -n "$FLOAT_HITS" ]; then
+if [ -z "$FLOAT_HITS" ]; then
+  ok "3/5 无业务代码改动，跳过浮点检查"
+else
   BAD=$(grep -nE '(: *float|float\(|round\()' $FLOAT_HITS 2>/dev/null | grep -vE '^\S+:[0-9]+: *#' || true)
   if [ -n "$BAD" ]; then
     printf '%s\n' "$BAD" | head -5 >&2
@@ -62,7 +68,9 @@ fi
 # ---------------------------------------------------------------- 4. 测试
 BACKEND_CHANGED=$(printf '%s\n' $STAGED | grep -cE '^backend/|^database/' || true)
 if [ "$BACKEND_CHANGED" -gt 0 ]; then
-  if [ -x backend/.venv/bin/python ]; then
+  if [ ! -x backend/.venv/bin/python ]; then
+    printf '\033[33m! 4/5 跳过测试：backend/.venv 不存在，先跑 ./scripts/dev-setup.sh\033[0m\n'
+  elif [ -x backend/.venv/bin/python ]; then
     if (cd backend && .venv/bin/python -m pytest 2>&1 | grep -qE '[0-9]+ passed'); then
       ok "后端测试通过"
     else
@@ -72,11 +80,13 @@ if [ "$BACKEND_CHANGED" -gt 0 ]; then
     printf '\033[33m! 跳过测试：backend/.venv 不存在，先跑 ./scripts/dev-setup.sh\033[0m\n'
   fi
 else
-  ok "未改动后端，跳过测试"
+  ok "4/5 未改动后端，跳过测试"
 fi
 
 # ---------------------------------------------------------------- 5. 文档链接
-if printf '%s\n' $STAGED | grep -q '\.md$'; then
+if ! printf '%s\n' $STAGED | grep -q '\.md$'; then
+  ok "5/5 未改动 Markdown，跳过内链检查"
+elif printf '%s\n' $STAGED | grep -q '\.md$'; then
   if ./scripts/check-docs.sh >/dev/null 2>&1; then
     ok "Markdown 内链有效"
   else

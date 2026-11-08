@@ -23,3 +23,6 @@ data/
 *.keystore
 *.p12
 *.mobileprovision
+
+# 但状态留痕文件要入库（覆盖上面的 *.log）
+!docs/state/commits.log
