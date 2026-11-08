@@ -9,8 +9,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # psycopg[binary] 自带二进制，无需 libpq-dev / gcc
+# PIP_INDEX_URL 默认走清华镜像：实测同机默认源 6 分 33 秒，镜像约 25 秒。
+# 海外构建可覆盖：docker compose build --build-arg PIP_INDEX_URL=https://pypi.org/simple
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --prefer-binary \
+      --index-url "${PIP_INDEX_URL}" -r requirements.txt
 
 COPY backend/app ./app
 COPY backend/alembic ./alembic

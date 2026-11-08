@@ -5,19 +5,35 @@
 
 ---
 
-## 1. 唯一真相来源
+## 1. 唯一真相来源（文档地图）
 
-| 主题 | 权威文件 | 备注 |
+根目录 6 个文件构成**自足文档体系**：只读这 6 个就能恢复开发状态。
+
+| 文件 | 回答什么问题 | 何时读 |
 | --- | --- | --- |
-| 产品范围与业务规则 | `docs/prd.md` | 需求变更先改这里 |
-| 技术方案与冲突决策 | `docs/final-plan.md` | 8 处冲突的定案与理由 |
-| 数据库结构 | **`database/001_init.sql`** | 唯一的 DDL 真相 |
-| 数据库字段说明 | `docs/database.md` | 与 DDL 必须一致 |
-| ER 图与关系 | `docs/er-diagram.md` | 与 DDL 必须一致 |
-| API 契约 | `docs/api.md` + FastAPI 的 OpenAPI | 两者必须一致 |
-| 验收标准 | `docs/prd.md` §8 与 `docs/final-plan.md` §14 | 数字不可改 |
+| `AGENTS.md` | 我该遵守什么规则 | 每次动工前 |
+| `PRD.md` | 产品要做什么、不做什么、验收数字是多少 | 改需求或写业务逻辑前 |
+| `ARCHITECTURE.md` | 系统怎么搭：分层、认证、数据模型、API、核心算法 | 设计实现方案时 |
+| `DEVELOPMENT_PLAN.md` | 分几个阶段、每阶段任务与完成判据 | 排期与验收时 |
+| `PROJECT_STATUS.md` | 现在做到哪、有什么已知问题、下一步是什么 | 每次接手时 |
+| `CHANGELOG.md` | 最近改了什么、数据库动过什么 | 排查回归时 |
 
-**冲突处理顺序**：`final-plan.md` > `prd.md` > 其他过程文档（`architecture.md` / `implementation-plan.md` / `prd-alignment.md` 仅作溯源）。
+**详细附录**（不重复根文件内容，只在需要字段级/接口级细节时查）：
+
+| 文件 | 内容 |
+| --- | --- |
+| `database/001_init.sql` | **DDL 唯一真相**：25 表 + 2 视图 + 索引/约束/触发器 |
+| `database/002_acceptance_check.sql` | 数据库侧验收断言（PRD 三条用例 + 四类约束反向验证） |
+| `docs/database.md` | 逐字段说明、索引理由、与 PRD 的差异 |
+| `docs/er-diagram.md` | ER 图（mermaid）、关系清单、状态机 |
+| `docs/api.md` | 完整接口契约、请求响应样例、错误码 |
+| `docs/final-plan.md` | 8 处冲突的论证过程（决策溯源） |
+| `docs/environment.md` | 环境搭建与验证手册（PG 安装、pip 加速、排障） |
+
+**归档文档**（头部已标注"被取代"，仅作历史参考）：`docs/architecture.md`、`docs/implementation-plan.md`、`docs/prd-alignment.md`。
+
+**冲突处理顺序**：`AGENTS.md` > `ARCHITECTURE.md` / `PRD.md` > `docs/*` > 归档文档。
+
 
 ---
 
@@ -127,16 +143,22 @@ docs/                                                         # 文档
 | 验收 | `tests/acceptance/` | PRD §11 的 9 条，数字断言到分/卡，**必须全绿才算 M 阶段完成** |
 | 数据库 | `database/002_acceptance_check.sql` | 在真库上验证约束与视图；改动 DDL 后必须重跑 |
 
-本地起库：
+本地准备与校验（一条命令，幂等）：
 
 ```bash
-brew services start postgresql@16
-createdb freshkeep
-psql -d freshkeep -f database/001_init.sql
-psql -d freshkeep -f database/002_acceptance_check.sql   # 期望 NOTICE: === 全部验收用例通过 ===
+./scripts/dev-setup.sh    # 装依赖 + 构建前端 + 建库 + 跑 DDL + 跑自检
+./scripts/verify-env.sh   # 逐项体检，输出 ✓ / ! / ✗
 ```
 
-禁止用 SQLite 跑测试（无 NUMERIC、无行锁，会掩盖真实缺陷）；禁止 mock 掉数据库做"集成测试"。
+没有本机 PostgreSQL 时，用 PGlite 验证 SQL（不装任何数据库）：
+
+```bash
+npm i --no-save @electric-sql/pglite && node scripts/verify-db.mjs
+```
+
+`pip` 必须走镜像或 uv（默认源在本机实测要 6 分钟，镜像 25 秒，uv 1.3 秒），
+细节与排障见 `docs/environment.md`。禁止用 SQLite 跑测试（无 NUMERIC、无行锁，会掩盖真实缺陷）；
+禁止 mock 掉数据库做"集成测试"。
 
 ---
 
@@ -184,5 +206,5 @@ scope: api | db | web | app | deploy | docs
 
 - 动工前先读本文件与 `final-plan.md`，不要凭上下文记忆推断业务规则。
 - 改动跨 3 个以上文件时，先给出改动清单再动手。
-- 不确定的业务规则，按"最保守 + 可追溯"的方案实现，并在代码注释标注 `# ASSUMPTION:`，同时补进 `docs/prd.md` 的待确认清单。
+- 不确定的业务规则，按"最保守 + 可追溯"的方案实现，并在代码注释标注 `# ASSUMPTION:`，同时补进 `PRD.md` §8 已决策表下方的"待确认"小节。
 - 不擅自升级主版本依赖、不改技术栈、不改验收数字。

@@ -6,12 +6,15 @@
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/prd.md](docs/prd.md) | 产品需求（范围、业务规则、验收标准、已决策事项） |
-| [docs/final-plan.md](docs/final-plan.md) | 技术方案与 8 处冲突的定案 |
-| [docs/database.md](docs/database.md) | 25 张表的字段设计 |
-| [docs/er-diagram.md](docs/er-diagram.md) | ER 图与关系说明 |
-| [docs/api.md](docs/api.md) | API 契约初稿 |
-| [AGENTS.md](AGENTS.md) | 开发规则（数值精度、事务、幂等、命名、提交） |
+| [AGENTS.md](AGENTS.md) | 开发规则：技术栈、分层、Decimal 铁律、禁止事项 |
+| [PRD.md](PRD.md) | 产品需求：范围、业务规则、9 条验收、已决策事项 |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 系统架构、数据模型、API 规范、核心算法、ADR |
+| [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) | 阶段 0 + M0~M10 的任务与完成判据 |
+| [PROJECT_STATUS.md](PROJECT_STATUS.md) | 当前进度、已完成/未完成、已知问题、下一步 |
+| [CHANGELOG.md](CHANGELOG.md) | 变更记录（含每次数据库变化） |
+
+> 只读这 6 个文件即可恢复完整开发状态；字段级与接口级细节在 `docs/`，环境搭建见
+> [docs/environment.md](docs/environment.md)。
 
 **阶段 0 验证结果**：DDL 在 PostgreSQL 16 上实跑通过（25 表 / 2 视图 / 37 外键），
 PRD 的 9 条验收用例中成本与营养两条已用真库断言（消耗成本 `10.80`、剩余 `42.20`、营养 `495 kcal`），
