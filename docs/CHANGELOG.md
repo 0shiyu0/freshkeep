@@ -7,15 +7,33 @@
 
 ## [Unreleased]
 
+### 新增
+
+- `AGENTS.md` §12「上下文管理与开发状态持久化」：开发前必读、功能完成后的记录义务、
+  任务收尾八项清单、上下文压缩后的恢复流程、核心逻辑保护、规则与执行者对照、提交粒度与可回退。
+- 自动化机制：`.githooks/{pre-commit,post-commit,pre-push}`、
+  `scripts/{install-hooks,session-start,status-snapshot,db-init,migrate-safe,check-docs}.sh`、
+  `.github/workflows/ci.yml`、`docs/state/`（状态留痕目录）。
+- `scripts/db-init.sh`：建库 → DDL → 自动 `alembic stamp`，修掉"手动建库后版本表为空"的隐患。
+- `scripts/migrate-safe.sh`：迁移前自动 `pg_dump`，失败时打印回滚命令。
+
 ### 变更
 
-- 本机开发环境：pip 安装加速（清华镜像 + uv）、PostgreSQL 本地安装与验证流程。
-- 文档体系重整为 6 个根级文件（`AGENTS.md` `PRD.md` `ARCHITECTURE.md` `DEVELOPMENT_PLAN.md` `PROJECT_STATUS.md` `CHANGELOG.md`），
-  `docs/` 保留为详细附录。
+- 文档结构调整：`PRD.md` `ARCHITECTURE.md` `DEVELOPMENT_PLAN.md` `PROJECT_STATUS.md` `CHANGELOG.md`
+  统一移入 `docs/`；旧版过程文档移入 `docs/archive/`（`architecture-v3-passkey.md`、
+  `implementation-plan-v4-node.md`、`prd-alignment.md`）。
+- 本机 PostgreSQL 16.15 安装完成并验证：25 表 / 2 视图 / 37 外键 / 2 条 trgm 索引；
+  `EXPLAIN` 确认命中 `ix_ingredients_name_trgm`。
+- pip 安装路径统一为「优先 uv、回退镜像」，Dockerfile 增加 `PIP_INDEX_URL` 构建参数。
+
+### 修复
+
+- 手动执行 `database/001_init.sql` 后 `alembic_version` 为空，会让后续 `alembic upgrade head`
+  重复建表并报 `relation already exists`；已 `alembic stamp 0001_init` 补齐，并纳入 `db-init.sh`。
 
 ### 数据库
 
-- 无结构变更。
+- 无 DDL 变更；新增 `alembic_version` 表（值为 `0001_init`），仅记录版本，不改变业务结构。
 
 ---
 

@@ -1,0 +1,40 @@
+#!/bin/sh
+# =============================================================================
+# 提交后留痕：往 docs/state/commits.log 追加一行结构化记录
+#
+# 说明：本文件在提交之后被写入，因此它本身会出现在「下一次提交」里（滞后一次）。
+# 这是刻意的——不在 post-commit 里做 amend，避免改写历史。
+# =============================================================================
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+LOG=docs/state/commits.log
+mkdir -p docs/state
+
+HASH=$(git rev-parse --short HEAD)
+WHEN=$(date '+%Y-%m-%d %H:%M')
+SUBJECT=$(git log -1 --pretty=%s)
+FILES=$(git show --stat --oneline HEAD | tail -n +2 | wc -l | tr -d ' ')
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# 本次提交触及的领域（用于回查"哪次改动动了数据库/前端/后端"）
+AREAS=""
+git show --name-only --pretty=format: HEAD | grep -q '^database/' && AREAS="$AREAS db"
+git show --name-only --pretty=format: HEAD | grep -q '^backend/' && AREAS="$AREAS api"
+git show --name-only --pretty=format: HEAD | grep -q '^frontend/' && AREAS="$AREAS web"
+git show --name-only --pretty=format: HEAD | grep -q '^deploy/' && AREAS="$AREAS deploy"
+git show --name-only --pretty=format: HEAD | grep -q '^docs/' && AREAS="$AREAS docs"
+[ -n "$AREAS" ] || AREAS=" none"
+
+printf '%s | %s | %-28s | %2s 文件 |%s | %s\n' \
+  "$WHEN" "$HASH" "$SUBJECT" "$FILES" "$AREAS" "$BRANCH" >> "$LOG"
+
+# 若本次提交改了 DDL，额外记一条醒目提示，便于追溯数据库变化
+if git show --name-only --pretty=format: HEAD | grep -qE '^database/.*\.sql$'; then
+  printf '%s | %s | ⚠ 数据库结构变更：请确认 docs/database.md 与 Alembic 版本已更新\n' "$WHEN" "$HASH" >> "$LOG"
+  printf '\033[33m⚠ 本次提交包含 DDL 变更：记得核对 alembic 版本与备份恢复点\033[0m\n'
+fi
+
+printf '已记录到 %s（下次提交时一并入库）\n' "$LOG"

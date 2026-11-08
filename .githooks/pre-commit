@@ -1,0 +1,92 @@
+#!/bin/sh
+# =============================================================================
+# 提交前闸门（由 scripts/install-hooks.sh 启用：git config core.hooksPath .githooks）
+#
+# 拦截四类问题：
+#   1. 机密与运行时数据被提交
+#   2. 改了 DDL 却忘了同步文档（database.md / er-diagram.md）
+#   3. 业务代码里出现浮点数处理金额/重量
+#   4. 改了后端却没过测试
+# =============================================================================
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+STAGED=$(git diff --cached --name-only)
+[ -n "$STAGED" ] || exit 0
+
+fail() { printf '\033[31m✗ pre-commit: %s\033[0m\n' "$1" >&2; FAILED=1; }
+ok()   { printf '\033[32m✓ %s\033[0m\n' "$1"; }
+FAILED=0
+
+# ---------------------------------------------------------------- 1. 机密
+for f in $STAGED; do
+  case "$f" in
+    *.env|.env|*.jks|*.keystore|*.p12|*.mobileprovision|*password.txt)
+      fail "禁止提交机密文件：$f" ;;
+    pgdata/*|data/*|node_modules/*|backend/.venv/*|frontend/dist/*)
+      fail "禁止提交运行时/构建产物：$f" ;;
+  esac
+done
+
+# ---------------------------------------------------------------- 2. 文档同步
+DDL_CHANGED=0
+for f in $STAGED; do
+  case "$f" in database/*.sql|backend/alembic/versions/*.py) DDL_CHANGED=1 ;; esac
+done
+if [ "$DDL_CHANGED" = "1" ]; then
+  DOCS_OK=0
+  for f in $STAGED; do
+    case "$f" in docs/database.md|docs/er-diagram.md) DOCS_OK=$((DOCS_OK + 1)) ;; esac
+  done
+  if [ "$DOCS_OK" -lt 2 ]; then
+    fail "改了 DDL，但 docs/database.md 与 docs/er-diagram.md 未同时更新"
+  else
+    ok "DDL 变更已同步数据库文档"
+  fi
+fi
+
+# ---------------------------------------------------------------- 3. 浮点红线
+FLOAT_HITS=$(printf '%s\n' $STAGED | grep -E '^backend/app/(services|repo|models)/.*\.py$' 2>/dev/null || true)
+if [ -n "$FLOAT_HITS" ]; then
+  BAD=$(grep -nE '(: *float|float\(|round\()' $FLOAT_HITS 2>/dev/null | grep -vE '^\S+:[0-9]+: *#' || true)
+  if [ -n "$BAD" ]; then
+    printf '%s\n' "$BAD" | head -5 >&2
+    fail "业务代码出现 float/round 处理数值，请改用 Decimal.quantize（见 AGENTS.md §4.1）"
+  else
+    ok "未发现浮点误用"
+  fi
+fi
+
+# ---------------------------------------------------------------- 4. 测试
+BACKEND_CHANGED=$(printf '%s\n' $STAGED | grep -cE '^backend/|^database/' || true)
+if [ "$BACKEND_CHANGED" -gt 0 ]; then
+  if [ -x backend/.venv/bin/python ]; then
+    if (cd backend && .venv/bin/python -m pytest 2>&1 | grep -qE '[0-9]+ passed'); then
+      ok "后端测试通过"
+    else
+      fail "后端测试未通过（cd backend && .venv/bin/python -m pytest）"
+    fi
+  else
+    printf '\033[33m! 跳过测试：backend/.venv 不存在，先跑 ./scripts/dev-setup.sh\033[0m\n'
+  fi
+else
+  ok "未改动后端，跳过测试"
+fi
+
+# ---------------------------------------------------------------- 5. 文档链接
+if printf '%s\n' $STAGED | grep -q '\.md$'; then
+  if ./scripts/check-docs.sh >/dev/null 2>&1; then
+    ok "Markdown 内链有效"
+  else
+    ./scripts/check-docs.sh 2>&1 | head -8 >&2
+    fail "Markdown 内链失效（见上）"
+  fi
+fi
+
+if [ "$FAILED" -ne 0 ]; then
+  printf '\033[31mpre-commit 未通过，提交已阻止。修复后重试。\033[0m\n' >&2
+  exit 1
+fi
+printf '\033[32mpre-commit 通过\033[0m\n'

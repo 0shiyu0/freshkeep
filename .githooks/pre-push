@@ -1,0 +1,35 @@
+#!/bin/sh
+# =============================================================================
+# 推送前闸门：全量测试 + 文档链接 + 数据库结构一致性
+# =============================================================================
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+FAILED=0
+fail() { printf '\033[31m✗ pre-push: %s\033[0m\n' "$1" >&2; FAILED=1; }
+ok()   { printf '\033[32m✓ %s\033[0m\n' "$1"; }
+
+if [ -x backend/.venv/bin/python ]; then
+  OUT=$(cd backend && .venv/bin/python -m pytest 2>&1 | grep -E '[0-9]+ (passed|failed)' | tail -1)
+  case "$OUT" in
+    *failed*) fail "后端测试失败：$OUT" ;;
+    "") fail "后端测试没有输出结果（可能收集失败）" ;;
+    *) ok "后端测试：$OUT" ;;
+  esac
+else
+  fail "backend/.venv 不存在，无法跑测试"
+fi
+
+if ./scripts/check-docs.sh >/dev/null 2>&1; then ok "文档内链有效"; else
+  ./scripts/check-docs.sh 2>&1 | head -10 >&2; fail "文档内链失效"; fi
+
+# 若有本地数据库，核对 Alembic 版本与表数
+if command -v psql >/dev/null 2>&1; then
+  VER=$(psql -d freshkeep -tAc "select version_num from alembic_version" 2>/dev/null || echo "")
+  if [ -n "$VER" ]; then ok "数据库迁移版本：$VER"; else
+    printf '\033[33m! 本地库未找到 alembic_version（未初始化或未 stamp），跳过一致性检查\033[0m\n'; fi
+fi
+
+[ "$FAILED" -eq 0 ] || { printf '\033[31mpre-push 未通过，推送已阻止。\033[0m\n' >&2; exit 1; }
+printf '\033[32mpre-push 通过\033[0m\n'

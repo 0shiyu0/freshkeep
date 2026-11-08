@@ -7,11 +7,11 @@
 | 文档 | 内容 |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | 开发规则：技术栈、分层、Decimal 铁律、禁止事项 |
-| [PRD.md](PRD.md) | 产品需求：范围、业务规则、9 条验收、已决策事项 |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 系统架构、数据模型、API 规范、核心算法、ADR |
-| [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) | 阶段 0 + M0~M10 的任务与完成判据 |
-| [PROJECT_STATUS.md](PROJECT_STATUS.md) | 当前进度、已完成/未完成、已知问题、下一步 |
-| [CHANGELOG.md](CHANGELOG.md) | 变更记录（含每次数据库变化） |
+| [PRD.md](docs/PRD.md) | 产品需求：范围、业务规则、9 条验收、已决策事项 |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构、数据模型、API 规范、核心算法、ADR |
+| [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 阶段 0 + M0~M10 的任务与完成判据 |
+| [PROJECT_STATUS.md](docs/PROJECT_STATUS.md) | 当前进度、已完成/未完成、已知问题、下一步 |
+| [CHANGELOG.md](docs/CHANGELOG.md) | 变更记录（含每次数据库变化） |
 
 > 只读这 6 个文件即可恢复完整开发状态；字段级与接口级细节在 `docs/`，环境搭建见
 > [docs/environment.md](docs/environment.md)。
