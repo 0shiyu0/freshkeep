@@ -71,7 +71,10 @@ onMounted(async () => {
       <h1>库存食材</h1>
       <p>共 {{ total }} 个食材 · 支持中文、拼音全拼与首字母搜索</p>
     </div>
-    <button class="btn btn--primary" @click="router.push('/ingredients/new')">+ 新增食材</button>
+    <div class="head-actions">
+      <button class="btn" @click="router.push('/consume')">− 记一笔消耗</button>
+      <button class="btn btn--primary" @click="router.push('/ingredients/new')">+ 新增食材</button>
+    </div>
   </div>
 
   <div class="filters card">

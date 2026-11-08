@@ -153,3 +153,9 @@ class IngredientQuery(BaseModel):
     page_size: int = Field(default=20, ge=1, le=100)
     sort_by: str = Field(default="updated_at", pattern="^(name|updated_at|created_at)$")
     sort_order: str = Field(default="desc", pattern="^(asc|desc)$")
+
+
+class NutritionReplace(BaseModel):
+    """PUT /ingredients/{id}/nutrition：整体替换「当前版本」营养档案。"""
+
+    items: list[NutritionIn] = Field(default_factory=list, max_length=12)

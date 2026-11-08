@@ -35,6 +35,7 @@ from app.schemas.ingredient import (
     IngredientIn,
     IngredientListItem,
     IngredientUpdate,
+    NutritionReplace,
     UnitBrief,
 )
 from app.services.search import relevance_order, search_filter, to_pinyin
@@ -488,3 +489,68 @@ def convert(
             "basis": "default_unit_weight（克）",
         },
     )
+
+
+@router.put("/{ingredient_id}/nutrition", summary="整体替换营养档案（版本化）")
+def replace_nutrition(
+    request: Request,
+    ingredient_id: uuid.UUID,
+    payload: NutritionReplace,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_current),
+):
+    """docs/api.md §3.2：旧行 is_current=false，插入 version+1 的新行，同一事务。
+
+    历史 `consumption_nutrition` 快照不受影响（M4 验收用例 3 依赖这一点）。
+    """
+    if db.get(Ingredient, ingredient_id) is None:
+        raise not_found("食材不存在")
+
+    codes = [item.code for item in payload.items]
+    if len(set(codes)) != len(codes):
+        raise validation_error("同一营养项目不能重复提交")
+
+    definitions = {
+        d.code: d
+        for d in db.scalars(
+            select(NutritionDefinition).where(NutritionDefinition.code.in_(codes))
+        ).all()
+    } if codes else {}
+    missing = [c for c in codes if c not in definitions]
+    if missing:
+        raise validation_error("营养项目不存在", codes=missing)
+
+    for item in payload.items:
+        if db.get(Unit, item.basis_unit_id) is None:
+            raise validation_error("基准单位不存在", code=item.code)
+
+    # 旧「当前」行全部退役（传入列表之外的项目也一并退役：整体替换语义）
+    current = db.scalars(
+        select(IngredientNutrition).where(
+            IngredientNutrition.ingredient_id == ingredient_id,
+            IngredientNutrition.is_current.is_(True),
+        )
+    ).all()
+    versions: dict[str, int] = {}
+    for row in current:
+        row.is_current = False
+        versions[row.nutrition_definition_id] = max(
+            versions.get(row.nutrition_definition_id, 0), row.version
+        )
+
+    for item in payload.items:
+        defn = definitions[item.code]
+        db.add(
+            IngredientNutrition(
+                ingredient_id=ingredient_id,
+                nutrition_definition_id=defn.id,
+                value=item.value,
+                basis_amount=item.basis_amount,
+                basis_unit_id=item.basis_unit_id,
+                source="manual",
+                version=versions.get(defn.id, 0) + 1,
+                is_current=True,
+            )
+        )
+    db.commit()
+    return ok(request, {"updated": len(payload.items)}, "营养档案已更新")

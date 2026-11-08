@@ -7,6 +7,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
   { path: '/', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
   { path: '/inventory', name: 'inventory', component: () => import('@/views/InventoryView.vue') },
+  { path: '/consume', name: 'consume', component: () => import('@/views/ConsumeView.vue') },
   { path: '/ingredients/new', name: 'ingredient-new', component: () => import('@/views/IngredientFormView.vue') },
   { path: '/ingredients/:id', name: 'ingredient-detail', component: () => import('@/views/IngredientDetailView.vue') },
   {

@@ -284,6 +284,57 @@ class TransactionAllocation(Base):
     created_at: Mapped[datetime] = _now()
 
 
+class ConsumptionRecord(Base):
+    """消耗单：一次消耗的业务单据（PRD §4.5）。status 只能经 services/consumption/state.py 迁移。"""
+
+    __tablename__ = "consumption_records"
+
+    id: Mapped[uuid.UUID] = _pk()
+    consumption_no: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    ingredient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ingredients.id")
+    )
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("inventory_transactions.id"), unique=True
+    )
+    quantity: Mapped[Decimal] = mapped_column(QTY, default=0)
+    weight: Mapped[Decimal] = mapped_column(QTY, default=0)
+    quantity_unit_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("units.id")
+    )
+    weight_unit_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("units.id")
+    )
+    cost: Mapped[Decimal] = mapped_column(MONEY, default=0)
+    consumed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    note: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(Text, default="completed")
+    reversed_by_transaction_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    device_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("devices.id")
+    )
+    idempotency_key: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = _now()
+
+
+class ConsumptionNutrition(Base):
+    """营养快照：消耗发生时冻结，后续改营养档案不影响历史（PRD §3.3 原则 7）。"""
+
+    __tablename__ = "consumption_nutrition"
+
+    id: Mapped[uuid.UUID] = _pk()
+    consumption_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("consumption_records.id")
+    )
+    nutrition_definition_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("nutrition_definitions.id")
+    )
+    actual_value: Mapped[Decimal] = mapped_column(NUTRI, nullable=False)
+    unit: Mapped[str] = mapped_column(Text, nullable=False)
+    basis_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = _now()
+
+
 class IdempotencyKey(Base):
     """写操作幂等记录：同 key 同 body 返回原响应（见 app/core/middleware.py）。"""
 

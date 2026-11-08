@@ -181,6 +181,59 @@
 
 ---
 
+## 2026-11-09 · M4：消耗域（FEFO / 成本 / 营养快照 / 撤销）
+
+### 新增
+
+- **验收层 `backend/tests/acceptance/test_consumption.py`**：PRD §7.1 的 9 条用例从
+  `database/002_acceptance_check.sql` 平移成真实 HTTP + 真实 PG 事务的 pytest，
+  开工前先确认 9 条全红（AGENTS.md §12.5）。
+- `services/consumption/`：`consume()` 五步事务（流水 → 批次缓存 → 分配 → 一致性断言 → 单据/快照）、
+  FEFO（`ORDER BY expiry_date NULLS LAST, purchase_date, id` + `FOR UPDATE OF batches`）、
+  尾差结清、双计量解析、营养快照冻结；`reverse()` 反向流水恢复库存；`state.py` 状态机。
+- `api/v1/consumptions.py`：`POST /consumptions`、`/batch`、`GET /consumptions`、`/{id}`、
+  `POST /{id}/reverse`；`/batch` 注册在 `/{id}` 之前。
+- `PUT /ingredients/{id}/nutrition`：**补齐 docs/api.md §3.2 已声明但阶段 2 未实现的缺口**——
+  整体替换当前版本营养档案（旧行 `is_current=false`、新行 `version+1`），历史快照不受影响。
+- ORM：`ConsumptionRecord`、`ConsumptionNutrition`；`schemas/consumption.py`。
+- 前端：`api/consumptions.ts`、`ConsumeView.vue`（预选食材/双计量输入/结果区含成本与营养）、
+  `RecordsView.vue` 从 14 行占位换成真实消耗列表（状态筛选/撤销/空态）；
+  库存页与详情页加入口，路由新增 `/consume`。
+
+### 变更
+
+- `main.css` 增加 `.head-actions`；`NutritionReplace` 从路由模块移到 `schemas/ingredient.py`
+  （与现有分层一致，同时修掉 OpenAPI 生成时的 forward-ref 失败）。
+- 记录页目前只展示消耗记录；入库/盘点/报损流水依赖 M5 的 `/inventory/transactions`，页面已标注。
+
+### 修复
+
+- **行锁与 eager-load 冲突**：`Batch.ingredient` / `storage_location` 是 `lazy="joined"`（OUTER JOIN），
+  PostgreSQL 拒绝 `FOR UPDATE` 作用于外连接可空侧 → 改为 `with_for_update(of=Batch)` 只锁主表。
+- 反向验证：临时去掉 `with_for_update`，并发用例立即变红（500），恢复后通过，证明行锁是并发正确性的关键。
+
+### 数据库
+
+- **无 DDL 变更**，无新迁移；迁移版本仍为 `0002_ingredient_storage (head)`。
+- 本轮只新增对既有表的 ORM 映射与写入逻辑；容器真实消耗/撤销后 `v_batch_reconcile` 差异始终为 0。
+
+### 验证
+
+- pytest **92 passed**（原 83 + 验收层 9）；全量含阶段 2、M0、M3 回归用例。
+- 容器真实 HTTP **22 项全过**：成本 10.80、剩余 42.20、营养 495.0000、对账 diff 全 0、
+  库存不足 422、批量整批回滚、撤销恢复 1500g 且原记录 `reversed`、幂等只产生一笔、
+  `GET /consumptions/{id}` 含分配与快照。
+- 浏览器：消耗页/记录页 1280/390 DOM 探针横向溢出 0px；真实点击提交消耗后结果区显示 ¥3.60 与批次分配。
+- `npm run build` 通过（vue-tsc 零错误）。
+
+### 遗留
+
+- 双计量按批次**实际比例**同步另一维度（不是按食材换算关系推算），单用户场景可接受。
+- 营养基准单位只接受 g/kg；体积或「份」基准返回 `NUTRITION_BASIS_MISMATCH`（PRD §8 不做密度换算）。
+- 记录页的完整流水视图待 M5；消耗列表目前固定取最近 50 条，未做翻页 UI。
+
+---
+
 ## [Unreleased]
 
 ### 新增

@@ -7,3 +7,4 @@
 2026-11-09 01:54 | 0c37dca | ⚠ 数据库结构变更：请确认 docs/database.md 与 Alembic 版本已更新
 2026-11-09 01:55 | 1e575c0 | chore: 补齐状态留痕（commits.log） |  2 文件 | docs | main
 2026-11-09 02:24 | 2b722f0 | feat(api): M3 批次域 —— 入库五步事务、查询、状态机与前端批次区 | 19 文件 | api web docs | main
+2026-11-09 02:25 | ba3a3a6 | chore: 刷新 M3 提交后的状态快照与留痕 |  4 文件 | docs | main

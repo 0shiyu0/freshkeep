@@ -247,7 +247,10 @@ onMounted(load)
     <section class="card">
       <div class="card__head">
         <h2>批次（{{ batches.length }}）</h2>
-        <button class="btn" @click="purchaseModal = true">＋ 入库</button>
+        <div class="head-actions">
+          <button class="btn" @click="router.push(`/consume?ingredient=${id}`)">− 记一笔消耗</button>
+          <button class="btn" @click="purchaseModal = true">＋ 入库</button>
+        </div>
       </div>
       <div v-if="batches.length === 0" class="muted-line">还没有批次，点「入库」记录第一次采购。</div>
       <div v-for="b in batches" :key="b.id" class="batch-row">
