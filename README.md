@@ -172,6 +172,8 @@ freshkeep/
 ├── manifest.webmanifest    # PWA 清单，可"添加到主屏幕"
 ├── icons/                  # PWA 图标
 ├── tests/selftest.html     # 数据层自检（48 条确定性用例）
+├── docs/architecture.md    # 部署与运维：容器、事务、IP 直连、iOS 签名
+├── docs/implementation-plan.md  # 功能实现与技术选型（认证已定配对码）
 ├── docs/screenshots/       # README 用截图
 └── .nojekyll               # 让 GitHub Pages 原样发布静态文件
 ```
@@ -226,12 +228,14 @@ python3 -m http.server 8080
 | **自托管**：NAS 上 Docker 跑服务端 + SQLite，网页与手机 App 都连它 | NAS 的 SQLite 文件 | 多设备共享、外网访问、要备份 | 📐 方案已出：[docs/architecture.md](docs/architecture.md) |
 
 自托管方案覆盖：单容器部署（零 npm 依赖，构建不用联网装包）、SQLite 表结构与事务、
-**仅 Passkey（通行密钥）登录**（WebAuthn，服务端零依赖验签）、Tailscale sidecar 自动签发并续期证书、
-只允许局域网/组网访问（无公网入口）、Capacitor 双端壳（系统认证会话 + 一次性 code 换会话）、
-GitHub Actions 出未签名 IPA + 自签要点、备份恢复与排障。
+**配对码认证**（一次性 6 位码 → 设备令牌，服务端只存令牌哈希）、只允许局域网/组网访问（无公网入口）、
+Capacitor 双端壳（WebView 同源加载，Cookie 自动生效）、GitHub Actions 出未签名 IPA + 自签要点、
+备份恢复与排障。
 
-方案里另外写清了一条容易被忽略的约束：**Passkey 的 RP ID 必须是域名、且必须 HTTPS**，
-所以"App 填 IP 直连 + Passkey"在规范层面不成立，地址形态改为域名（细节见文档 §3.1）。
+两份文档分工：`docs/implementation-plan.md` 是**功能实现与技术选型**的唯一依据（每个功能的关键技术、
+模块划分、数据流，以及跨平台组件与取舍依据）；`docs/architecture.md` 是**部署与运维**参考
+（容器、事务模板、IP 直连适配、iOS 打包自签、备份恢复）。认证改走配对码之后，
+`architecture.md` 的 Passkey 章节仅作技术备查。
 
 方案还对照了 grocy 与 mealie 的建模方式，采纳了**存放位置**、**单位换算**、
 **盘点修正**三个维度，并说明了哪些做法不照搬（默认口令、食谱体系、离线同步）。

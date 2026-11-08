@@ -1,5 +1,9 @@
 # 鲜度 FreshKeep · 自托管方案（v3：仅 Passkey 登录）
 
+> ⚠️ **2026-11-08 决策更新**：认证已改为**配对码**方案，本文的 Passkey 章节（§3 全节、§5 的 `credentials`/`recovery_codes` 表）
+> 自 `docs/implementation-plan.md` 起**仅作技术备查**，实际实现以该文档 §1.1 为准。
+> 本文其余部分（容器化、事务与幂等、IP 直连适配、iOS 打包与自签、备份与排障）仍然有效。
+
 > **v3 相对 v2 的变更**
 > 1. **认证只保留通行密钥（Passkey / WebAuthn）**：删除账号密码、"成员"与改密流程。
 > 2. **新增硬前提：必须有域名 + HTTPS**——Passkey 的 RP ID 不能是 IP，且必须安全上下文。
