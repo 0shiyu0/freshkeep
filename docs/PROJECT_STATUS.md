@@ -180,25 +180,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-09 02:24 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-09 02:25 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `1e575c0` |
-| 工作区 | 16 个未提交改动，未跟踪 8 个 |
+| 分支 / HEAD | `main` / `2b722f0` |
+| 工作区 | 1 个未提交改动，未跟踪 0 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0002_ingredient_storage`，25 张表 |
-| 后端测试 | 83 passed, 1 warning in 6.22s |
+| 后端测试 | 83 passed, 1 warning in 6.32s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+2b722f0 2026-11-09 feat(api): M3 批次域 —— 入库五步事务、查询、状态机与前端批次区
 1e575c0 2026-11-09 chore: 补齐状态留痕（commits.log）
 0c37dca 2026-11-09 docs(db): 同步 ingredients.default_storage_location_id 与迁移历史
 1a1e3be 2026-11-09 feat(init): 阶段 1 项目初始化 —— 三容器 + 前后端骨架 + 日志与错误处理
 0d5d3ff 2026-11-09 docs: Docker 与 Xcode 环境验证结论
-e8f0596 2026-11-08 fix(scripts): 变量紧邻中文导致 unbound variable；表数排除 alembic_version
 ```
 <!-- AUTO:STATUS:END -->
