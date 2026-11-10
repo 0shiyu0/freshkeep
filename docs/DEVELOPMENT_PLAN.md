@@ -115,6 +115,30 @@ P2（AI 识别 + 采购清单 + 菜谱 + 对账告警 + TLS）≈ 14 人日。
 
 ---
 
+## 阶段 4 · 库存引擎（2026-11-10 完成）
+
+按「测试先行」交付：先写 17 项纯函数单测 + 10 项接口验收，确认红后再实现。
+
+| # | 任务 | 交付物 | 状态 |
+| --- | --- | --- | --- |
+| 4.1 | 基于有效流水计算库存 | `engine.recalc_from_ledger` + `GET /inventory/ledger-stock` | ✅ |
+| 4.2 | FEFO 先到期先消耗 | `engine.fefo_sort_key` / `plan_deduction`（nulls last、同日期按购买日） | ✅ |
+| 4.3 | 按数量或重量扣减 | `plan_deduction(mode="weight"/"quantity")` | ✅ |
+| 4.4 | 多食材批量消耗 | `POST /consumptions/batch`（整批事务） | ✅ |
+| 4.5 | 批次分配记录 | `transaction_allocations`（每批一条，含 unit_cost 快照） | ✅ |
+| 4.6 | 按批次核算成本 | 单位成本 4 位、分摊到分、单据成本 = 分摊之和 | ✅ |
+| 4.7 | 归零尾差结清 | `closes_batch` 时取剩余成本（10.00 而非 9.99） | ✅ |
+| 4.8 | 盘点增减 | `POST /inventory/adjustments`（提交实际值反算 delta） | ✅ |
+| 4.9 | 报损处理 | `POST /inventory/spoilage`（FEFO 扣批次） | ✅ |
+| 4.10 | 撤销恢复库存 | `POST /consumptions/{id}/reverse`（反向流水） | ✅ |
+| 4.11 | 行锁/事务/幂等 | `FOR UPDATE OF batches` + 请求事务 + `Idempotency-Key` | ✅ |
+| 4.12 | 缓存与流水对账 | `v_batch_reconcile` + `GET /inventory/reconcile` + `POST /reconcile/repair`（写审计） | ✅ |
+
+**测试证据**：`tests/unit/test_inventory_engine.py` 17 项、`tests/acceptance/test_stage4_engine.py` 10 项，
+全量 **140 passed**；成本核算报告见 `docs/reports/cost-accounting.md`（含实跑输出）。
+
+---
+
 ## M0 · 骨架收尾（已完成）
 
 | # | 任务 | 完成判据 | 状态 |

@@ -343,6 +343,49 @@
 
 ---
 
+## 2026-11-10 · 阶段 4：库存引擎（测试先行）
+
+### 新增
+
+- **独立库存引擎** `services/inventory/engine.py`：纯函数层，无 IO/无事务，
+  负责 FEFO 排序、扣减计划、成本分摊、尾差结清、双计量比例、流水重算、对账差异判定。
+  `FefoBatch` / `DeductionPlan` / `DeductionItem` 三个不可变数据结构。
+- **4.1 流水口径库存** `GET /inventory/ledger-stock`：按 `Σ有效流水` 重算并逐食材对照批次缓存，
+  返回 `consistency = ok / mismatch` 与不一致计数。
+- **4.12 对账与修复**：`GET /inventory/reconcile` 列出 `v_batch_reconcile` 中 diff 非 0 的批次；
+  `POST /inventory/reconcile/repair` 按分配聚合覆盖缓存，并写
+  `audit_logs(action='reconcile_repair')`（AGENTS.md §4.2 允许的唯一例外场景）。
+- 测试：`tests/unit/test_inventory_engine.py`（17 项纯函数）、
+  `tests/acceptance/test_stage4_engine.py`（10 项，含 8 项必须测试）。
+- 报告：`docs/reports/cost-accounting.md`（成本核算测试报告，含实跑输出）。
+
+### 变更
+
+- `docs/api.md` 补三个新端点到「库存」清单。
+
+### 数据库
+
+- **无 DDL 变更**，无新迁移；`audit_logs` 表在 `0001_init.sql` 已存在，本轮开始真正写入。
+
+### 验证
+
+- pytest **140 passed**（原 113 + 引擎 17 + 阶段 4 验收 10）。
+- 8 项必须测试全绿：分配批次、库存不足整笔失败、批量回滚、并发不超卖、
+  撤销反向流水、归零成本归零、重复提交不重复扣、手动调整生成流水；
+  另加 4.1 流水口径与 4.12 对账修复。
+- 成本数字与 PRD 一致：消耗 300g → 10.80；剩余 200g/7.20 + 1000g/35.00；
+  总成本 42.20；尾差场景 10.00（非 9.99）；多批次 18.00 + 3.50 = 21.50；对账差异 0。
+- 容器真实 HTTP 复核同一组数字（见报告 §4）。
+
+### 遗留
+
+- `reconcile/repair` 需要人工或定时任务触发，尚未接入 APScheduler（K21）。
+- 引擎暂未被 `consumption` / `ops` 复用（两处仍各自实现分配循环），
+  避免在无测试覆盖的情况下重构已通过的消耗路径；后续可在等价性测试保护下统一。
+- 数量维度的库存对照未纳入 `ledger-stock`（当前只对照重量与成本）。
+
+---
+
 ## [Unreleased]
 
 ### 新增

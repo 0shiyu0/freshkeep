@@ -137,6 +137,9 @@
 | --- | --- | --- | --- |
 | GET | `/inventory` | `category_id, is_low_stock, location_id, q, page…` | 读 `v_inventory` |
 | GET | `/inventory/summary` | `as_of?` | 总数量/总重量/总成本/食材数/临期数 |
+| GET | `/inventory/ledger-stock` | — | **4.1** 按有效流水重算的库存，与批次缓存逐食材对照 |
+| GET | `/inventory/reconcile` | — | **4.12** 批次缓存与分配聚合的差异清单（正常为空） |
+| POST | `/inventory/reconcile/repair` | `batch_ids?, reason?` | **4.12** 按流水修正缓存，写 `audit_logs` |
 | GET | `/inventory/transactions` | `type, ingredient_id, batch_id, from, to, page…` | 全部流水；`batch_id` 经分配表反查 |
 | POST | `/inventory/adjustments` | `ingredient_id, batch_id?, actual_weight, actual_quantity, reason` | 盘点调整：**提交实际值**，服务端反算 delta |
 | POST | `/inventory/stocktake` | `[{batch_id, actual_weight, actual_quantity}]` | 批量盘点，整批事务 |

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import text
@@ -20,8 +21,14 @@ from app.core.time import biz_today, days_until
 from app.db.session import get_db
 from app.models import Ingredient, InventoryTransaction
 from app.schemas.common import ok
+from app.schemas.common import ok as ok_
 from app.schemas.inventory import (
     AdjustmentIn,
+    LedgerStockOut,
+    LedgerStockRow,
+    ReconcileOut,
+    ReconcileRepairIn,
+    ReconcileRow,
     AdjustmentOut,
     InventoryRow,
     InventorySummary,
@@ -31,6 +38,7 @@ from app.schemas.inventory import (
     StocktakeOut,
     TransactionRow,
 )
+from app.services.inventory.engine import is_consistent
 from app.services.inventory.ops import adjust_batch, spoil, stocktake as do_stocktake
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
@@ -282,3 +290,180 @@ def create_spoilage(
     )
     db.commit()
     return ok(request, SpoilageOut.model_validate(data).model_dump(mode="json"), message="已报损")
+
+
+# ---------------------------------------------------------------- 4.1 流水口径库存
+
+
+@router.get("/ledger-stock", summary="按有效流水计算的库存（与批次缓存对照）")
+def ledger_stock(
+    request: Request,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_current),
+):
+    """4.1：库存 = Σ有效流水；与批次缓存聚合逐食材对照。
+
+    反向流水本身也是流水，撤销后净额自然回到原值，因此不需要额外过滤 status。
+    """
+    rows = db.execute(
+        text(
+            """
+            SELECT i.id AS ingredient_id, i.name,
+                   COALESCE(SUM(t.weight_delta), 0) AS ledger_w,
+                   COALESCE(SUM(t.cost_delta), 0)   AS ledger_c,
+                   COALESCE((SELECT SUM(b.remaining_weight) FROM batches b
+                              WHERE b.ingredient_id = i.id), 0) AS cached_w,
+                   COALESCE((SELECT SUM(b.remaining_cost) FROM batches b
+                              WHERE b.ingredient_id = i.id), 0) AS cached_c
+              FROM ingredients i
+              LEFT JOIN inventory_transactions t ON t.ingredient_id = i.id
+             WHERE i.is_active
+             GROUP BY i.id, i.name
+             ORDER BY i.name
+            """
+        )
+    ).all()
+
+    items = []
+    for r in rows:
+        ok = is_consistent(
+            cached_q=Decimal(0), alloc_q=Decimal(0),  # 数量维度不在本接口校验
+            cached_w=Decimal(r.cached_w), alloc_w=Decimal(r.ledger_w),
+            cached_c=Decimal(r.cached_c), alloc_c=Decimal(r.ledger_c),
+        )
+        items.append(
+            LedgerStockRow(
+                ingredient_id=r.ingredient_id, name=r.name,
+                ledger_weight=r.ledger_w, ledger_cost=r.ledger_c,
+                cached_weight=r.cached_w, cached_cost=r.cached_c,
+                consistency="ok" if ok else "mismatch",
+            )
+        )
+    return ok_(request, LedgerStockOut(
+        items=items, inconsistent_count=sum(1 for i in items if i.consistency != "ok")
+    ).model_dump(mode="json"))
+
+
+# ---------------------------------------------------------------- 4.12 对账
+
+
+@router.get("/reconcile", summary="批次缓存与流水分配的对账差异")
+def reconcile(
+    request: Request,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_current),
+):
+    """列出 `v_batch_reconcile` 中三个 diff 非 0 的批次（正常应为空）。"""
+    rows = db.execute(
+        text(
+            """
+            SELECT v.batch_id, b.batch_no, b.ingredient_id, i.name,
+                   v.remaining_quantity, v.allocated_quantity, v.diff_quantity,
+                   v.remaining_weight,   v.allocated_weight,   v.diff_weight,
+                   v.remaining_cost,     v.allocated_cost,     v.diff_cost
+              FROM v_batch_reconcile v
+              JOIN batches b ON b.id = v.batch_id
+              JOIN ingredients i ON i.id = b.ingredient_id
+             WHERE v.diff_quantity <> 0 OR v.diff_weight <> 0 OR v.diff_cost <> 0
+             ORDER BY b.batch_no
+            """
+        )
+    ).all()
+    items = [
+        ReconcileRow(
+            batch_id=r.batch_id, batch_no=r.batch_no,
+            ingredient_id=r.ingredient_id, ingredient_name=r.name,
+            cached_quantity=r.remaining_quantity, allocated_quantity=r.allocated_quantity,
+            diff_quantity=r.diff_quantity,
+            cached_weight=r.remaining_weight, allocated_weight=r.allocated_weight,
+            diff_weight=r.diff_weight,
+            cached_cost=r.remaining_cost, allocated_cost=r.allocated_cost,
+            diff_cost=r.diff_cost,
+        )
+        for r in rows
+    ]
+    return ok_(request, ReconcileOut(items=items, total=len(items)).model_dump(mode="json"))
+
+
+@router.post("/reconcile/repair", summary="按流水修正批次缓存并写审计")
+def reconcile_repair(
+    request: Request,
+    payload: ReconcileRepairIn,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_current),
+):
+    """4.12 修复：把 `batches.remaining_*` 覆盖为分配聚合值。
+
+    这是 AGENTS.md §4.2 允许的唯一「不写流水直接改缓存」的场景，
+    因此必须写 `audit_logs(action='reconcile_repair')` 留痕。
+    """
+    import json
+
+    from sqlalchemy import bindparam
+
+    targets = payload.batch_ids
+    if targets:
+        stmt = text(
+            """
+            SELECT v.batch_id, v.allocated_quantity, v.allocated_weight, v.allocated_cost,
+                   b.remaining_quantity, b.remaining_weight, b.remaining_cost
+              FROM v_batch_reconcile v JOIN batches b ON b.id = v.batch_id
+             WHERE v.batch_id IN :ids
+               AND (v.diff_quantity <> 0 OR v.diff_weight <> 0 OR v.diff_cost <> 0)
+            """
+        ).bindparams(bindparam("ids", expanding=True))
+        rows = db.execute(stmt, {"ids": targets}).all()
+    else:
+        rows = db.execute(
+            text(
+                """
+                SELECT v.batch_id, v.allocated_quantity, v.allocated_weight, v.allocated_cost,
+                       b.remaining_quantity, b.remaining_weight, b.remaining_cost
+                  FROM v_batch_reconcile v JOIN batches b ON b.id = v.batch_id
+                 WHERE v.diff_quantity <> 0 OR v.diff_weight <> 0 OR v.diff_cost <> 0
+                """
+            )
+        ).all()
+
+    repaired = []
+    for r in rows:
+        before = {
+            "quantity": str(r.remaining_quantity),
+            "weight": str(r.remaining_weight),
+            "cost": str(r.remaining_cost),
+        }
+        after = {
+            "quantity": str(r.allocated_quantity),
+            "weight": str(r.allocated_weight),
+            "cost": str(r.allocated_cost),
+        }
+        db.execute(
+            text(
+                "UPDATE batches SET remaining_quantity=CAST(:q AS numeric), "
+                "remaining_weight=CAST(:w AS numeric), remaining_cost=CAST(:c AS numeric) "
+                "WHERE id = CAST(:bid AS uuid)"
+            ),
+            {"q": after["quantity"], "w": after["weight"], "c": after["cost"], "bid": str(r.batch_id)},
+        )
+        db.execute(
+            text(
+                "INSERT INTO audit_logs (action, object_type, object_id, before_json, after_json, device_id) "
+                "VALUES ('reconcile_repair', 'batch', CAST(:bid AS uuid), "
+                "CAST(:b AS jsonb), CAST(:a AS jsonb), CAST(:did AS uuid))"
+            ),
+            {
+                "bid": str(r.batch_id),
+                "b": json.dumps(before, ensure_ascii=False),
+                "a": json.dumps(after, ensure_ascii=False),
+                "did": str(auth.device.id),
+            },
+        )
+        repaired.append({"batch_id": str(r.batch_id), "before": before, "after": after})
+
+    db.commit()
+    return ok_(
+        request,
+        {"repaired": len(repaired), "items": repaired,
+         "reason": payload.reason or "对账修复"},
+        message=f"已修复 {len(repaired)} 个批次",
+    )

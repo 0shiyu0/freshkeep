@@ -130,3 +130,50 @@ class SpoilageOut(BaseModel):
     quantity: Dec3
     cost: Dec2
     allocations: list[SpoilageAlloc]
+
+
+class LedgerStockRow(BaseModel):
+    """4.1：按流水重算的库存，与批次缓存对照。"""
+
+    ingredient_id: uuid.UUID
+    name: str
+    ledger_weight: Dec3
+    ledger_cost: Dec2
+    cached_weight: Dec3
+    cached_cost: Dec2
+    consistency: str  # ok / mismatch
+
+
+class LedgerStockOut(BaseModel):
+    items: list[LedgerStockRow]
+    inconsistent_count: int
+
+
+class ReconcileRow(BaseModel):
+    """4.12：批次缓存的差异明细（只列出 diff 非 0 的批次）。"""
+
+    batch_id: uuid.UUID
+    batch_no: str
+    ingredient_id: uuid.UUID
+    ingredient_name: str
+    cached_quantity: Dec3
+    allocated_quantity: Dec3
+    diff_quantity: Dec3
+    cached_weight: Dec3
+    allocated_weight: Dec3
+    diff_weight: Dec3
+    cached_cost: Dec2
+    allocated_cost: Dec2
+    diff_cost: Dec2
+
+
+class ReconcileOut(BaseModel):
+    items: list[ReconcileRow]
+    total: int
+
+
+class ReconcileRepairIn(BaseModel):
+    """指定要修复的批次；不传则修复全部有差异的批次。"""
+
+    batch_ids: list[uuid.UUID] = Field(default_factory=list, max_length=200)
+    reason: str = Field(default="", max_length=200)
