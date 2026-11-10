@@ -21,6 +21,7 @@ class BatchCreate(BaseModel):
     purchase_date: date | None = None  # 缺省 = 今天（Asia/Shanghai）
     production_date: date | None = None
     expiry_date: date | None = None
+    opened_date: date | None = None  # 开封日期（P1 的「开封后保质期」会用到）
     storage_location_id: uuid.UUID | None = None
 
     quantity: Dec3 = Field(default=Decimal("0"), ge=0, description="数量，如 2（包）")

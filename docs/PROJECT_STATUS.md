@@ -1,17 +1,18 @@
 # 项目状态
 
-> 快照时间：2026-11-10 16:50（Asia/Shanghai）
+> 快照时间：2026-11-10 17:10（Asia/Shanghai）
 > 维护规则：每个里程碑结束、每次数据库结构变化、每次发现已知问题，都要更新本文与 `docs/CHANGELOG.md`。
 
 ---
 
 ## 1. 一句话现状
 
-**M5 库存域已完成**：`v_inventory` 聚合查询、汇总、全部流水分页、盘点调整（提交实际值反算差异）、
-批量盘点（整批回滚）、报损（FEFO 扣批次），以及记录页接完整流水、库存页汇总条、详情页盘点/报损入口。
-pytest **106 项通过**（含 PRD 9 条验收 + 库存域 14 条），容器真实 HTTP **16 项断言全过**，
-三个页面 1280/390 DOM 探针无溢出。本轮**无 DDL 变更**，两库均为 `0002_ingredient_storage`。
-下一步是 **M6 首页与营养统计**。
+**M5 库存域 + 阶段 3（采购入库与批次管理）已完成**：在 M3 的五步事务入库之上，
+补齐独立入库页面（食材可搜索、四个日期齐全）、跨食材批次列表、批次详情页与该批次流水；
+M5 提供 `v_inventory` 聚合、汇总、全部流水、盘点与报损。
+pytest **113 项通过**（PRD 9 条验收 + 消耗 9 + 库存 14 + 采购 7），
+容器真实 HTTP **17 项断言全过**，浏览器真实填表入库后正确显示批次号与流水号。
+本轮**无 DDL 变更**，两库均为 `0002_ingredient_storage`。下一步是 **M6 首页与营养统计**。
 
 | 里程碑 | 状态 | 备注 |
 | --- | --- | --- |
@@ -24,12 +25,13 @@ pytest **106 项通过**（含 PRD 9 条验收 + 库存域 14 条），容器真
 | M3 批次域 | ✅ 完成 | 五步事务 / 查询 / 状态机 / 前端批次区 |
 | M4 消耗域 | ✅ 完成 | 9 条验收全绿；证据见 §2.4 |
 | **M5 库存域** | ✅ **完成** | 聚合/汇总/流水/盘点/报损；证据见 §2.5 |
+| **阶段 3 采购入库** | ✅ **完成** | 独立入库页/批次列表/批次详情；证据见 §2.6 |
 | M7 备份导出 | ⬜ | |
 | M8 前端页面 | 🔄 部分 | 登录/库存/详情(含批次)/编辑/设置/消耗/记录已完成；记录页完整流水待 M5 |
 | M9 原生 App | ⬜ | 需 Xcode（iOS 走真机自签） |
 | M10 联调验收 | ⬜ | |
 
-整体进度：**P0 完成 8/13 个里程碑（约 62%）**；按人日约 21/36。
+整体进度：**P0 完成 8/13 个里程碑（约 62%），另加阶段 3 的展示层补齐**；按人日约 22/36。
 
 ---
 
@@ -92,7 +94,23 @@ pytest **106 项通过**（含 PRD 9 条验收 + 库存域 14 条），容器真
 | 对账 | `v_batch_reconcile` | 盘点/盘盈/报损后差异始终为 0 |
 | 前端 | `api/inventory.ts`、`RecordsView`、`InventoryView`、`IngredientDetailView` | 记录页全部流水 + 类型筛选 + 消耗撤销；库存页汇总条；详情页盘点/报损弹层；1280/390 溢出 0px |
 
-### 2.6 测试规模
+### 2.6 阶段 3：采购入库与批次管理（本轮）
+
+| 项 | 文件 | 验证方式与结果 |
+| --- | --- | --- |
+| 3.1 入库页面 | `views/PurchaseView.vue`（`/purchase`） | 食材搜索选择、数量/重量/价格、单位成本预览、四个日期、位置、备注；浏览器真实填表提交 500g/18 元后显示批次号、`TX-P-` 流水号、`0.0360` |
+| 3.2 独立批次 | `services/inventory/__init__.py` | 两次采购生成 `20261110-01` / `20261110-02`，id 与批次号都不同 |
+| 3.3 四日期 | `schemas/batch.py` 增 `opened_date` | 购买/生产/到期/开封全部保存；两批次到期日各自独立 |
+| 3.4 储存位置 | 入库表单 + `BatchCreate` | 位置「冷冻室」正确落库并在详情展示 |
+| 3.5 成本 | `unit_cost` 快照 | 500g/18 元 → 0.0360；1000g/40 元 → 0.0400，互不影响 |
+| 3.6 purchase 流水 | 五步事务 | 两条入库流水合计 1500g；库存总量 == 流水增量之和 |
+| 3.7 批次列表 | `views/BatchesView.vue`、`GET /batches?q=` | 跨食材列表；`q=S3-E2E` 命中 2 个批次；状态/位置筛选可用 |
+| 3.8 批次详情 | `views/BatchDetailView.vue`、`batch_id` 过滤 | 初始/剩余/采购/剩余/单位成本、四日期、位置、该批次流水；跨批次报损后两批次各自可见同一条流水 |
+
+**验收 6 条**：两批次独立 ✅ / 价格独立 ✅ / 到期独立 ✅ / 自动流水 ✅ /
+幂等不重复入库（同 key 只 1 个批次）✅ / 无来源库存增加（库存 == 流水、对账差异 0）✅。
+
+### 2.7 测试规模
 
 ```
 backend/tests/
@@ -104,8 +122,9 @@ backend/tests/
   api/test_middleware.py         150 行   CIDR + 幂等（14 项）
   api/test_batches.py            346 行   批次域（18 项）
   acceptance/test_consumption.py  ~260 行  PRD §7.1 九条验收（9 项）
-  acceptance/test_inventory.py    ~250 行  库存域（14 项，M5 新增）
-合计 106 项，全绿
+  acceptance/test_inventory.py    ~250 行  库存域（14 项）
+  acceptance/test_purchase.py     ~200 行  采购入库与批次（7 项，阶段 3 新增）
+合计 113 项，全绿
 ```
 
 ---
@@ -140,6 +159,7 @@ backend/tests/
 | K19 | 营养基准单位只接受 g/kg | 体积/「份」基准返回 `NUTRITION_BASIS_MISMATCH` | PRD §8 明确不做密度换算，属既定限制 | ℹ️ 既定限制 |
 | K20 | 盘点同时改数量时只按重量计成本 | 数量差异不单独计价 | 单用户场景够用；若将来按数量核算成本需扩展 | ⚠️ 已知 |
 | K21 | 每日对账未定时执行 | 只能靠每次写入后断言 + 手工查询 | M7 与备份任务一起接入 APScheduler | ⚠️ 已知 |
+| K23 | 批次详情页未内置盘点/报损入口 | 需回到食材详情页操作 | 不影响功能；批次详情已提供「记一笔消耗」与食材档案跳转 | ⚠️ 已知 |
 | K22 | 盘点盘盈会改动 `batches.initial_*` 与 `purchase_cost` | 历史「初始量」不再是最初入库值 | 保持 `remaining <= initial` 约束的必要语义；变更记录在 `adjustment` 流水里 | ℹ️ 设计取舍 |
 
 已关闭：K1~K8、K10。
@@ -150,7 +170,7 @@ backend/tests/
 
 | 能力 | 状态 | 说明 |
 | --- | --- | --- |
-| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 106 项可用 |
+| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 113 项可用 |
 | 本机 PostgreSQL | ✅ 16.15 | 库 `freshkeep` 与测试库 `freshkeep_test`，均在 `0002` |
 | 容器三件套 | ✅ | `freshkeep-{db,api,web}` 全 healthy，对外 8080 |
 | 容器内迁移版本 | ✅ | `0002_ingredient_storage` |
@@ -172,7 +192,7 @@ head -120 docs/CHANGELOG.md
 
 ```bash
 git status --short && git log -3 --oneline
-cd backend && .venv/bin/python -m pytest          # 期望 106 passed
+cd backend && .venv/bin/python -m pytest          # 期望 113 passed
 export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
 docker compose ps                                  # 期望 3 个 healthy
 docker compose exec -T db psql -U freshkeep -d freshkeep -tAc "select version_num from alembic_version"
@@ -197,25 +217,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-10 16:28 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-10 17:00 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `8317b85` |
-| 工作区 | 1 个未提交改动，未跟踪 0 个 |
+| 分支 / HEAD | `main` / `ab484c7` |
+| 工作区 | 18 个未提交改动，未跟踪 4 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0002_ingredient_storage`，25 张表 |
-| 后端测试 | 106 passed, 1 warning in 4.25s |
+| 后端测试 | 113 passed, 1 warning in 4.83s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+ab484c7 2026-11-10 chore: 刷新 M5 提交后的状态快照与留痕
 8317b85 2026-11-10 feat(api): M5 库存域 —— 聚合查询/汇总/流水/盘点/报损 + 记录页接完整流水
 e95658c 2026-11-09 chore: 刷新 M4 提交后的状态快照与留痕
 cf6c591 2026-11-09 feat(api): M4 消耗域 —— FEFO/成本分摊/尾差/营养快照/撤销 + 验收层
 ba3a3a6 2026-11-09 chore: 刷新 M3 提交后的状态快照与留痕
-2b722f0 2026-11-09 feat(api): M3 批次域 —— 入库五步事务、查询、状态机与前端批次区
 ```
 <!-- AUTO:STATUS:END -->

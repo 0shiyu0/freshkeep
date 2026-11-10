@@ -174,6 +174,7 @@ def list_transactions(
     request: Request,
     type: str | None = Query(default=None, pattern="^(purchase|consume|spoilage|adjustment|reverse)$"),
     ingredient_id: uuid.UUID | None = None,
+    batch_id: uuid.UUID | None = None,
     from_date: date | None = None,
     to_date: date | None = None,
     page: int = Query(default=1, ge=1),
@@ -190,6 +191,17 @@ def list_transactions(
         stmt = stmt.where(InventoryTransaction.type == type)
     if ingredient_id:
         stmt = stmt.where(InventoryTransaction.ingredient_id == ingredient_id)
+    if batch_id:
+        # 一笔流水可能跨多个批次，按分配表反查它是否影响了该批次
+        from app.models import TransactionAllocation
+
+        stmt = stmt.where(
+            InventoryTransaction.id.in_(
+                select(TransactionAllocation.transaction_id).where(
+                    TransactionAllocation.batch_id == batch_id
+                )
+            )
+        )
     if from_date:
         stmt = stmt.where(InventoryTransaction.created_at >= from_date)
     if to_date:

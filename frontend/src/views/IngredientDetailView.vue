@@ -327,7 +327,7 @@ onMounted(load)
         <div class="head-actions">
           <button class="btn" @click="router.push(`/consume?ingredient=${id}`)">− 记一笔消耗</button>
           <button class="btn" @click="openSpoil">报损</button>
-          <button class="btn" @click="purchaseModal = true">＋ 入库</button>
+          <button class="btn" @click="router.push(`/purchase?ingredient=${id}`)">＋ 入库</button>
         </div>
       </div>
       <div v-if="batches.length === 0" class="muted-line">还没有批次，点「入库」记录第一次采购。</div>
@@ -342,6 +342,7 @@ onMounted(load)
           <span v-if="b.remaining_cost !== '0.00'">成本 ¥{{ b.remaining_cost }}</span>
           <span v-if="b.status === 'depleted'" class="tag tag--muted">已耗尽</span>
           <button class="btn btn--tiny" @click="openAdjust(b)">盘点</button>
+          <button class="btn btn--tiny" @click="router.push(`/batches/${b.id}`)">详情</button>
         </div>
       </div>
     </section>

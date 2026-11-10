@@ -8,6 +8,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
   { path: '/inventory', name: 'inventory', component: () => import('@/views/InventoryView.vue') },
   { path: '/consume', name: 'consume', component: () => import('@/views/ConsumeView.vue') },
+  { path: '/purchase', name: 'purchase', component: () => import('@/views/PurchaseView.vue') },
+  { path: '/batches', name: 'batches', component: () => import('@/views/BatchesView.vue') },
+  { path: '/batches/:id', name: 'batch-detail', component: () => import('@/views/BatchDetailView.vue') },
   { path: '/ingredients/new', name: 'ingredient-new', component: () => import('@/views/IngredientFormView.vue') },
   { path: '/ingredients/:id', name: 'ingredient-detail', component: () => import('@/views/IngredientDetailView.vue') },
   {

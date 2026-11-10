@@ -31,6 +31,7 @@ export interface BatchCreateInput {
   purchase_date?: string
   production_date?: string | null
   expiry_date?: string | null
+  opened_date?: string | null
   storage_location_id?: string | null
   quantity?: string
   weight?: string

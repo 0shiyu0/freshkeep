@@ -12,7 +12,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import AuthContext, get_current
@@ -58,6 +58,7 @@ def create_batch_endpoint(
         purchase_date=payload.purchase_date,
         production_date=payload.production_date,
         expiry_date=payload.expiry_date,
+        opened_date=payload.opened_date,
         storage_location_id=payload.storage_location_id,
         quantity=payload.quantity,
         weight_in=payload.weight,
@@ -82,6 +83,7 @@ def create_batch_endpoint(
 @router.get("", summary="批次列表")
 def list_batches(
     request: Request,
+    q: str | None = None,
     ingredient_id: uuid.UUID | None = None,
     location_id: uuid.UUID | None = None,
     status: str | None = Query(default=None, pattern="^(active|depleted|void)$"),
@@ -91,14 +93,24 @@ def list_batches(
     auth: AuthContext = Depends(get_current),
 ):
     stmt = select(Batch)
+    keyword = (q or "").strip().lower()
+    if keyword:
+        # 与食材搜索同一套口径：中文模糊 + 全拼前缀 + 首字母精确
+        from app.models import Ingredient
+
+        stmt = stmt.join(Ingredient, Ingredient.id == Batch.ingredient_id).where(
+            or_(
+                func.lower(Ingredient.name).like(f"%{keyword}%"),
+                func.lower(Ingredient.name_pinyin).like(f"%{keyword}%"),
+                func.lower(Ingredient.name_initials) == keyword,
+            )
+        )
     if ingredient_id:
         stmt = stmt.where(Batch.ingredient_id == ingredient_id)
     if location_id:
         stmt = stmt.where(Batch.storage_location_id == location_id)
     if status:
         stmt = stmt.where(Batch.status == status)
-
-    from sqlalchemy import func
 
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar() or 0
     stmt = stmt.order_by(Batch.created_at.desc()).offset((page - 1) * page_size).limit(page_size)

@@ -84,6 +84,8 @@ onMounted(async () => {
     </div>
     <div class="head-actions">
       <button class="btn" @click="router.push('/consume')">− 记一笔消耗</button>
+      <button class="btn" @click="router.push('/batches')">批次</button>
+      <button class="btn" @click="router.push('/purchase')">+ 采购入库</button>
       <button class="btn btn--primary" @click="router.push('/ingredients/new')">+ 新增食材</button>
     </div>
   </div>

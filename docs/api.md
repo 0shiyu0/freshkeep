@@ -116,7 +116,7 @@
 | 方法 | 路径 | 关键请求 | 说明 |
 | --- | --- | --- | --- |
 | POST | `/batches` | 见 §3.3 | 新建批次 = 一次采购入库，同一事务写 `purchase` 流水 + 分配 |
-| GET | `/batches` | `ingredient_id, location_id, status, page…` | 批次列表 |
+| GET | `/batches` | `q, ingredient_id, location_id, status, page…` | 批次列表（`q` 支持食材中文/拼音/首字母） |
 | GET/PUT | `/batches/{id}` | `expiry_date, storage_location_id, opened_date, note` | 只允许改元数据，**不允许改数量**（改数量必须走盘点） |
 | GET | `/batches/expiring` | `days=7` | 临期批次（按剩余天数升序） |
 | GET | `/batches/expired` | — | 已过期且仍有库存 |
@@ -137,7 +137,7 @@
 | --- | --- | --- | --- |
 | GET | `/inventory` | `category_id, is_low_stock, location_id, q, page…` | 读 `v_inventory` |
 | GET | `/inventory/summary` | `as_of?` | 总数量/总重量/总成本/食材数/临期数 |
-| GET | `/inventory/transactions` | `type, ingredient_id, from, to, page…` | 全部流水 |
+| GET | `/inventory/transactions` | `type, ingredient_id, batch_id, from, to, page…` | 全部流水；`batch_id` 经分配表反查 |
 | POST | `/inventory/adjustments` | `ingredient_id, batch_id?, actual_weight, actual_quantity, reason` | 盘点调整：**提交实际值**，服务端反算 delta |
 | POST | `/inventory/stocktake` | `[{batch_id, actual_weight, actual_quantity}]` | 批量盘点，整批事务 |
 | POST | `/inventory/spoilage` | `ingredient_id, weight, quantity, reason` | 报损（走 `spoilage` 流水） |
@@ -208,7 +208,8 @@
 
 ```json
 // 请求
-{ "ingredient_id": "…", "purchase_date": "2026-11-08", "expiry_date": "2026-11-15",
+{ "ingredient_id": "…", "purchase_date": "2026-11-08", "production_date": "2026-11-05",
+  "expiry_date": "2026-11-15", "opened_date": "2026-11-08",
   "storage_location_id": "…", "quantity": "2", "weight": "500", "purchase_cost": "18.00",
   "quantity_unit_id": "…", "weight_unit_id": "…", "note": "" }
 ```
