@@ -197,25 +197,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-10 16:27 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-10 16:28 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `e95658c` |
-| 工作区 | 16 个未提交改动，未跟踪 5 个 |
+| 分支 / HEAD | `main` / `8317b85` |
+| 工作区 | 1 个未提交改动，未跟踪 0 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0002_ingredient_storage`，25 张表 |
-| 后端测试 | 106 passed, 1 warning in 4.41s |
+| 后端测试 | 106 passed, 1 warning in 4.25s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+8317b85 2026-11-10 feat(api): M5 库存域 —— 聚合查询/汇总/流水/盘点/报损 + 记录页接完整流水
 e95658c 2026-11-09 chore: 刷新 M4 提交后的状态快照与留痕
 cf6c591 2026-11-09 feat(api): M4 消耗域 —— FEFO/成本分摊/尾差/营养快照/撤销 + 验收层
 ba3a3a6 2026-11-09 chore: 刷新 M3 提交后的状态快照与留痕
 2b722f0 2026-11-09 feat(api): M3 批次域 —— 入库五步事务、查询、状态机与前端批次区
-1e575c0 2026-11-09 chore: 补齐状态留痕（commits.log）
 ```
 <!-- AUTO:STATUS:END -->
