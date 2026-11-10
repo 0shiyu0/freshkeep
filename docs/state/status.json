@@ -1,21 +1,21 @@
 {
   "BRANCH": "main",
-  "HEAD": "cf6c591",
-  "DIRTY": 1,
-  "UNTRACKED": 0,
+  "HEAD": "e95658c",
+  "DIRTY": 16,
+  "UNTRACKED": 5,
   "AHEAD": 0,
   "RECENT": [
+    "e95658c 2026-11-09 chore: 刷新 M4 提交后的状态快照与留痕",
     "cf6c591 2026-11-09 feat(api): M4 消耗域 —— FEFO/成本分摊/尾差/营养快照/撤销 + 验收层",
     "ba3a3a6 2026-11-09 chore: 刷新 M3 提交后的状态快照与留痕",
     "2b722f0 2026-11-09 feat(api): M3 批次域 —— 入库五步事务、查询、状态机与前端批次区",
-    "1e575c0 2026-11-09 chore: 补齐状态留痕（commits.log）",
-    "0c37dca 2026-11-09 docs(db): 同步 ingredients.default_storage_location_id 与迁移历史"
+    "1e575c0 2026-11-09 chore: 补齐状态留痕（commits.log）"
   ],
   "MIG": "0002_ingredient_storage",
   "TABLES": "25",
   "DB_OK": true,
-  "TESTS": "92 passed, 1 warning in 5.83s",
+  "TESTS": "106 passed, 1 warning in 4.41s",
   "BUILD": "已构建",
   "DOCS_OK": true,
-  "NOW": "2026-11-09 02:45"
+  "NOW": "2026-11-10 16:27"
 }

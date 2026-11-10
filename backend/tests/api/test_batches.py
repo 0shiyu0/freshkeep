@@ -218,13 +218,18 @@ def test_create_batch_unknown_ingredient(seeded):
 
 def test_create_batch_rejects_expiry_before_production(seeded, ingredient):
     """到期日早于生产日 → 400（DDL 也有约束，但接口层先给友好错误）。"""
+    from datetime import timedelta
+
+    from app.core.time import biz_today
+
+    today = biz_today()
     res = seeded.post(
         "/api/v1/batches",
         json={
             "ingredient_id": ingredient["id"],
             "weight": "100",
-            "production_date": "2026-11-08",
-            "expiry_date": "2026-11-07",
+            "production_date": today.isoformat(),
+            "expiry_date": (today - timedelta(days=1)).isoformat(),
         },
     )
     assert res.status_code == 400
@@ -239,16 +244,24 @@ def test_create_batch_requires_login(client):
 
 
 def test_batch_list_and_filters(seeded, ingredient):
+    # 日期一律相对今天计算：硬编码绝对日期会随时间推移让测试失效
+    from datetime import timedelta
+
+    from app.core.time import biz_today
+
+    today = biz_today()
     ing2 = seeded.post("/api/v1/ingredients", json={"name": "牛奶"})
     ing2_id = ing2.json()["data"]["id"]
 
     seeded.post(
         "/api/v1/batches",
-        json={"ingredient_id": ingredient["id"], "weight": "500", "expiry_date": "2026-11-11"},
+        json={"ingredient_id": ingredient["id"], "weight": "500",
+              "expiry_date": (today + timedelta(days=2)).isoformat()},
     )
     seeded.post(
         "/api/v1/batches",
-        json={"ingredient_id": ing2_id, "weight": "1000", "expiry_date": "2026-11-21"},
+        json={"ingredient_id": ing2_id, "weight": "1000",
+              "expiry_date": (today + timedelta(days=12)).isoformat()},
     )
 
     # 与阶段 2 的 GET /ingredients 保持同一分页结构：data.items 是数组
@@ -282,18 +295,29 @@ def test_batch_detail_404(seeded):
 
 
 def test_expiring_and_expired_batches(seeded, ingredient):
-    """临期按天过滤；过期单列；无到期日不进临期。"""
+    """临期按天过滤；过期单列；无到期日不进临期。
+
+    日期相对今天计算：绝对日期会让测试在次日失效（曾因硬编码 11-11 在 11-10 变红）。
+    """
+    from datetime import timedelta
+
+    from app.core.time import biz_today
+
+    today = biz_today()
     seeded.post(  # 2 天后到期 → 临期
         "/api/v1/batches",
-        json={"ingredient_id": ingredient["id"], "weight": "100", "expiry_date": "2026-11-11"},
+        json={"ingredient_id": ingredient["id"], "weight": "100",
+              "expiry_date": (today + timedelta(days=2)).isoformat()},
     )
     seeded.post(  # 10 天后到期 → 不在 7 天窗口
         "/api/v1/batches",
-        json={"ingredient_id": ingredient["id"], "weight": "100", "expiry_date": "2026-11-19"},
+        json={"ingredient_id": ingredient["id"], "weight": "100",
+              "expiry_date": (today + timedelta(days=10)).isoformat()},
     )
     seeded.post(  # 已过期
         "/api/v1/batches",
-        json={"ingredient_id": ingredient["id"], "weight": "100", "expiry_date": "2026-11-05"},
+        json={"ingredient_id": ingredient["id"], "weight": "100",
+              "expiry_date": (today - timedelta(days=1)).isoformat()},
     )
     seeded.post(  # 无到期日
         "/api/v1/batches",
@@ -313,16 +337,21 @@ def test_expiring_and_expired_batches(seeded, ingredient):
 
 
 def test_update_batch_meta(seeded, ingredient):
+    from datetime import timedelta
+
+    from app.core.time import biz_today
+
+    target = (biz_today() + timedelta(days=20)).isoformat()
     created = seeded.post(
         "/api/v1/batches", json={"ingredient_id": ingredient["id"], "weight": "500"}
     ).json()["data"]["batch"]
     res = seeded.put(
         f"/api/v1/batches/{created['id']}",
-        json={"expiry_date": "2026-11-20", "note": "放在冷冻室最里层"},
+        json={"expiry_date": target, "note": "放在冷冻室最里层"},
     )
     assert res.status_code == 200, res.text
     d = res.json()["data"]
-    assert d["expiry_date"] == "2026-11-20"
+    assert d["expiry_date"] == target
     assert d["note"] == "放在冷冻室最里层"
 
 

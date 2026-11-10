@@ -9,6 +9,7 @@ from app.api.v1 import (
     consumptions,
     files,
     ingredients,
+    inventory,
     nutrition,
     system,
     units,
@@ -26,3 +27,4 @@ api_router.include_router(ingredients.router)
 api_router.include_router(barcodes.router)
 api_router.include_router(batches.router)
 api_router.include_router(consumptions.router)
+api_router.include_router(inventory.router)

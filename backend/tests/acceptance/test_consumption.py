@@ -102,11 +102,20 @@ def _consume(client, ing_id: str, weight: str, **extra):
 # ---------------------------------------------------------------- 1 批次成本
 
 
+def _expiry(days: int) -> str:
+    """相对今天算到期日：绝对日期会让用例随时间推移失效。"""
+    from datetime import timedelta
+
+    from app.core.time import biz_today
+
+    return (biz_today() + timedelta(days=days)).isoformat()
+
+
 def test_1_batch_cost(seeded, ingredient_with_nutrition):
     """批次1 500g/18元、批次2 1000g/35元，消耗 300g → 10.80 / 剩余 42.20。"""
     iid = ingredient_with_nutrition["id"]
-    b1 = _add_batch(seeded, iid, "500", "18.00", "2026-11-10")
-    _add_batch(seeded, iid, "1000", "35.00", "2026-11-20")
+    b1 = _add_batch(seeded, iid, "500", "18.00", _expiry(1))
+    _add_batch(seeded, iid, "1000", "35.00", _expiry(11))
 
     res = _consume(seeded, iid, "300")
     assert res.status_code == 201, res.text
@@ -132,8 +141,8 @@ def test_1_batch_cost(seeded, ingredient_with_nutrition):
 def test_2_fefo(seeded, ingredient_with_nutrition):
     """A 500g 到期 11-10、B 1000g 到期 11-20，消耗 600g → A 清零、B 剩 900g。"""
     iid = ingredient_with_nutrition["id"]
-    a = _add_batch(seeded, iid, "500", "18.00", "2026-11-10")
-    b = _add_batch(seeded, iid, "1000", "35.00", "2026-11-20")
+    a = _add_batch(seeded, iid, "500", "18.00", _expiry(1))
+    b = _add_batch(seeded, iid, "1000", "35.00", _expiry(11))
 
     res = _consume(seeded, iid, "600")
     assert res.status_code == 201, res.text

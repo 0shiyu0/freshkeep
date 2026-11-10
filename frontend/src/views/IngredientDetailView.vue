@@ -6,6 +6,7 @@ import { NButton, NInput, NModal, NSelect } from 'naive-ui'
 import { ingredientApi, fileApi, type IngredientDetail } from '@/api/ingredients'
 import { batchApi, expiryClass, expiryText, type BatchItem } from '@/api/batches'
 import { catalogApi, type StorageLocation } from '@/api/catalog'
+import { inventoryApi, trimNum } from '@/api/inventory'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
 const route = useRoute()
@@ -20,6 +21,14 @@ const busy = ref(false)
 const batches = ref<BatchItem[]>([])
 const locations = ref<StorageLocation[]>([])
 const purchaseModal = ref(false)
+// 盘点（按批次提交实际值）与报损（按食材 FEFO 扣批次）
+const adjustModal = ref(false)
+const adjusting = ref(false)
+const adjustTarget = ref<BatchItem | null>(null)
+const adjustForm = reactive({ actual_weight: '', reason: '盘点' })
+const spoilModal = ref(false)
+const spoiling = ref(false)
+const spoilForm = reactive({ weight: '', reason: '变质' })
 const purchasing = ref(false)
 const purchaseForm = reactive({
   purchase_date: new Date().toISOString().slice(0, 10),
@@ -59,6 +68,74 @@ function remainingText(b: BatchItem): string {
   if (b.remaining_weight !== '0.000') return `${Number(b.remaining_weight)}g`
   if (b.remaining_quantity !== '0.000') return `${Number(b.remaining_quantity)}${data.value?.quantity_unit?.name ?? ''}`
   return '0'
+}
+
+function openAdjust(b: BatchItem) {
+  adjustTarget.value = b
+  adjustForm.actual_weight = trimNum(b.remaining_weight)
+  adjustForm.reason = '盘点'
+  adjustModal.value = true
+}
+
+async function submitAdjust() {
+  if (!adjustTarget.value || adjusting.value) return
+  if (adjustForm.actual_weight.trim() === '') {
+    notifyError('请填写实际重量')
+    return
+  }
+  adjusting.value = true
+  try {
+    const res = await inventoryApi.adjust({
+      batch_id: adjustTarget.value.id,
+      actual_weight: adjustForm.actual_weight.trim(),
+      reason: adjustForm.reason.trim() || '盘点',
+    })
+    notifySuccess(`已调整 ${trimNum(res.weight_delta)}g，成本变化 ${res.cost_delta} 元`)
+    adjustModal.value = false
+    await load()
+    await loadSummaryQuietly()
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : '盘点失败')
+  } finally {
+    adjusting.value = false
+  }
+}
+
+function openSpoil() {
+  spoilForm.weight = ''
+  spoilForm.reason = '变质'
+  spoilModal.value = true
+}
+
+async function submitSpoil() {
+  if (spoiling.value) return
+  const w = spoilForm.weight.trim()
+  if (!w || Number(w) <= 0) {
+    notifyError('请填写报损重量')
+    return
+  }
+  if (!spoilForm.reason.trim()) {
+    notifyError('请填写报损原因')
+    return
+  }
+  spoiling.value = true
+  try {
+    const res = await inventoryApi.spoilage({
+      ingredient_id: id.value, weight: w, reason: spoilForm.reason.trim(),
+    })
+    notifySuccess(`已报损 ${trimNum(res.weight)}g，成本 ${res.cost} 元`)
+    spoilModal.value = false
+    await load()
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : '报损失败')
+  } finally {
+    spoiling.value = false
+  }
+}
+
+/** 汇总条在库存页；详情页只需要拿到最新批次，这里留个空实现避免误导 */
+async function loadSummaryQuietly() {
+  /* 详情页不展示汇总，刷新批次即可 */
 }
 
 async function submitPurchase() {
@@ -249,6 +326,7 @@ onMounted(load)
         <h2>批次（{{ batches.length }}）</h2>
         <div class="head-actions">
           <button class="btn" @click="router.push(`/consume?ingredient=${id}`)">− 记一笔消耗</button>
+          <button class="btn" @click="openSpoil">报损</button>
           <button class="btn" @click="purchaseModal = true">＋ 入库</button>
         </div>
       </div>
@@ -263,6 +341,7 @@ onMounted(load)
           <span>剩余 <b>{{ remainingText(b) }}</b></span>
           <span v-if="b.remaining_cost !== '0.00'">成本 ¥{{ b.remaining_cost }}</span>
           <span v-if="b.status === 'depleted'" class="tag tag--muted">已耗尽</span>
+          <button class="btn btn--tiny" @click="openAdjust(b)">盘点</button>
         </div>
       </div>
     </section>
@@ -313,6 +392,43 @@ onMounted(load)
         <div style="display: flex; justify-content: flex-end; gap: 8px">
           <NButton @click="barcodeModal = false">取消</NButton>
           <NButton type="primary" @click="addBarcode">绑定</NButton>
+        </div>
+      </template>
+    </NModal>
+
+    <!-- 盘点（M5）：提交实际值，服务端反算差异 -->
+    <NModal v-model:show="adjustModal" preset="card" title="盘点调整" style="max-width: 380px">
+      <p class="form-tip" v-if="adjustTarget">
+        批次 {{ adjustTarget.batch_no }} · 账面 {{ trimNum(adjustTarget.remaining_weight) }}g
+      </p>
+      <div class="form-grid">
+        <label class="form-grid--full">实际重量（g）
+          <input v-model="adjustForm.actual_weight" inputmode="decimal" placeholder="当前实际称重" /></label>
+        <label class="form-grid--full">原因
+          <input v-model="adjustForm.reason" placeholder="如 盘点 / 化冻失水" /></label>
+      </div>
+      <p class="form-tip">差异会写成盘点流水；盘盈会同步上调批次初始量。</p>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px">
+          <NButton @click="adjustModal = false">取消</NButton>
+          <NButton type="primary" :loading="adjusting" @click="submitAdjust">提交</NButton>
+        </div>
+      </template>
+    </NModal>
+
+    <!-- 报损（M5）：按 FEFO 扣批次 -->
+    <NModal v-model:show="spoilModal" preset="card" title="报损" style="max-width: 380px">
+      <div class="form-grid">
+        <label class="form-grid--full">报损重量（g）
+          <input v-model="spoilForm.weight" inputmode="decimal" placeholder="如 200" /></label>
+        <label class="form-grid--full">原因
+          <input v-model="spoilForm.reason" placeholder="如 变质 / 过期" /></label>
+      </div>
+      <p class="form-tip">按先到期先出扣减批次，成本按批次单位成本核算。</p>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px">
+          <NButton @click="spoilModal = false">取消</NButton>
+          <NButton type="primary" :loading="spoiling" @click="submitSpoil">提交</NButton>
         </div>
       </template>
     </NModal>
@@ -422,6 +538,7 @@ onMounted(load)
   font-variant-numeric: tabular-nums;
 }
 .batch-row__nums b { font-size: 13.5px; color: var(--text-1); }
+.btn--tiny { padding: 2px 8px; font-size: 11.5px; border-radius: 6px; }
 
 .expiry { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
 .expiry--ok { background: var(--green-weak); color: var(--green); }

@@ -5,6 +5,7 @@ import { NSelect } from 'naive-ui'
 
 import { catalogApi, type Category, type StorageLocation } from '@/api/catalog'
 import { ingredientApi, type IngredientListItem } from '@/api/ingredients'
+import { inventoryApi, trimNum, type InventorySummary } from '@/api/inventory'
 
 const router = useRouter()
 
@@ -17,6 +18,7 @@ const total = ref(0)
 const loading = ref(false)
 const categories = ref<Category[]>([])
 const locations = ref<StorageLocation[]>([])
+const summary = ref<InventorySummary | null>(null)
 
 const categoryOptions = computed(() => {
   const parents = categories.value.filter((c) => !c.parent_id)
@@ -33,6 +35,14 @@ const categoryOptions = computed(() => {
 const locationOptions = computed(() =>
   locations.value.map((l) => ({ label: l.name, value: l.id }))
 )
+
+async function loadSummary() {
+  try {
+    summary.value = await inventoryApi.summary()
+  } catch {
+    // 汇总失败不阻塞列表：链路异常时页面其余部分仍可用
+  }
+}
 
 let timer: number | undefined
 async function load() {
@@ -58,6 +68,7 @@ watch([keyword, categoryId, locationId, includeInactive], () => {
 })
 
 onMounted(async () => {
+  void loadSummary()
   const [cats, locs] = await Promise.all([catalogApi.categories(), catalogApi.locations()])
   categories.value = cats.items
   locations.value = locs.items
@@ -75,6 +86,14 @@ onMounted(async () => {
       <button class="btn" @click="router.push('/consume')">− 记一笔消耗</button>
       <button class="btn btn--primary" @click="router.push('/ingredients/new')">+ 新增食材</button>
     </div>
+  </div>
+
+  <div v-if="summary" class="card summary-bar">
+    <div><span>库存总价值</span><b>¥{{ summary.total_cost }}</b></div>
+    <div><span>总重量</span><b>{{ trimNum(summary.total_weight) }} g</b></div>
+    <div><span>食材 / 批次</span><b>{{ summary.ingredient_count }} / {{ summary.batch_count }}</b></div>
+    <div><span>临期 7 天内</span><b :class="{ 'summary-bar__alert': summary.expiring_count > 0 }">{{ summary.expiring_count }}</b></div>
+    <div><span>低库存</span><b :class="{ 'summary-bar__alert': summary.low_stock_count > 0 }">{{ summary.low_stock_count }}</b></div>
   </div>
 
   <div class="filters card">
@@ -199,4 +218,11 @@ onMounted(async () => {
 .row__side { text-align: right; flex: none; }
 .row__unit { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .row__min { font-size: 11.5px; color: var(--text-3); margin-top: 3px; }
+
+.summary-bar { display: flex; gap: 30px; flex-wrap: wrap; }
+.summary-bar div { display: flex; flex-direction: column; gap: 3px; }
+.summary-bar span { font-size: 11.5px; color: var(--text-3); }
+.summary-bar b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.summary-bar__alert { color: var(--red); }
+@media (max-width: 720px) { .summary-bar { gap: 18px; } .summary-bar b { font-size: 15px; } }
 </style>

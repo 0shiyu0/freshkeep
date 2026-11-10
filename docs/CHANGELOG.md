@@ -234,6 +234,67 @@
 
 ---
 
+## 2026-11-10 · M5：库存域（聚合 / 流水 / 盘点 / 报损）
+
+### 新增
+
+- `GET /inventory`：读 `v_inventory`，支持中文/拼音/首字母搜索、分类（含子分类）、
+  储存位置（EXISTS 子查询）、低库存筛选与分页；返回最近到期与剩余天数。
+- `GET /inventory/summary`：总重量、总成本、总数量、食材数、批次数、低库存数、临期 7 天、已过期。
+- `GET /inventory/transactions`：全部流水（purchase/consume/spoilage/adjustment/reverse），
+  类型/食材/日期过滤 + 分页；行内含 `related_object_id`，前端据此撤销消耗。
+- `POST /inventory/adjustments`：盘点提交**实际值**、服务端反算 delta；
+  盘亏按单位成本扣减、扣到归零时取剩余成本结清尾差；盘盈按当前单位成本计入。
+- `POST /inventory/stocktake`：批量盘点，任一项失败整批回滚。
+- `POST /inventory/spoilage`：报损按 FEFO 扣批次，写 `spoilage` 流水；原因必填。
+- `services/inventory/ops.py`：盘点/报损的五步事务实现（复用 `fefo_order`、
+  状态机与一致性断言，不复制消耗域的业务规则）。
+- 测试：`tests/acceptance/test_inventory.py` 14 项（聚合/汇总/搜索/流水/盘亏/盘盈/
+  归零结清/批量回滚/报损 FEFO/鉴权）。
+- 前端：记录页改为完整流水（类型标签 + 筛选 + 消耗撤销）；库存页加汇总条；
+  食材详情页批次行加「盘点」、批次区加「报损」弹层；`api/inventory.ts`。
+
+### 变更
+
+- 记录页从「只显示消耗」升级为「全部流水」，撤销入口按 `related_object_type=consumption` 判定。
+
+### 修复
+
+- **盘盈违反 DDL 约束**：`ck_batch_remaining_le_initial` 要求 `remaining <= initial`，
+  盘盈会让剩余量超过初始量 → 盘盈时同步上调 `initial_weight/initial_quantity/purchase_cost`
+  （语义：当初入库少记了，只升不降）。
+- **`text()` 参数绑定**：`:param::uuid` 不被 SQLAlchemy 识别（bindparam 正则 `(?!:)`），
+  改为 `CAST(:param AS uuid)`；`:q IS NULL` 让 PG 无法推断类型，改为 `COALESCE(CAST(...), 列)`。
+- **测试日期漂移**：`test_expiring_and_expired_batches` 硬编码 `2026-11-11` 并断言「剩 2 天」，
+  11-10 运行时按实际只剩 1 天而失败 → 测试日期一律改为基于 `biz_today()` 相对计算
+  （`test_batches.py`、`test_consumption.py` 一并修正）。
+- **测试夹具**：库存测试的食材改用 API 建档，否则 `name_pinyin` 为空会让拼音搜索用例假失败。
+
+### 数据库
+
+- **无 DDL 变更**，无新迁移；迁移版本仍为 `0002_ingredient_storage (head)`。
+- 盘点盘盈会更新 `batches.initial_*` 与 `purchase_cost`（只升不降），这是业务语义要求，
+  不改变表结构。
+
+### 验证
+
+- pytest **106 passed**（原 92 + 库存域 14）。
+- 容器真实 HTTP **16 项全过**：聚合 1500g/53.00、汇总、盘亏 -20g/-0.72、盘盈 +20g 且
+  initial 上调、批量盘点整批回滚、报损 600g 后剩余 b1=0/b2=900、流水类型过滤、
+  `v_batch_reconcile` 差异为 0。
+- 浏览器 DOM 探针：记录页（流水类型/单号/筛选）、库存页（汇总条）、详情页（盘点/报损按钮）
+  在 1280/390 下全部可见且横向溢出 0px。
+- `npm run build` 通过（vue-tsc 零错误）。
+
+### 遗留
+
+- 每日对账任务（APScheduler）尚未实现，留到 M7 与备份任务一起做；当前靠
+  `v_batch_reconcile` 在每次写入后断言。
+- 盘点只支持按重量主维度核算成本；同时改数量时按重量计成本，数量差异不单独计价。
+- 记录页固定取最近 60 条，未做翻页 UI（接口已支持）。
+
+---
+
 ## [Unreleased]
 
 ### 新增
