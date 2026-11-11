@@ -1,17 +1,17 @@
 # 项目状态
 
-> 快照时间：2026-11-11 10:40（Asia/Shanghai）
+> 快照时间：2026-11-11 11:00（Asia/Shanghai）
 > 维护规则：每个里程碑结束、每次数据库结构变化、每次发现已知问题，都要更新本文与 `docs/CHANGELOG.md`。
 
 ---
 
 ## 1. 一句话现状
 
-**阶段 5 库存管理界面已完成**：库存总览改用 `/inventory` 聚合（与后端一致），
-支持搜索 + 分类 + **状态（正常/临期/过期/无库存）** + 位置四条件组合筛选；
-行内快速消耗、多选批量消耗、独立的盘点/报损页、详情页历史流水与单位成本、记录页日期与翻页。
-pytest **158 项通过**（含状态筛选 7 项），浏览器实测移动端 390 快速消耗 500→400g、
-批量消耗 440/450g 且 2 张消耗单、状态筛选只留 1 个食材。
+**阶段 6 首页与统计已完成**：新增 `GET /stats/overview`（库存价值按剩余成本、
+采购/消耗按日周月年趋势、分类支出占比、消耗排行、库存周转、最近操作），
+首页接入统计面板与 SVG 趋势图，支持粒度切换与自定义日期区间。
+pytest **173 项通过**（含统计 15 项），容器实测采购 106.00 / 消耗 28.80 / 库存价值 77.20
+与流水逐项一致且库存价值 ≠ 采购总额，四种粒度桶数与序列之和均正确。
 本轮**无 DDL 变更**，两库均为 `0002_ingredient_storage`。下一步是 **M7 备份导出与定时任务**。
 
 | 里程碑 | 状态 | 备注 |
@@ -29,12 +29,13 @@ pytest **158 项通过**（含状态筛选 7 项），浏览器实测移动端 3
 | **阶段 4 库存引擎** | ✅ **完成** | 独立引擎层 + 8 项必须测试 + 成本报告；证据见 §2.7 |
 | **M6 首页与营养** | ✅ **完成** | summary / nutrition / targets + 首页改版；证据见 §2.8 |
 | **阶段 5 库存界面** | ✅ **完成** | 库存总览/状态筛选/快消/批量/盘点报损/记录；证据见 §2.9 |
+| **阶段 6 首页统计** | ✅ **完成** | stats/overview + 趋势/占比/排行/周转 + 首页面板；证据见 §2.10 |
 | M7 备份导出与定时任务 | ⬜ **下一步** | pg_dump、CSV/JSON 导出、APScheduler 对账 |
 | M8 前端页面 | 🔄 部分 | 登录/库存/详情(含批次)/编辑/设置/消耗/记录已完成；记录页完整流水待 M5 |
 | M9 原生 App | ⬜ | 需 Xcode（iOS 走真机自签） |
 | M10 联调验收 | ⬜ | |
 
-整体进度：**P0 完成 9/13 个里程碑（约 69%），另加阶段 3/4/5 的补齐**；按人日约 26/36。
+整体进度：**P0 完成 9/13 个里程碑（约 69%），另加阶段 3/4/5/6 的补齐**；按人日约 28/36。
 
 ---
 
@@ -151,7 +152,20 @@ pytest **158 项通过**（含状态筛选 7 项），浏览器实测移动端 3
 | 详情 | `IngredientDetailView` | 批次 + 单位成本 + 历史记录（20 条流水） |
 | 记录 | `RecordsView` | 类型 + 日期区间 + 上一页/下一页 |
 
-### 2.10 测试规模
+### 2.10 阶段 6 首页与统计（本轮）
+
+| 项 | 文件 | 验证方式与结果 |
+| --- | --- | --- |
+| 统计接口 | `api/v1/stats.py`、`services/stats.py` | 一次返回库存价值/总额/序列/分类/排行/周转/最近操作 |
+| 库存价值 | 同上 | `Σ remaining_cost` = 77.20，采购总额 106.00，两者不等 |
+| 采购/消耗 | 同上 | 106.00 / 28.80 与流水逐项一致；撤销后消耗净额减少 |
+| 粒度 | 同上 | day 30 点 / week 13 点 / month 13 点 / year 6 点；序列之和 == 总额 |
+| 时间筛选 | 同上 | 单日窗口只含当天；未来区间 0 且 `has_data=false`；起止倒置返回 400 |
+| 分类占比 | 同上 | 肉类 10.80 + 蔬菜 2.00 == 消耗总额；比率之和 ≈ 1 |
+| 排行/周转 | 同上 | 鸡胸肉 300g 居首；采购 2 次/消耗 2 次 |
+| 首页 | `components/StatsPanel.vue` | 4 卡 + SVG 折线 + 占比条 + 排行条 + 周转表 + 最近操作；1280/390 溢出 0px |
+
+### 2.11 测试规模
 
 ```
 backend/tests/
@@ -168,8 +182,9 @@ backend/tests/
   unit/test_inventory_engine.py   ~230 行  库存引擎纯函数（17 项，阶段 4 新增）
   acceptance/test_stage4_engine.py ~230 行 阶段 4 八项必须测试 + 4.1/4.12（10 项）
   acceptance/test_dashboard.py    ~200 行 首页汇总/营养/目标（11 项）
-  acceptance/test_stage5_filters.py ~180 行 库存状态与组合筛选（7 项，阶段 5 新增）
-合计 158 项，全绿
+  acceptance/test_stage5_filters.py ~180 行 库存状态与组合筛选（7 项）
+  acceptance/test_stats.py        ~250 行 统计口径与粒度（15 项，阶段 6 新增）
+合计 173 项，全绿
 ```
 
 ---
@@ -214,7 +229,7 @@ backend/tests/
 
 | 能力 | 状态 | 说明 |
 | --- | --- | --- |
-| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 158 项可用 |
+| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 173 项可用 |
 | 本机 PostgreSQL | ✅ 16.15 | 库 `freshkeep` 与测试库 `freshkeep_test`，均在 `0002` |
 | 容器三件套 | ✅ | `freshkeep-{db,api,web}` 全 healthy，对外 8080 |
 | 容器内迁移版本 | ✅ | `0002_ingredient_storage` |
@@ -236,7 +251,7 @@ head -120 docs/CHANGELOG.md
 
 ```bash
 git status --short && git log -3 --oneline
-cd backend && .venv/bin/python -m pytest          # 期望 158 passed
+cd backend && .venv/bin/python -m pytest          # 期望 173 passed
 export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
 docker compose ps                                  # 期望 3 个 healthy
 docker compose exec -T db psql -U freshkeep -d freshkeep -tAc "select version_num from alembic_version"
@@ -260,25 +275,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 10:08 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 10:19 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `61ac382` |
-| 工作区 | 1 个未提交改动，未跟踪 0 个 |
+| 分支 / HEAD | `main` / `ca8a62f` |
+| 工作区 | 14 个未提交改动，未跟踪 6 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0002_ingredient_storage`，25 张表 |
-| 后端测试 | 158 passed, 1 warning in 5.57s |
+| 后端测试 | 173 passed, 1 warning in 6.87s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+ca8a62f 2026-11-11 chore: 刷新阶段 5 提交后的状态快照与留痕
 61ac382 2026-11-11 feat(web): 阶段 5 库存管理界面 —— 状态筛选/快速消耗/批量消耗/盘点报损页
 985e077 2026-11-11 chore: 刷新 M6 提交后的状态快照与留痕
 e98e56b 2026-11-11 feat(api): M6 首页与营养统计 —— summary/nutrition/targets + 首页改版
 682ef38 2026-11-10 chore: 刷新阶段 4 提交后的状态快照与留痕
-53f775d 2026-11-10 feat(api): 阶段 4 库存引擎 —— 独立纯函数层 + 流水口径库存 + 对账修复
 ```
 <!-- AUTO:STATUS:END -->

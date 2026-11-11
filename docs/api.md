@@ -140,6 +140,7 @@
 | GET | `/inventory/ledger-stock` | — | **4.1** 按有效流水重算的库存，与批次缓存逐食材对照 |
 | GET | `/inventory/reconcile` | — | **4.12** 批次缓存与分配聚合的差异清单（正常为空） |
 | GET | `/dashboard/summary` | `from_date?, to_date?` | 首页：库存价值、期间采购/消耗/报损、消耗比例、最近 4 条入库、临期计数 |
+| GET | `/stats/overview` | `granularity=day｜week｜month｜year, from_date?, to_date?` | **阶段 6** 库存价值（剩余成本）、趋势序列、分类占比、消耗排行、周转、最近操作 |
 | GET | `/dashboard/nutrition` | `period=today｜3d｜week` | 六项营养汇总；`has_records=false` 表示窗口内无消耗 |
 | GET/PUT | `/nutrition/targets` | `items[{code, target_value, period}]` | 营养目标；同日重复设置覆盖 |
 | POST | `/inventory/reconcile/repair` | `batch_ids?, reason?` | **4.12** 按流水修正缓存，写 `audit_logs` |

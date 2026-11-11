@@ -19,3 +19,4 @@
 2026-11-11 09:49 | e98e56b | feat(api): M6 首页与营养统计 —— summary/nutrition/targets + 首页改版 | 16 文件 | api web docs | main
 2026-11-11 09:49 | 985e077 | chore: 刷新 M6 提交后的状态快照与留痕 |  4 文件 | docs | main
 2026-11-11 10:07 | 61ac382 | feat(web): 阶段 5 库存管理界面 —— 状态筛选/快速消耗/批量消耗/盘点报损页 | 16 文件 | api web docs | main
+2026-11-11 10:08 | ca8a62f | chore: 刷新阶段 5 提交后的状态快照与留痕 |  4 文件 | docs | main

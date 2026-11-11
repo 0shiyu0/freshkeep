@@ -1,21 +1,21 @@
 {
   "BRANCH": "main",
-  "HEAD": "61ac382",
-  "DIRTY": 1,
-  "UNTRACKED": 0,
+  "HEAD": "ca8a62f",
+  "DIRTY": 14,
+  "UNTRACKED": 6,
   "AHEAD": 0,
   "RECENT": [
+    "ca8a62f 2026-11-11 chore: 刷新阶段 5 提交后的状态快照与留痕",
     "61ac382 2026-11-11 feat(web): 阶段 5 库存管理界面 —— 状态筛选/快速消耗/批量消耗/盘点报损页",
     "985e077 2026-11-11 chore: 刷新 M6 提交后的状态快照与留痕",
     "e98e56b 2026-11-11 feat(api): M6 首页与营养统计 —— summary/nutrition/targets + 首页改版",
-    "682ef38 2026-11-10 chore: 刷新阶段 4 提交后的状态快照与留痕",
-    "53f775d 2026-11-10 feat(api): 阶段 4 库存引擎 —— 独立纯函数层 + 流水口径库存 + 对账修复"
+    "682ef38 2026-11-10 chore: 刷新阶段 4 提交后的状态快照与留痕"
   ],
   "MIG": "0002_ingredient_storage",
   "TABLES": "25",
   "DB_OK": true,
-  "TESTS": "158 passed, 1 warning in 5.57s",
+  "TESTS": "173 passed, 1 warning in 6.87s",
   "BUILD": "已构建",
   "DOCS_OK": true,
-  "NOW": "2026-11-11 10:08"
+  "NOW": "2026-11-11 10:19"
 }

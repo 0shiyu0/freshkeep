@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { dashboardApi, pct, type DashboardNutrition, type DashboardSummary } from '@/api/dashboard'
+import StatsPanel from '@/components/StatsPanel.vue'
 import { useAppStore } from '@/stores/app'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
@@ -42,13 +43,6 @@ async function loadNutrition() {
     notifyError(err instanceof Error ? err.message : '加载营养失败')
   }
 }
-
-/** 期间标签：无采购时比例显示「— 无采购」，不显示 0% */
-const ratioText = computed(() => {
-  const v = summary.value?.consumption_ratio
-  if (v === null || v === undefined) return '— 期间无采购'
-  return `${(Number(v) * 100).toFixed(1)}%`
-})
 
 async function openTargets() {
   const res = await dashboardApi.targets()
@@ -106,25 +100,8 @@ onMounted(async () => {
   <div v-if="loading && !summary" class="card empty"><p>加载中…</p></div>
 
   <template v-else-if="summary">
-    <!-- 库存与期间金额 -->
-    <div class="grid grid--2">
-      <section class="card hero-card">
-        <span class="hero-card__label">库存总价值</span>
-        <strong class="hero-card__value">¥{{ summary.stock_cost }}</strong>
-        <div class="hero-card__meta">
-          <span>总重量 {{ Number(summary.stock_weight) }}g</span>
-          <span>{{ summary.stock_ingredient_count }} 种食材 / {{ summary.batch_count }} 个批次</span>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>期间金额</h2>
-        <div class="kv"><span>采购</span><em>¥{{ summary.purchase_amount }}</em></div>
-        <div class="kv"><span>消耗</span><em>¥{{ summary.consumption_amount }}</em></div>
-        <div class="kv"><span>报损</span><em>¥{{ summary.spoilage_amount }}</em></div>
-        <div class="kv"><span>消耗比例</span><em>{{ ratioText }}</em></div>
-      </section>
-    </div>
+    <!-- 统计面板：概览卡片 + 趋势图 + 分类占比 + 排行 + 周转 + 最近操作 -->
+    <StatsPanel />
 
     <!-- 提醒 -->
     <section class="card alerts">
@@ -224,10 +201,6 @@ onMounted(async () => {
 .status-mini.ok { color: var(--green); }
 .status-mini.down { color: var(--red); }
 
-.hero-card { display: flex; flex-direction: column; justify-content: center; }
-.hero-card__label { font-size: 12px; color: var(--text-3); }
-.hero-card__value { font-size: 30px; font-weight: 700; letter-spacing: -.5px; margin: 6px 0 8px; font-variant-numeric: tabular-nums; }
-.hero-card__meta { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); flex-wrap: wrap; }
 
 .alerts { display: flex; gap: 12px; flex-wrap: wrap; }
 .alert {
@@ -277,6 +250,5 @@ onMounted(async () => {
 .modal__foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 @media (max-width: 720px) {
   .grid--2 { grid-template-columns: 1fr; }
-  .hero-card__value { font-size: 24px; }
 }
 </style>
