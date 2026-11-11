@@ -2,10 +2,10 @@
 
 > NAS 私有部署 · 原生 App + Web · 批次级库存 · 成本核算 · 营养估算
 
-**当前状态：阶段 8（智能辅助）上半完成**（扫码/条码/外部商品源/AI 识别闸门/临期提醒/采购建议）。
-AI 识别只写 `recognition_drafts`，人工确认后才建档或入库，批次与流水在识别阶段零变化；
-pytest **200 项全绿**，成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)。
-菜谱管理与采购清单（8.11~8.13）待做。三容器 `docker compose up -d` 一键起全，对外 8080。
+**当前状态：阶段 8（智能辅助）完成**（扫码/条码/外部源/AI 识别闸门/临期提醒/采购建议/菜谱匹配/采购清单）。
+AI 识别只写 `recognition_drafts`，人工确认后才建档或入库；采购清单同样不产生库存流水。
+pytest **214 项全绿**，成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)。
+待补：PWA 通知、定时扫描、清单勾选与一键入库。三容器 `docker compose up -d` 一键起全，对外 8080。
 
 | 文档 | 内容 |
 | --- | --- |

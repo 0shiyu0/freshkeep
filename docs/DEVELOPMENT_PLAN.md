@@ -228,9 +228,13 @@ P2（AI 识别 + 采购清单 + 菜谱 + 对账告警 + TLS）≈ 14 人日。
 | 8.8 | 临期提醒 | `/alerts` 通知中心 + 首页入口；**PWA 通知未做** | 🔄 部分 |
 | 8.9 | 最低库存 | `ingredients.minimum_quantity/minimum_weight` + `is_low_stock` | ✅ 已有 |
 | 8.10 | 采购建议 | `GET /purchase/suggestions`：最低库存差额 / 近 30 天用量估算 | ✅ |
-| 8.11 | 菜谱管理 | `recipes` / `recipe_items` 表已有，CRUD 未做 | ⬜ |
-| 8.12 | 菜谱匹配 | 库存匹配与缺口计算 | ⬜ |
-| 8.13 | 采购清单 | 多菜谱合并 → `shopping_lists` | ⬜ |
+| 8.11 | 菜谱管理 | `GET/POST /recipes`、`GET/PUT/DELETE /recipes/{id}`；前端 `RecipesView` | ✅ |
+| 8.12 | 菜谱匹配 | `GET /recipes/{id}/match?servings=`：需求（按份缩放）− 库存 → 缺口 | ✅ |
+| 8.13 | 采购清单 | `POST /shopping-lists/from-recipes`：需求相加后减库存，只留缺口；`ShoppingListsView` | ✅ |
+
+**8.11~8.13 实测**：`tests/acceptance/test_recipes.py` 14 项全绿（CRUD/校验/按份缩放/缺口/合并清单/不产生流水）；
+容器 13 项全过：700g 需求 − 500g 库存 = 200g 缺口、4 份需 600g 缺 100g、
+清单生成前后流水数不变；三个页面 1280/390 均无溢出。
 
 **已完成部分实测**：`tests/acceptance/test_ai_assist.py` 16 项全绿（含"识别/修正/拒绝三个阶段批次与流水零变化"的硬断言）；
 容器真实 HTTP 26 项全过；浏览器 390 实测手动链路：查询未命中 → 手动填写 → 待确认（含 `NAME_MISSING`）

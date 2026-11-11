@@ -1,18 +1,17 @@
 # 项目状态
 
-> 快照时间：2026-11-11 16:40（Asia/Shanghai）
+> 快照时间：2026-11-11 16:55（Asia/Shanghai）
 > 维护规则：每个里程碑结束、每次数据库结构变化、每次发现已知问题，都要更新本文与 `docs/CHANGELOG.md`。
 
 ---
 
 ## 1. 一句话现状
 
-**阶段 8（上）已完成**：AI 识别闸门（`recognition_drafts` + 待确认 + 人工修正 + 日期互错检测）、
-条码查询与可配置外部商品源（拒绝内网地址）、临期/过期/低库存扫描与通知中心、采购建议；
-菜谱管理与采购清单（8.11~8.13）尚未做。
-pytest **200 项通过**（含阶段 8 的 16 项），容器 HTTP 26 项全过。
-**新增迁移 `0003_recognition_drafts`**，两库均为 `0003`，业务表 26 张。
-**AI 只写草稿表，识别/修正/拒绝三个阶段批次与流水零变化**（测试硬断言）。
+**阶段 8 已完成主体（13/13）**：AI 识别闸门（草稿表 + 待确认 + 日期互错检测）、
+条码与可配置外部源（拒内网）、临期扫描与通知中心、采购建议、**菜谱管理 / 库存匹配 / 多菜谱合并采购清单**。
+pytest **214 项通过**（阶段 8 共 30 项），容器 HTTP 13 项 + 页面渲染验证通过。
+两库均为 `0003_recognition_drafts`，业务表 26 张（本轮无新迁移）。
+**AI 只写草稿表；识别/修正/拒绝三个阶段批次与流水零变化**；采购清单同样不产生流水。
 
 | 里程碑 | 状态 | 备注 |
 | --- | --- | --- |
@@ -31,13 +30,13 @@ pytest **200 项通过**（含阶段 8 的 16 项），容器 HTTP 26 项全过�
 | **阶段 5 库存界面** | ✅ **完成** | 库存总览/状态筛选/快消/批量/盘点报损/记录；证据见 §2.9 |
 | **阶段 6 首页统计** | ✅ **完成** | stats/overview + 趋势/占比/排行/周转 + 首页面板；证据见 §2.10 |
 | **阶段 7 营养管理** | ✅ **完成** | 项目/档案版本/快照/四周期/目标达标率/来源；证据见 §2.11 |
-| **阶段 8 智能辅助** | 🔄 **部分** | 8.1~8.10 完成；8.11~8.13 菜谱/清单待做；证据见 §2.12 |
+| **阶段 8 智能辅助** | ✅ **完成** | 8.1~8.13 全部落地；PWA 通知与定时扫描待补；证据见 §2.12 |
 | M7 备份导出与定时任务 | ⬜ **下一步** | pg_dump、CSV/JSON 导出、APScheduler 对账 |
 | **M8 前端页面** | ✅ **完成** | 13 个视图：登录/首页/库存总览/食材详情与编辑/批次列表与详情/采购入库/消耗录入/盘点报损/记录/设置；401 由全局 handler 跳登录 |
 | M9 原生 App | ⬜ | 需 Xcode（iOS 走真机自签） |
 | M10 联调验收 | ⬜ | |
 
-整体进度：**阶段 0~7 与 M0~M6、M8 已完成；阶段 8 完成 10/13 项**。剩余 **8.11~8.13 菜谱/清单**、**M7**（备份导出与定时任务，含 8.7 定时扫描）、**M9**（原生 App）、**M10**（联调验收）。按人日约 31/36。
+整体进度：**阶段 0~8 与 M0~M6、M8 已完成**。剩余 **M7**（备份导出与定时任务，含 8.7 定时扫描与 8.8 PWA 通知）、**M9**（原生 App）、**M10**（联调验收）。按人日约 33/36。
 
 ---
 
@@ -195,6 +194,10 @@ pytest **200 项通过**（含阶段 8 的 16 项），容器 HTTP 26 项全过�
 | 通知中心 | `/alerts` 前端 | 统计卡 + 列表 + 已读；390 实测出现低库存项 |
 | 采购建议 | `GET /purchase/suggestions` | 最低 1000/现有 200 → 建议 800g、预估 ¥28.80（字符串） |
 | 扫码/待确认 | `ScanView` | 390 实测：查询→手动填写→`NAME_MISSING`→填名→确认建档→跳详情，DB 落库 |
+| 8.11 菜谱 | `api/v1/recipes.py`、`RecipesView` | CRUD + 整体替换食材 + 搜索；详情带当前库存 |
+| 8.12 匹配 | `GET /recipes/{id}/match` | 1 份 150g（基准 2 份 300g）；4 份需 600g 缺 100g；数量无换算标 `unmeasured` |
+| 8.13 清单 | `POST /shopping-lists/from-recipes` | 两菜谱 700g 需求 − 500g 库存 = 200g 缺口；牛奶无缺口不出现；流水 2→2 不变 |
+| 菜谱页面 | `RecipesView`/`RecipeDetailView`/`ShoppingListsView` | 三页 1280/390 渲染匹配表、缺口、步骤、清单项；溢出 0px |
 
 ### 2.13 测试规模
 
@@ -217,7 +220,8 @@ backend/tests/
   acceptance/test_stats.py        ~250 行 统计口径与粒度（15 项）
   acceptance/test_nutrition_stage7.py ~230 行 营养项目/档案/快照/周期/达标率（11 项）
   acceptance/test_ai_assist.py    ~290 行 AI 闸门/条码/提醒/建议（16 项，阶段 8）
-合计 200 项，全绿
+  acceptance/test_recipes.py      ~280 行 菜谱 CRUD/匹配/合并清单（14 项，阶段 8）
+合计 214 项，全绿
 ```
 
 ---
@@ -230,7 +234,8 @@ backend/tests/
 | 备份导出接口 | 未实现（脚本 `deploy/backup.sh` 可用，但无 API） |
 | APScheduler 定时任务 | 依赖已装，未启用（临期扫描/每日对账） |
 | 8.11 菜谱管理 / 8.12 匹配 / 8.13 采购清单 | `recipes`、`recipe_items`、`shopping_lists` 表已在 `0001`，接口与页面未做 |
-| PWA 通知 | 通知中心已可用；Web Notification + Service Worker 未接 |
+| PWA 通知（8.8 增强） | 通知中心已可用；Web Notification + Service Worker 未接 |
+| 清单勾选完成 / 一键入库 | 需补 `PATCH /shopping-list-items/{id}` 与批量入库 |
 | `PairView.vue` 遗留死文件 | 路由已用 `/login` 取代，该视图无任何引用（14 行），可安全删除 |
 | Capacitor 原生工程 | 未 `cap add`，`android/` `ios/` 不存在 |
 | NAS 部署验证 | 本机 compose 已通过；NAS 未跑过 |
@@ -265,7 +270,7 @@ backend/tests/
 
 | 能力 | 状态 | 说明 |
 | --- | --- | --- |
-| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 200 项可用 |
+| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 214 项可用 |
 | 本机 PostgreSQL | ✅ 16.15 | 库 `freshkeep` 与测试库 `freshkeep_test`；本机 `0003`，测试库建表用 `001_init.sql` |
 | 容器三件套 | ✅ | `freshkeep-{db,api,web}` 全 healthy，对外 8080 |
 | 容器内迁移版本 | ✅ | `0003_recognition_drafts` |
@@ -287,7 +292,7 @@ head -120 docs/CHANGELOG.md
 
 ```bash
 git status --short && git log -3 --oneline
-cd backend && .venv/bin/python -m pytest          # 期望 200 passed
+cd backend && .venv/bin/python -m pytest          # 期望 214 passed
 export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
 docker compose ps                                  # 期望 3 个 healthy
 docker compose exec -T db psql -U freshkeep -d freshkeep -tAc "select version_num from alembic_version"
@@ -311,25 +316,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 16:29 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 16:39 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `2e71b3b` |
-| 工作区 | 1 个未提交改动，未跟踪 0 个 |
+| 分支 / HEAD | `main` / `f0b18a0` |
+| 工作区 | 22 个未提交改动，未跟踪 9 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0003_recognition_drafts`，26 张表 |
-| 后端测试 | 200 passed, 1 warning in 8.57s |
+| 后端测试 | 214 passed, 1 warning in 9.24s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+f0b18a0 2026-11-11 chore: 刷新阶段 8（上）提交后的状态快照与留痕
 2e71b3b 2026-11-11 feat(api): 阶段 8（上）AI 识别闸门 + 条码/外部源 + 临期提醒 + 采购建议
 79452fe 2026-11-11 docs: 更正 M8 与翻页 UI 的滞后描述
 62f8adc 2026-11-11 chore: 刷新阶段 7 提交后的状态快照与留痕
 2df3c6e 2026-11-11 feat(api): 阶段 7 营养管理 —— month 周期/达标率按天数/档案来源与编辑
-3405838 2026-11-11 chore: 刷新阶段 6 提交后的状态快照与留痕
 ```
 <!-- AUTO:STATUS:END -->

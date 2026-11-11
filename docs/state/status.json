@@ -1,21 +1,21 @@
 {
   "BRANCH": "main",
-  "HEAD": "2e71b3b",
-  "DIRTY": 1,
-  "UNTRACKED": 0,
+  "HEAD": "f0b18a0",
+  "DIRTY": 22,
+  "UNTRACKED": 9,
   "AHEAD": 0,
   "RECENT": [
+    "f0b18a0 2026-11-11 chore: 刷新阶段 8（上）提交后的状态快照与留痕",
     "2e71b3b 2026-11-11 feat(api): 阶段 8（上）AI 识别闸门 + 条码/外部源 + 临期提醒 + 采购建议",
     "79452fe 2026-11-11 docs: 更正 M8 与翻页 UI 的滞后描述",
     "62f8adc 2026-11-11 chore: 刷新阶段 7 提交后的状态快照与留痕",
-    "2df3c6e 2026-11-11 feat(api): 阶段 7 营养管理 —— month 周期/达标率按天数/档案来源与编辑",
-    "3405838 2026-11-11 chore: 刷新阶段 6 提交后的状态快照与留痕"
+    "2df3c6e 2026-11-11 feat(api): 阶段 7 营养管理 —— month 周期/达标率按天数/档案来源与编辑"
   ],
   "MIG": "0003_recognition_drafts",
   "TABLES": "26",
   "DB_OK": true,
-  "TESTS": "200 passed, 1 warning in 8.57s",
+  "TESTS": "214 passed, 1 warning in 9.24s",
   "BUILD": "已构建",
   "DOCS_OK": true,
-  "NOW": "2026-11-11 16:29"
+  "NOW": "2026-11-11 16:39"
 }

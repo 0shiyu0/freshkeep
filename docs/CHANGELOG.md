@@ -618,6 +618,48 @@
 
 ---
 
+## 2026-11-11 · 阶段 8（下）：菜谱管理 / 库存匹配 / 采购清单
+
+### 新增
+
+- **菜谱**：`GET/POST /recipes`、`GET/PUT/DELETE /recipes/{id}`；
+  `recipes.steps` 存文本步骤，`recipe_items` 存食材需求（重量优先，数量无换算时标 `unmeasured`）。
+- **匹配** `GET /recipes/{id}/match?servings=`：需求按份数缩放后减当前库存，返回
+  `required/available/shortage/sufficient`，汇总 `can_cook` 与 `missing_count`。
+- **采购清单** `POST /shopping-lists/from-recipes`：多菜谱需求**相加**后减库存，只保留正缺口，
+  写入 `shopping_lists` / `shopping_list_items(source='recipe')`；
+  `GET /shopping-lists`、`/{id}` 查询。**不产生任何库存流水**（测试断言前后计数一致）。
+- **前端**：`RecipesView`（列表/搜索/新建编辑弹层，含多行食材需求）、
+  `RecipeDetailView`（份数调整 + 匹配表 + 一键生成清单 + 步骤）、
+  `ShoppingListsView`（清单列表 + 明细 + 去入库）；首页与库存页加入口；`api/recipes.ts`。
+- 测试：`tests/acceptance/test_recipes.py`（14 项）。
+
+### 变更
+
+- `api/http.ts` 补 `apiPut` / `apiDelete` 便捷方法。
+
+### 数据库
+
+- **无新迁移**；`recipes` / `recipe_items` / `shopping_lists` / `shopping_list_items`
+  在 `0001_init.sql` 已存在，本轮只加 ORM 映射（`Recipe`、`RecipeItem`）与接口。
+
+### 验证
+
+- pytest **214 passed**（原 200 + 菜谱 14）。
+- 容器 13 项全过：创建/更新整体替换/搜索、1 份 150g、4 份 600g 缺 100g、
+  两菜谱合并 700g − 500g = 200g 缺口且牛奶无缺口、清单生成前后 `inventory_transactions` 2→2、
+  清单明细 `source=recipe`。
+- 浏览器：菜谱列表/详情/清单三页 1280/390 均渲染匹配表、缺口、步骤与清单项，横向溢出 0px。
+- `npm run build` 通过（vue-tsc 零错误）。
+
+### 遗留
+
+- 菜谱步骤目前是纯文本，未做结构化步骤（新增/排序/配图）。
+- 采购清单未做勾选完成与「一键全部入库」（需先有 `PATCH items` 接口）。
+- 清单只按缺口生成，未合并「低库存建议」与「临期」来源。
+
+---
+
 ## [Unreleased]
 
 ### 新增

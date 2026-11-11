@@ -368,3 +368,39 @@ class RecognitionDraft(Base):
     )
     created_at: Mapped[datetime] = _now()
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Recipe(Base):
+    """菜谱（阶段 8.11）：步骤存 text，食材需求见 RecipeItem。"""
+
+    __tablename__ = "recipes"
+
+    id: Mapped[uuid.UUID] = _pk()
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    image_asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("file_assets.id")
+    )
+    category: Mapped[str] = mapped_column(Text, default="")
+    servings: Mapped[Decimal] = mapped_column(Numeric(6, 2), default=1)
+    duration_minutes: Mapped[int | None] = mapped_column(Integer)
+    steps: Mapped[str] = mapped_column(Text, default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = _now()
+
+
+class RecipeItem(Base):
+    __tablename__ = "recipe_items"
+
+    id: Mapped[uuid.UUID] = _pk()
+    recipe_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE")
+    )
+    ingredient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ingredients.id")
+    )
+    quantity: Mapped[Decimal | None] = mapped_column(QTY)
+    weight: Mapped[Decimal | None] = mapped_column(QTY)
+    unit_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("units.id")
+    )
+    note: Mapped[str] = mapped_column(Text, default="")

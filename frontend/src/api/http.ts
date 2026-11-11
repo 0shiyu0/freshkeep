@@ -115,6 +115,9 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
 export const apiGet = <T>(url: string, params?: Record<string, unknown>) =>
   request<T>({ url, method: 'GET', params })
 
+export const apiPut = <T>(url: string, data?: unknown) =>
+  request<T>({ url, method: 'PUT', data })
+export const apiDelete = <T>(url: string) => request<T>({ url, method: 'DELETE' })
 export const apiPost = <T>(url: string, data?: unknown, idempotencyKey?: string) =>
   request<T>({
     url,

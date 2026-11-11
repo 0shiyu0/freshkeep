@@ -152,6 +152,11 @@
 | GET | `/alerts/notifications` | `status, page…` | 通知中心 |
 | POST | `/alerts/notifications/{id}/read`、`/read-all` | — | 标记已读 |
 | GET | `/purchase/suggestions` | `limit` | 低库存采购建议（只读） |
+| GET/POST | `/recipes` | `q, page…` / `{name, servings, steps, items[]}` | **8.11** 菜谱列表 / 新建 |
+| GET/PUT/DELETE | `/recipes/{id}` | — | 菜谱详情（含食材与当前库存）/ 更新（整体替换食材）/ 删除 |
+| GET | `/recipes/{id}/match` | `servings?` | **8.12** 按份数缩放后与库存匹配，返回缺口 |
+| POST | `/shopping-lists/from-recipes` | `recipe_ids[], servings_map?, name?` | **8.13** 多菜谱合并生成采购清单（只读库存） |
+| GET | `/shopping-lists`、`/{id}` | `page…` | 采购清单列表 / 详情 |
 | GET | `/stats/overview` | `granularity=day｜week｜month｜year, from_date?, to_date?` | **阶段 6** 库存价值（剩余成本）、趋势序列、分类占比、消耗排行、周转、最近操作 |
 | GET | `/dashboard/nutrition` | `period=today｜3d｜week` | 六项营养汇总；`has_records=false` 表示窗口内无消耗 |
 | GET/PUT | `/nutrition/targets` | `items[{code, target_value, period}]` | 营养目标；同日重复设置覆盖 |
