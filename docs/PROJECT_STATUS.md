@@ -1,20 +1,19 @@
 # 项目状态
 
-> 快照时间：2026-11-10 17:35（Asia/Shanghai）
+> 快照时间：2026-11-11 10:05（Asia/Shanghai）
 > 维护规则：每个里程碑结束、每次数据库结构变化、每次发现已知问题，都要更新本文与 `docs/CHANGELOG.md`。
 
 ---
 
 ## 1. 一句话现状
 
-**阶段 4（库存引擎）已完成**：抽出独立纯函数层 `services/inventory/engine.py`
-（FEFO、扣减计划、成本分摊、尾差结清、双计量比例、流水重算、对账判定），
-新增 4.1 `GET /inventory/ledger-stock` 与 4.12 `GET /inventory/reconcile` +
-`POST /inventory/reconcile/repair`（按流水修复缓存并写审计）。
-pytest **140 项通过**（含 17 项引擎纯函数 + 10 项阶段 4 验收），
-成本核算报告 `docs/reports/cost-accounting.md` 已附实跑输出：
-300g → 10.80 元、剩余 42.20、尾差 10.00（非 9.99）、多批次 21.50、对账差异 0。
-本轮**无 DDL 变更**，两库均为 `0002_ingredient_storage`。下一步是 **M6 首页与营养统计**。
+**M6 首页与营养统计已完成**：`GET /dashboard/summary`（库存价值、期间采购/消耗/报损、
+消耗比例、最近入库、临期计数）、`GET /dashboard/nutrition`（六项营养按消耗快照汇总，
+`today/3d/week`，`has_records` 区分空白天）、`GET/PUT /nutrition/targets`（同日覆盖 + 达成率），
+首页从链路自检卡片改为业务数字。
+pytest **151 项通过**（含首页 11 项），容器真实 HTTP **21 项全过**，
+首页 1280/390 DOM 探针：空状态正确显示「没有消耗记录」而非「摄入 0」，有数据时 495/目标/免责声明齐全。
+本轮**无 DDL 变更**，两库均为 `0002_ingredient_storage`。下一步是 **M7 备份导出与定时任务**。
 
 | 里程碑 | 状态 | 备注 |
 | --- | --- | --- |
@@ -29,12 +28,13 @@ pytest **140 项通过**（含 17 项引擎纯函数 + 10 项阶段 4 验收）�
 | **M5 库存域** | ✅ **完成** | 聚合/汇总/流水/盘点/报损；证据见 §2.5 |
 | **阶段 3 采购入库** | ✅ **完成** | 独立入库页/批次列表/批次详情；证据见 §2.6 |
 | **阶段 4 库存引擎** | ✅ **完成** | 独立引擎层 + 8 项必须测试 + 成本报告；证据见 §2.7 |
-| M7 备份导出 | ⬜ | |
+| **M6 首页与营养** | ✅ **完成** | summary / nutrition / targets + 首页改版；证据见 §2.8 |
+| M7 备份导出与定时任务 | ⬜ **下一步** | pg_dump、CSV/JSON 导出、APScheduler 对账 |
 | M8 前端页面 | 🔄 部分 | 登录/库存/详情(含批次)/编辑/设置/消耗/记录已完成；记录页完整流水待 M5 |
 | M9 原生 App | ⬜ | 需 Xcode（iOS 走真机自签） |
 | M10 联调验收 | ⬜ | |
 
-整体进度：**P0 完成 8/13 个里程碑（约 62%），另加阶段 3 的展示层补齐**；按人日约 22/36。
+整体进度：**P0 完成 9/13 个里程碑（约 69%），另加阶段 3/4 的补齐**；按人日约 24/36。
 
 ---
 
@@ -127,7 +127,18 @@ pytest **140 项通过**（含 17 项引擎纯函数 + 10 项阶段 4 验收）�
 （红），再实现到全绿。期间修正的是**测试自身**的 3 处数据错误（流水重算重复计入库、
 造差异违反 `remaining <= initial` 约束），实现口径未变。
 
-### 2.8 测试规模
+### 2.8 M6 首页与营养（本轮）
+
+| 项 | 文件 | 验证方式与结果 |
+| --- | --- | --- |
+| 首页汇总 | `api/v1/dashboard.py`、`services/dashboard.py` | 库存价值 42.20、期间采购 53.00 / 消耗 10.80 / 比例 0.2038、最近入库 2 条、临期 1 |
+| 营养汇总 | 同上 | 消耗 300g → 热量 `495.0000`；`today/3d/week` 天数 0/2/6；`has_records` 区分空白天 |
+| 空态区分 | 同上 | 无消耗时 `has_records=false`、`record_count=0`、比例为 `null`（不是 0） |
+| 撤销不计入 | 同上 | 撤销一笔后 `record_count` 2 → 1 |
+| 营养目标 | `api/v1/nutrition.py` | 同日重复 PUT 覆盖为 2100、库中仅 1 行、达成率 0.2357 |
+| 首页 | `views/DashboardView.vue` | 空状态显示「这段时间没有消耗记录」；有数据时库存价值/批次号/495/免责声明/目标可见；1280/390 溢出 0px |
+
+### 2.9 测试规模
 
 ```
 backend/tests/
@@ -143,7 +154,8 @@ backend/tests/
   acceptance/test_purchase.py     ~200 行  采购入库与批次（7 项）
   unit/test_inventory_engine.py   ~230 行  库存引擎纯函数（17 项，阶段 4 新增）
   acceptance/test_stage4_engine.py ~230 行 阶段 4 八项必须测试 + 4.1/4.12（10 项）
-合计 140 项，全绿
+  acceptance/test_dashboard.py    ~200 行 首页汇总/营养/目标（11 项，M6 新增）
+合计 151 项，全绿
 ```
 
 ---
@@ -152,7 +164,6 @@ backend/tests/
 
 | 项 | 现状 |
 | --- | --- |
-| 首页与营养统计 | 首页仍是链路自检卡片，无业务数字；**M6 是下一步** |
 | 每日对账定时任务 | `v_batch_reconcile` 已有，但 APScheduler 定时对账未启用（M7 与备份任务一起做） |
 | 备份导出接口 | 未实现（脚本 `deploy/backup.sh` 可用，但无 API） |
 | APScheduler 定时任务 | 依赖已装，未启用（临期扫描/每日对账） |
@@ -189,7 +200,7 @@ backend/tests/
 
 | 能力 | 状态 | 说明 |
 | --- | --- | --- |
-| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 140 项可用 |
+| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 151 项可用 |
 | 本机 PostgreSQL | ✅ 16.15 | 库 `freshkeep` 与测试库 `freshkeep_test`，均在 `0002` |
 | 容器三件套 | ✅ | `freshkeep-{db,api,web}` 全 healthy，对外 8080 |
 | 容器内迁移版本 | ✅ | `0002_ingredient_storage` |
@@ -211,7 +222,7 @@ head -120 docs/CHANGELOG.md
 
 ```bash
 git status --short && git log -3 --oneline
-cd backend && .venv/bin/python -m pytest          # 期望 140 passed
+cd backend && .venv/bin/python -m pytest          # 期望 151 passed
 export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
 docker compose ps                                  # 期望 3 个 healthy
 docker compose exec -T db psql -U freshkeep -d freshkeep -tAc "select version_num from alembic_version"
@@ -220,41 +231,40 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 
 ---
 
-## 7. 下一步（M6 首页与营养）
+## 7. 下一步（M7 备份导出与定时任务）
 
-按 `docs/DEVELOPMENT_PLAN.md` 的 M6，顺序如下：
-
-1. `GET /dashboard/summary`：库存总价值、所选周期采购/消耗金额与消耗比例、最近 4 条入库、临期提醒条；
-2. `GET /dashboard/nutrition`：今日/近三天/本周的热量、蛋白质、脂肪、碳水、膳食纤维、钠，
-   只统计 `consumption_records.status='completed'` 的消耗快照；**无记录与 0 要区分**；
-3. 营养目标：`nutrition_targets` 表已有，做读写接口与达成率；
-4. 前端首页替换链路自检卡片为业务数字（保留一个小型链路状态角标）；
-5. 把 dashboard 的统计口径用例补进 `tests/acceptance/`（尤其「空白天 ≠ 0 摄入」）。
+1. `POST /backup`：触发 `pg_dump -Fc` 到 `backups/`，返回文件名与大小；`GET /backups` 列出现有备份；
+2. `GET /export/consumptions.csv`、`/export/transactions.csv`：流式 CSV，带 BOM 便于 Excel；
+3. APScheduler 接入：每日 03:00 对账（`reconcile` + 自动修复有差异的批次并写审计）、
+   每日备份、临期扫描；任务失败写 `audit_logs`，并在 `/dashboard/summary` 暴露最近一次结果；
+4. 前端设置页加「备份 / 导出」区块与最近备份列表；
+5. 补 acceptance 用例：备份文件可被 `pg_restore --list` 读取、CSV 行数与流水数一致、
+   对账任务在人为制造差异后能自动修复。
 
 ---
 
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-10 17:10 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 09:48 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `53f775d` |
-| 工作区 | 1 个未提交改动，未跟踪 0 个 |
+| 分支 / HEAD | `main` / `682ef38` |
+| 工作区 | 13 个未提交改动，未跟踪 5 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0002_ingredient_storage`，25 张表 |
-| 后端测试 | 140 passed, 1 warning in 5.60s |
+| 后端测试 | 151 passed, 1 warning in 5.54s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+682ef38 2026-11-10 chore: 刷新阶段 4 提交后的状态快照与留痕
 53f775d 2026-11-10 feat(api): 阶段 4 库存引擎 —— 独立纯函数层 + 流水口径库存 + 对账修复
 01b3185 2026-11-10 chore: 刷新阶段 3 提交后的状态快照与留痕
 fc309cf 2026-11-10 feat(web): 阶段 3 采购入库与批次管理 —— 独立入库页/批次列表/批次详情
 ab484c7 2026-11-10 chore: 刷新 M5 提交后的状态快照与留痕
-8317b85 2026-11-10 feat(api): M5 库存域 —— 聚合查询/汇总/流水/盘点/报损 + 记录页接完整流水
 ```
 <!-- AUTO:STATUS:END -->

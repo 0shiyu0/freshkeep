@@ -2,11 +2,11 @@
 
 > NAS 私有部署 · 原生 App + Web · 批次级库存 · 成本核算 · 营养估算
 
-**当前状态：阶段 4（库存引擎）已完成**（阶段 0/1/2/3/4 与 M0~M5 全部交付）。
+**当前状态：M6 首页与营养统计已完成**（阶段 0/1/2/3/4 与 M0~M6 全部交付）。
 认证、基础资料、采购入库、独立批次、FEFO 消耗与成本分摊、营养快照、撤销、盘点、报损、
-完整流水、批次详情、库存引擎与对账修复均可运行；pytest **140 项全绿**，
-成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)。
-三容器 `docker compose up -d` 一键起全，对外 8080。下一步是 M6 首页与营养统计。
+完整流水、批次详情、库存引擎与对账、首页业务数字与营养目标均可运行；
+pytest **151 项全绿**，成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)。
+三容器 `docker compose up -d` 一键起全，对外 8080。下一步是 M7 备份导出与定时任务。
 
 | 文档 | 内容 |
 | --- | --- |

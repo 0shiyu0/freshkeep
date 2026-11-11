@@ -386,6 +386,47 @@
 
 ---
 
+## 2026-11-11 · M6：首页与营养统计
+
+### 新增
+
+- `GET /dashboard/summary`：库存总价值/总重量/食材数/批次数、期间采购/消耗/报损金额、
+  消耗比例、最近 4 条入库、临期 7 天/已过期/低库存计数；支持 `from_date/to_date`（默认近 30 天）。
+- `GET /dashboard/nutrition?period=today|3d|week`：六项营养素按**消耗快照**汇总，
+  返回窗口起止、`days`、`has_records`、`record_count`、单项目标与达成率、免责说明。
+- `GET/PUT /nutrition/targets`：营养目标读写；同日重复设置用 `ON CONFLICT` 覆盖，
+  历史日期保留；读取取每个 (code, period) 最新生效行。
+- `services/dashboard.py`：窗口计算（Asia/Shanghai 自然日）、金额统计、营养聚合、目标 upsert。
+- `views/DashboardView.vue` 重写：库存价值大卡 + 期间金额 + 提醒条 + 最近入库 + 营养卡片
+  （周期切换、目标达成率、空态文案「这段时间没有消耗记录」）；`api/dashboard.ts`。
+- 测试：`tests/acceptance/test_dashboard.py`（11 项）。
+
+### 变更
+
+- 首页从「链路自检卡片」改为业务数字，左右顶栏保留一行状态角标。
+- `docs/api.md` 补 4 个新端点到清单。
+
+### 数据库
+
+- **无 DDL 变更**，无新迁移；`nutrition_targets` 在 `0001_init.sql` 已存在，本轮开始读写。
+
+### 验证
+
+- pytest **151 passed**（原 140 + 首页 11）。
+- 容器真实 HTTP **21 项全过**：空状态 `has_records=false` 且比例为 `null`；消耗 300g →
+  热量 `495.0000`；采购 53.00 / 消耗 10.80 / 比例 0.2038；`today/3d/week` 天数 0/2/6；
+  目标同日覆盖为 2100、达成率 0.2357、库中仅 1 行；撤销后记录数 2 → 1。
+- 首页 1280/390 DOM 探针：空状态显示「这段时间没有消耗记录」且不称「摄入 0」；
+  有数据时库存价值、批次号、495、免责声明、目标均可见；横向溢出 0px。
+- `npm run build` 通过（vue-tsc 零错误）。
+
+### 遗留
+
+- 营养目标只做 `daily` 视图的达成率；`weekly` 目标已存但未参与展示换算。
+- 首页「期间」默认近 30 天，暂未做前端日期选择器（接口已支持）。
+
+---
+
 ## [Unreleased]
 
 ### 新增
