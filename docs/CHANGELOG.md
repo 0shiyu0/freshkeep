@@ -660,6 +660,58 @@
 
 ---
 
+## 2026-11-11 · 阶段 8 收尾 + M7 备份/调度 + M9 脚手架
+
+### 范围收敛
+
+- **8.8 只做应用内通知中心**，不做系统级推送（Web Notification / Service Worker 从待办移除），
+  与需求一致；临期/过期/低库存仍通过 `/alerts` 展示。
+
+### 新增
+
+- **菜谱步骤结构化**（迁移 `0004_recipe_steps`）：新增 `recipe_steps(recipe_id, seq, text, duration_minutes)`；
+  API 兼容字符串（按行拆分、去序号）与数组（含单步时长）；详情返回 `steps[]` + `steps_text`，
+  旧数据按行兜底并标 `legacy`；前端有序展示 + 「约 N 分钟」。
+- **采购清单增强**：`PATCH /shopping-list-items/{id}`（勾选）、`POST /shopping-lists/{id}/complete`
+  （整单完成）、`POST /shopping-lists/from-low-stock`（按低库存建议生成，`source='low_stock'`）；
+  前端清单页加勾选框、全部完成、按低库存生成。
+- **M7 备份导出**：`POST /backup` 生成 `freshkeep-backup-<ts>.tar.gz`（`schema.sql` + 27 表 CSV + `manifest.json`）；
+  `GET /backups`、`POST /backups/{name}/verify`、`GET /backups/{name}/download`（拒绝路径穿越）；
+  `GET /export/transactions.csv`、`/consumptions.csv`（流式 + BOM）。
+- **M7 定时任务**：`app/tasks/scheduler.py` 三个作业（03:00 对账、03:10 备份、08:00 临期扫描），
+  `ENABLE_SCHEDULER=true` 启用，`GET /tasks` 查看、`POST /tasks/{id}/run` 手动执行，均写 `audit_logs`；
+  设置页加「备份与导出」区块（备份/校验/下载/CSV/任务状态与手动执行）。
+- **M9 脚手架**：`scripts/cap-add-platforms.sh`（install 平台包 → build → `cap add android/ios` → `cap sync`）；
+  `capacitor.config.ts` 四项关键配置已就绪（appId / webDir / androidScheme / cleartext）。
+
+### 变更
+
+- 业务表 **26 → 27**（`recipe_steps`），`test_system` 的「业务表数」断言同步为 27。
+- `backend/requirements.txt` 补 `APScheduler==3.11.3`；`docker-compose.yml` 加 `ENABLE_SCHEDULER: "true"`。
+- **Capacitor 平台包不进 `package.json`**：加进去会让 `docker compose build web` 在无外网环境安装失败；
+  改由脚本在本地按需安装，Web 产物与原生工程解耦。
+- 测试临时备份目录改用 `backend/.pytest-backups`（本机沙箱禁止写系统临时目录），已加 `.gitignore`。
+
+### 验证
+
+- pytest **230 passed**（原 217 + 备份/导出/调度/清单 13）。
+- 容器 **27 项全过**：备份 27 表/139 行、`verify.ok=true`、下载 gzip、路径穿越 404、
+  CSV 带 BOM、`tasks` 已启用运行、对账与扫描写审计、清单勾选与整单完成、
+  建议量 600g（最低 1000 − 库存 400）、步骤数组/文本两种写法。
+- 浏览器：设置页「备份与导出」在 1280/390 均渲染备份项与任务；清单勾选真实点击后行变完成态；
+  菜谱详情显示「步骤（2）」与「约 10 分钟」；三页横向溢出 0px。
+- 无 lint 级问题；`npm run build` 通过。
+
+### 遗留
+
+- **M9 平台目录未生成**：本会话 npm registry 不可达，`@capacitor/android|ios` 未安装；
+  需在有网机器执行 `./scripts/cap-add-platforms.sh`，随后补 Android `usesCleartextTraffic`/`CAMERA`
+  与 iOS `NSCameraUsageDescription`/`NSAllowsArbitraryLoads`。
+- 清单「一键全部入库」未做（需批量转入库接口）。
+- 备份只保留文件，未做自动清理策略（保留 N 份）。
+
+---
+
 ## [Unreleased]
 
 ### 新增

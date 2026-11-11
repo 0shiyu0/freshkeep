@@ -85,6 +85,8 @@ class Settings:
     )
     # 生产由 nginx 托管前端；本地开发可置 1 让 FastAPI 直接托管 dist
     serve_static: bool = field(default_factory=lambda: _env_bool("SERVE_STATIC", False))
+    # 定时任务（M7）：容器里设为 true；测试与本地默认关闭
+    enable_scheduler: bool = field(default_factory=lambda: _env_bool("ENABLE_SCHEDULER", False))
     static_dir: Path = field(
         default_factory=lambda: Path(
             _env("STATIC_DIR", str(Path(__file__).resolve().parents[2] / "frontend" / "dist"))

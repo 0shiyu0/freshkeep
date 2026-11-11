@@ -4,7 +4,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { recipeApi, type ShoppingList } from '@/api/recipes'
-import { notifyError } from '@/utils/notify'
+import { notifyError, notifySuccess } from '@/utils/notify'
 
 const router = useRouter()
 const lists = ref<Array<{ id: string; name: string; status: string; item_count: number; open_count: number; created_at: string }>>([])
@@ -30,6 +30,38 @@ async function open(id: string) {
   }
 }
 
+async function toggle(itemId: string, done: boolean) {
+  try {
+    await recipeApi.toggleItem(itemId, done)
+    if (detail.value) detail.value = await recipeApi.shoppingList(detail.value.id)
+    await load()
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : '操作失败')
+  }
+}
+
+async function completeAll() {
+  if (!detail.value) return
+  try {
+    await recipeApi.completeList(detail.value.id)
+    notifySuccess('清单已完成')
+    await load()
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : '操作失败')
+  }
+}
+
+async function fromLowStock() {
+  try {
+    const res = await recipeApi.fromLowStock('低库存补货')
+    if (res.items.length === 0) notifySuccess('没有低库存食材')
+    else notifySuccess(`已按低库存生成 ${res.items.length} 项`)
+    await load()
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : '生成失败')
+  }
+}
+
 function fmt(s: string) {
   const d = new Date(s)
   return Number.isNaN(d.getTime()) ? s : d.toLocaleString('zh-CN', { hour12: false })
@@ -46,6 +78,7 @@ onMounted(load)
     </div>
     <div class="head-actions">
       <button class="btn" @click="router.push('/recipes')">菜谱</button>
+      <button class="btn" @click="fromLowStock">按低库存生成</button>
       <button class="btn" @click="router.push('/purchase')">+ 采购入库</button>
     </div>
   </div>
@@ -74,10 +107,14 @@ onMounted(load)
     <section v-if="detail" class="card">
       <div class="card__head">
         <h2>{{ detail.name }}</h2>
-        <span class="tag">{{ detail.items.length }} 项</span>
+        <div class="head-actions">
+          <span class="tag">{{ detail.items.length }} 项</span>
+          <button v-if="detail.status === 'open'" class="btn btn--tiny" @click="completeAll">全部完成</button>
+        </div>
       </div>
       <div v-if="detail.items.length === 0" class="muted-line">这份清单没有需要采购的项</div>
-      <div v-for="i in detail.items" :key="i.id" class="item">
+      <div v-for="i in detail.items" :key="i.id" class="item" :class="{ 'item--done': i.is_completed }">
+        <input type="checkbox" :checked="i.is_completed" @change="toggle(i.id, ($event.target as HTMLInputElement).checked)" />
         <div class="item__main">
           <div class="item__name">{{ i.ingredient_name }}</div>
           <div class="item__meta">
@@ -109,6 +146,8 @@ onMounted(load)
 .card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .card__head h2 { margin: 0; }
 .item { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px dashed var(--line); }
+.item--done .item__name { text-decoration: line-through; color: var(--text-3); }
+.head-actions { display: flex; align-items: center; gap: 8px; }
 .item__main { flex: 1; }
 .item__name { font-size: 14px; font-weight: 500; }
 .item__meta { font-size: 11.5px; color: var(--text-3); margin-top: 2px; display: flex; gap: 8px; }

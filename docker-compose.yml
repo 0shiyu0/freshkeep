@@ -39,6 +39,7 @@ services:
       STORAGE_DIR: /data/storage
       BACKUP_DIR: /data/backups
       SERVE_STATIC: "0"                 # 前端由 web 容器托管
+      ENABLE_SCHEDULER: "true"           # M7 定时任务：对账/备份/临期扫描
       ALLOW_CIDR: ${ALLOW_CIDR:-192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,100.64.0.0/10,127.0.0.1/32}
       CORS_ORIGINS: ${CORS_ORIGINS:-capacitor://localhost,http://localhost,http://localhost:5173}
       DB_POOL_SIZE: ${DB_POOL_SIZE:-5}

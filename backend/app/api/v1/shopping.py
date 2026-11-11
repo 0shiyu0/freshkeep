@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import AuthContext, get_current
 from app.db.session import get_db
 from app.schemas.common import ok
-from app.schemas.recipe import ShoppingListFromRecipesIn
+from app.schemas.recipe import ShoppingListFromRecipesIn, ShoppingItemPatchIn
 from app.services import recipes as svc
 
 router = APIRouter(prefix="/shopping-lists", tags=["shopping"])
@@ -52,3 +52,44 @@ def get_list(
     auth: AuthContext = Depends(get_current),
 ):
     return ok(request, svc.get_shopping_list(db, list_id))
+
+
+@router.post("/from-low-stock", status_code=201, summary="按低库存建议生成采购清单")
+def from_low_stock(
+    request: Request,
+    name: str = "",
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_current),
+):
+    data = svc.build_from_low_stock(db, name=name)
+    db.commit()
+    return ok(request, data, "采购清单已生成")
+
+
+@router.post("/{list_id}/complete", summary="整单标记完成")
+def complete(
+    request: Request,
+    list_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_current),
+):
+    data = svc.complete_list(db, list_id)
+    db.commit()
+    return ok(request, data, "清单已完成")
+
+
+# 清单项用独立前缀，避免与 /{list_id} 的 UUID 解析冲突
+items_router = APIRouter(prefix="/shopping-list-items", tags=["shopping"])
+
+
+@items_router.patch("/{item_id}", summary="勾选/取消清单项")
+def patch_item(
+    request: Request,
+    item_id: uuid.UUID,
+    payload: ShoppingItemPatchIn,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_current),
+):
+    data = svc.set_item_completed(db, item_id, payload.is_completed)
+    db.commit()
+    return ok(request, data)

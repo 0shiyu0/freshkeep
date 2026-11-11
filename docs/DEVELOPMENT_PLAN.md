@@ -225,10 +225,10 @@ P2（AI 识别 + 采购清单 + 菜谱 + 对账告警 + TLS）≈ 14 人日。
 | 8.5 | 营养表识别 | provider 返回 nutrition 数组，规范化后进草稿 | ✅ |
 | 8.6 | 日期识别 | 生产/到期/保质期；`DATE_SWAPPED` 等 5 类校验 | ✅ |
 | 8.7 | 临期扫描 | `POST /alerts/scan`：幂等 SQL（expiring/expired/low_stock） | ✅ 手动触发；定时任务待接 |
-| 8.8 | 临期提醒 | `/alerts` 通知中心 + 首页入口；**PWA 通知未做** | 🔄 部分 |
+| 8.8 | 临期提醒 | `/alerts` 通知中心 + 首页入口；**按需求范围只做应用内通知，不做系统级推送** | ✅ 完成（范围收敛） |
 | 8.9 | 最低库存 | `ingredients.minimum_quantity/minimum_weight` + `is_low_stock` | ✅ 已有 |
 | 8.10 | 采购建议 | `GET /purchase/suggestions`：最低库存差额 / 近 30 天用量估算 | ✅ |
-| 8.11 | 菜谱管理 | `GET/POST /recipes`、`GET/PUT/DELETE /recipes/{id}`；前端 `RecipesView` | ✅ |
+| 8.11 | 菜谱管理 | `GET/POST /recipes`、`GET/PUT/DELETE /recipes/{id}`；**步骤已结构化**（`recipe_steps`，兼容旧文本）；前端 `RecipesView` | ✅ |
 | 8.12 | 菜谱匹配 | `GET /recipes/{id}/match?servings=`：需求（按份缩放）− 库存 → 缺口 | ✅ |
 | 8.13 | 采购清单 | `POST /shopping-lists/from-recipes`：需求相加后减库存，只留缺口；`ShoppingListsView` | ✅ |
 
@@ -363,11 +363,23 @@ dashboard 五组接口 → 营养定义/目标 → 日汇总（区分"无记录"
 
 ---
 
-## M7 · 备份导出
+## M7 · 备份导出与定时任务（2026-11-11 完成）
 
-定时 `pg_dump` + 文件 tar + 保留策略 → 导出 CSV/JSON。
+| # | 任务 | 交付物 | 状态 |
+| --- | --- | --- | --- |
+| 7.1 | 备份 | `POST /backup` → `freshkeep-backup-<ts>.tar.gz`（`schema.sql` + 27 张表 CSV + `manifest.json`） | ✅ |
+| 7.2 | 备份管理 | `GET /backups`、`POST /backups/{name}/verify`、`GET /backups/{name}/download`（拒绝路径穿越） | ✅ |
+| 7.3 | 导出 | `GET /export/transactions.csv`、`/consumptions.csv`，流式 + BOM | ✅ |
+| 7.4 | 定时任务 | `app/tasks/scheduler.py`：03:00 对账、03:10 备份、08:00 临期扫描；`ENABLE_SCHEDULER=true` 启用 | ✅ |
+| 7.5 | 前端 | 设置页「备份与导出」：立即备份、列表、校验、下载、CSV、任务状态与手动执行 | ✅ |
 
-**完成判据**：`./deploy/backup.sh` 产物可被 `restore.sh` 恢复；导出文件 Excel 打开不乱码。
+**实现取舍**：api 镜像是 `python:3.12-slim`，没有 `pg_dump`；装 `postgresql-client` 只有 PG15
+（导出 PG16 会直接报版本不兼容）。因此改为**纯 Python 逻辑备份**（`COPY ... TO STDOUT` + tar.gz），
+恢复方式：建库 → `psql -f schema.sql` → 按表 `COPY FROM`。宿主机仍可用 `deploy/backup.sh` 做物理备份。
+
+**完成判据实测**：备份 27 张表 / 139 行、`verify.ok=true`、下载返回 `application/gzip`、
+路径穿越 404；CSV 带 BOM 且表头正确；容器内 `enabled=true / running=true`，手动执行对账与扫描均写
+`audit_logs(scheduler_*)`。
 
 ---
 
@@ -395,11 +407,23 @@ dashboard 五组接口 → 营养定义/目标 → 日汇总（区分"无记录"
 
 ---
 
-## M9 · 原生 App
+## M9 · 原生 App（工程脚手架已就绪，平台目录待生成）
 
-Capacitor 8 集成 → 原生配置（ATS/cleartext/androidScheme）→ 安全存储令牌 → 地址与配对 → APK / IPA 出包。
+| 项 | 现状 |
+| --- | --- |
+| Capacitor 配置 | ✅ `frontend/capacitor.config.ts`：`appId=com.0shiyu0.freshkeep`、`webDir=dist`、`androidScheme='http'`、`cleartext=true` |
+| 插件依赖 | ✅ core/app/network/preferences/splash-screen/status-bar/local-notifications + secure-storage（已在 `package.json`） |
+| 平台包 | ⬜ `@capacitor/android`、`@capacitor/ios` **未安装**（本会话 npm registry 不可达）；已写入一键脚本 |
+| 平台目录 | ⬜ `android/`、`ios/` 未生成 |
+| 一键脚本 | ✅ `scripts/cap-add-platforms.sh`：install 平台包 → build → `cap add android/ios` → `cap sync` |
+| 原生配置 | ⬜ 待平台目录生成后手工加：Android `usesCleartextTraffic` + `CAMERA` 权限；iOS `NSCameraUsageDescription` + `NSAllowsArbitraryLoads` |
+| 出包验收 | ⬜ APK 真机可配对可记账；IPA 重签后可用 |
 
-**完成判据**：APK 装到 Android 真机可配对可记账；未签名 IPA 用长期证书重签后装到 iOS 可运行。
+**为什么平台包不进 `package.json`**：加进 `dependencies` 会让 `docker compose build web` 在构建时
+联网安装这两个包，而镜像构建环境无外网，实测直接失败。平台包属于「打包期依赖」，
+由脚本在本地按需安装（`--save`），Web 产物与原生工程解耦。
+
+**执行方式**：在有网络的机器上 `./scripts/cap-add-platforms.sh`；iOS 需完整 Xcode（本机仅 CLT）。
 
 ---
 

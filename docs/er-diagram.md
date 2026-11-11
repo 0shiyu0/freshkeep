@@ -126,7 +126,7 @@ flowchart LR
 | 状态机 | `ck_*` CHECK 约束 + 服务层状态迁移函数（M3 实现） |
 | AI 草稿（阶段 8） | `recognition_drafts`：`status` 三态 + `ck_recognition_confirmed` 约束保证「确认必有实体、pending 必无实体」 |
 
-> 迁移历史见 `docs/database.md` 的「迁移历史」小节（当前 head：`0003_recognition_drafts`）。
+> 迁移历史见 `docs/database.md` 的「迁移历史」小节（当前 head：`0004_recipe_steps`）。
 >
 > 修改表结构时的顺序：先改 `001_init.sql` → 在本地库重建 → 更新本文档的 ER 图与关系表 → 再写服务层。
 > 三者不一致视为缺陷（见 `AGENTS.md` 的"文档同步"规则）。

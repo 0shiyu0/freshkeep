@@ -18,7 +18,7 @@
 
 ---
 
-## 2. 表清单（26 张）
+## 2. 表清单（27 张）
 
 | # | 表名 | 用途 | 量级 | 来源 |
 | --- | --- | --- | --- | --- |
@@ -48,6 +48,7 @@
 | 24 | `audit_logs` | 审计与对账差异 | 万 | PRD |
 | 25 | `idempotency_keys` | 写操作幂等 | 千（24h 清理） | **本项目新增** |
 | 26 | `recognition_drafts` | AI 识别**待确认**草稿（与库存表零耦合） | 千 | **本项目新增**（阶段 8） |
+| 27 | `recipe_steps` | 菜谱结构化步骤（顺序 + 单步时长） | 千 | **本项目新增**（阶段 8 收尾） |
 
 ---
 
@@ -290,6 +291,7 @@ batches.remaining_cost   = Σ transaction_allocations.cost_delta
 | `0001_init` | 25 表 + 2 视图 + 索引/约束/触发器 | 建表 |
 | `0002_ingredient_storage` | `ingredients` 增加 `default_storage_location_id`（FK → `storage_locations`，`ON DELETE SET NULL`）+ 部分索引 `ix_ingredients_location` | 加列 + 加索引 |
 | `0003_recognition_drafts` | 新增 `recognition_drafts`（AI 识别草稿：`draft`/`warnings` jsonb、`status` 三态、`confirmed_entity_type/id`）+ 索引 `ix_recognition_status` | 建表 + 加索引 |
+| `0004_recipe_steps` | 新增 `recipe_steps`（`recipe_id`/`seq`/`text`/`duration_minutes`，`UNIQUE(recipe_id, seq)`）+ 索引 | 建表 + 加索引 |
 
 > `0002` 用 `ADD COLUMN IF NOT EXISTS`，对已含该列的新库为空操作，可重复执行。
 >

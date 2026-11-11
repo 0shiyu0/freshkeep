@@ -19,7 +19,8 @@ export interface Recipe {
   category: string
   servings: string
   duration_minutes: number | null
-  steps: string
+  steps: Array<{ seq: number; text: string; duration_minutes: number | null; legacy: boolean }>
+  steps_text: string
   note: string
   image_url: string | null
   created_at: string
@@ -90,4 +91,15 @@ export const recipeApi = {
     ),
   shoppingLists: () => apiGet<PageResult<{ id: string; name: string; status: string; item_count: number; open_count: number; created_at: string }>>('/shopping-lists'),
   shoppingList: (id: string) => apiGet<ShoppingList>(`/shopping-lists/${id}`),
+  toggleItem: (itemId: string, isCompleted: boolean) =>
+    request<{ id: string; is_completed: boolean }>({
+      url: `/shopping-list-items/${itemId}`,
+      method: 'PATCH',
+      data: { is_completed: isCompleted },
+    }),
+  completeList: (id: string) => apiPost<{ id: string; status: string }>(`/shopping-lists/${id}/complete`, {}),
+  fromLowStock: (name = '') =>
+    apiPost<{ id: string; name: string; items: Array<Record<string, unknown>>; message: string }>(
+      `/shopping-lists/from-low-stock${name ? `?name=${encodeURIComponent(name)}` : ''}`, {}
+    ),
 }

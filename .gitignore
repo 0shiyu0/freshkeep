@@ -34,3 +34,4 @@ storage/logs/*
 backups/*
 !storage/**/.gitkeep
 !backups/.gitkeep
+.pytest-backups/

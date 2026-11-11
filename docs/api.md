@@ -157,6 +157,13 @@
 | GET | `/recipes/{id}/match` | `servings?` | **8.12** 按份数缩放后与库存匹配，返回缺口 |
 | POST | `/shopping-lists/from-recipes` | `recipe_ids[], servings_map?, name?` | **8.13** 多菜谱合并生成采购清单（只读库存） |
 | GET | `/shopping-lists`、`/{id}` | `page…` | 采购清单列表 / 详情 |
+| POST | `/shopping-lists/from-low-stock` | `name?` | **清单增强** 按低库存建议生成（`source='low_stock'`） |
+| POST | `/shopping-lists/{id}/complete` | — | 整单完成（所有项勾选 + 状态 completed） |
+| PATCH | `/shopping-list-items/{item_id}` | `is_completed` | 勾选/取消单项 |
+| POST | `/backup` | — | **M7** 立即生成逻辑备份（tar.gz：schema + 每表 CSV + manifest） |
+| GET | `/backups`、`/{name}/download`、`POST /{name}/verify` | — | 备份列表 / 下载 / 校验可读性 |
+| GET | `/export/{kind}.csv` | `kind=transactions｜consumptions` | CSV 导出（带 BOM） |
+| GET | `/tasks`、`POST /tasks/{job_id}/run` | — | 定时任务状态 / 手动触发（对账、备份、临期扫描） |
 | GET | `/stats/overview` | `granularity=day｜week｜month｜year, from_date?, to_date?` | **阶段 6** 库存价值（剩余成本）、趋势序列、分类占比、消耗排行、周转、最近操作 |
 | GET | `/dashboard/nutrition` | `period=today｜3d｜week` | 六项营养汇总；`has_records=false` 表示窗口内无消耗 |
 | GET/PUT | `/nutrition/targets` | `items[{code, target_value, period}]` | 营养目标；同日重复设置覆盖 |

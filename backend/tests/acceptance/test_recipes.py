@@ -219,3 +219,50 @@ def test_shopping_list_endpoints(seeded, ing):
 def test_recipes_require_login(client):
     assert client.get("/api/v1/recipes").status_code == 401
     assert client.get("/api/v1/shopping-lists").status_code == 401
+
+
+# ---------------------------------------------------------------- 结构化步骤
+
+
+def test_structured_steps(seeded, ing):
+    """数组形式写入：顺序、文本、单步时长都要保留。"""
+    r = seeded.post("/api/v1/recipes", json={
+        "name": "结构化步骤",
+        "items": [{"ingredient_id": ing["chicken"], "weight": "100"}],
+        "steps": [
+            {"text": "腌 10 分钟", "duration_minutes": 10},
+            {"text": "中火煎 6 分钟", "duration_minutes": 6},
+        ],
+    })
+    assert r.status_code == 201, r.text
+    d = r.json()["data"]
+    assert [s["text"] for s in d["steps"]] == ["腌 10 分钟", "中火煎 6 分钟"]
+    assert [s["duration_minutes"] for s in d["steps"]] == [10, 6]
+    assert d["steps"][0]["legacy"] is False
+    assert d["steps_text"] == "腌 10 分钟\n中火煎 6 分钟"
+
+
+def test_text_steps_are_parsed_and_stripped(seeded, ing):
+    """旧式字符串：按行拆分并去掉序号前缀。"""
+    d = _create(seeded, "字符串步骤", [{"ingredient_id": ing["chicken"], "weight": "100"}])
+    # _create 传的是 "1. 洗净\n2. 下锅"
+    assert [s["text"] for s in d["steps"]] == ["洗净", "下锅"]
+    assert len(d["steps"]) == 2
+
+
+def test_legacy_text_fallback(seeded, ing):
+    """库里只有 recipes.steps 旧文本、没有步骤行时，详情按行兜底并标 legacy。"""
+    from sqlalchemy import text
+
+    from app.db.session import SessionLocal
+
+    d = _create(seeded, "旧数据菜谱", [{"ingredient_id": ing["chicken"], "weight": "100"}])
+    rid = d["id"]
+    with SessionLocal() as db:
+        db.execute(text("delete from recipe_steps where recipe_id = CAST(:r AS uuid)"), {"r": rid})
+        db.execute(text("update recipes set steps = '甲\n乙' where id = CAST(:r AS uuid)"), {"r": rid})
+        db.commit()
+
+    got = seeded.get(f"/api/v1/recipes/{rid}").json()["data"]
+    assert [s["text"] for s in got["steps"]] == ["甲", "乙"]
+    assert all(s["legacy"] is True for s in got["steps"])

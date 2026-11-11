@@ -57,9 +57,7 @@ async function makeShoppingList() {
   }
 }
 
-function stepList(text: string) {
-  return text.split('\n').map((s) => s.trim()).filter(Boolean)
-}
+const legacySteps = computed(() => (recipe.value?.steps ?? []).some((s) => s.legacy))
 
 onMounted(load)
 </script>
@@ -128,10 +126,16 @@ onMounted(load)
       </div>
     </section>
 
-    <section v-if="recipe.steps" class="card">
-      <h2>步骤</h2>
+    <section v-if="recipe.steps.length" class="card">
+      <div class="card__head">
+        <h2>步骤（{{ recipe.steps.length }}）</h2>
+        <span v-if="legacySteps" class="tag tag--muted">旧数据按行拆分</span>
+      </div>
       <ol class="steps">
-        <li v-for="(s, i) in stepList(recipe.steps)" :key="i">{{ s }}</li>
+        <li v-for="s in recipe.steps" :key="s.seq">
+          <span>{{ s.text }}</span>
+          <em v-if="s.duration_minutes != null" class="step__time">约 {{ s.duration_minutes }} 分钟</em>
+        </li>
       </ol>
     </section>
 
@@ -177,7 +181,9 @@ onMounted(load)
 .muted { color: var(--text-3); font-size: 11.5px; }
 .muted-line { font-size: 13px; color: var(--text-3); padding: 6px 0; }
 .foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-.steps { font-size: 13.5px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.steps { font-size: 13.5px; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.steps li { line-height: 1.5; }
+.step__time { font-style: normal; font-size: 11.5px; color: var(--text-3); margin-left: 8px; }
 @media (max-width: 720px) {
   .match__head, .match__row { grid-template-columns: 1.4fr .8fr .8fr .8fr; }
 }

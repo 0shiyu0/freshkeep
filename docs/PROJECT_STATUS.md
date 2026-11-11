@@ -1,17 +1,18 @@
 # 项目状态
 
-> 快照时间：2026-11-11 16:55（Asia/Shanghai）
+> 快照时间：2026-11-11 17:20（Asia/Shanghai）
 > 维护规则：每个里程碑结束、每次数据库结构变化、每次发现已知问题，都要更新本文与 `docs/CHANGELOG.md`。
 
 ---
 
 ## 1. 一句话现状
 
-**阶段 8 已完成主体（13/13）**：AI 识别闸门（草稿表 + 待确认 + 日期互错检测）、
-条码与可配置外部源（拒内网）、临期扫描与通知中心、采购建议、**菜谱管理 / 库存匹配 / 多菜谱合并采购清单**。
-pytest **214 项通过**（阶段 8 共 30 项），容器 HTTP 13 项 + 页面渲染验证通过。
-两库均为 `0003_recognition_drafts`，业务表 26 张（本轮无新迁移）。
-**AI 只写草稿表；识别/修正/拒绝三个阶段批次与流水零变化**；采购清单同样不产生流水。
+**阶段 8 + M7 已完成**：AI 识别闸门（草稿表/待确认/日期互错）、条码与外部源、临期提醒（应用内通知中心，
+不做系统级推送）、采购建议、菜谱（**步骤已结构化**）、库存匹配、合并采购清单、
+**备份导出与定时任务（M7）**。M9 Capacitor 脚手架就绪（配置 + 一键脚本），平台目录待联网生成。
+pytest **230 项通过**，容器 27 项 + 页面渲染验证通过。
+两库均为 `0004_recipe_steps`，业务表 **27 张**。
+**AI 只写草稿表**；备份与采购清单都不产生库存流水。
 
 | 里程碑 | 状态 | 备注 |
 | --- | --- | --- |
@@ -30,13 +31,13 @@ pytest **214 项通过**（阶段 8 共 30 项），容器 HTTP 13 项 + 页面�
 | **阶段 5 库存界面** | ✅ **完成** | 库存总览/状态筛选/快消/批量/盘点报损/记录；证据见 §2.9 |
 | **阶段 6 首页统计** | ✅ **完成** | stats/overview + 趋势/占比/排行/周转 + 首页面板；证据见 §2.10 |
 | **阶段 7 营养管理** | ✅ **完成** | 项目/档案版本/快照/四周期/目标达标率/来源；证据见 §2.11 |
-| **阶段 8 智能辅助** | ✅ **完成** | 8.1~8.13 全部落地；PWA 通知与定时扫描待补；证据见 §2.12 |
-| M7 备份导出与定时任务 | ⬜ **下一步** | pg_dump、CSV/JSON 导出、APScheduler 对账 |
+| **阶段 8 智能辅助** | ✅ **完成** | 8.1~8.13 落地；8.8 按范围只做应用内通知；证据见 §2.12 |
+| **M7 备份导出与定时任务** | ✅ **完成** | 逻辑备份 + CSV + APScheduler 三作业；证据见 §2.13 |
 | **M8 前端页面** | ✅ **完成** | 13 个视图：登录/首页/库存总览/食材详情与编辑/批次列表与详情/采购入库/消耗录入/盘点报损/记录/设置；401 由全局 handler 跳登录 |
-| M9 原生 App | ⬜ | 需 Xcode（iOS 走真机自签） |
+| M9 原生 App | 🔄 **脚手架就绪** | 配置/插件/脚本已备；`android/` `ios/` 待联网生成；证据见 §2.14 |
 | M10 联调验收 | ⬜ | |
 
-整体进度：**阶段 0~8 与 M0~M6、M8 已完成**。剩余 **M7**（备份导出与定时任务，含 8.7 定时扫描与 8.8 PWA 通知）、**M9**（原生 App）、**M10**（联调验收）。按人日约 33/36。
+整体进度：**阶段 0~8 与 M0~M7、M8 已完成；M9 脚手架就绪**。剩余 **M9 平台目录与出包**、**M10**（联调验收）。按人日约 34.5/36。
 
 ---
 
@@ -199,7 +200,26 @@ pytest **214 项通过**（阶段 8 共 30 项），容器 HTTP 13 项 + 页面�
 | 8.13 清单 | `POST /shopping-lists/from-recipes` | 两菜谱 700g 需求 − 500g 库存 = 200g 缺口；牛奶无缺口不出现；流水 2→2 不变 |
 | 菜谱页面 | `RecipesView`/`RecipeDetailView`/`ShoppingListsView` | 三页 1280/390 渲染匹配表、缺口、步骤、清单项；溢出 0px |
 
-### 2.13 测试规模
+### 2.13 M7 备份导出与定时任务（本轮）
+
+| 项 | 文件 | 验证方式与结果 |
+| --- | --- | --- |
+| 逻辑备份 | `services/backup.py` | `POST /backup` → tar.gz（`schema.sql` + 27 表 CSV + manifest），27 表 / 139 行，sha256 64 位 |
+| 备份管理 | `api/v1/backup.py` | 列表、`verify.ok=true`、下载 `application/gzip`、`../x.tar.gz` 返回 404 |
+| CSV 导出 | `services/export.py` | 流水/消耗两个导出均带 BOM；表头正确；容器库含历史行 |
+| 定时任务 | `app/tasks/scheduler.py` | 容器内 `enabled=true / running=true`；三作业可手动执行；写 `audit_logs(scheduler_*)` |
+| 前端 | `SettingsView` | 「备份与导出」区块：立即备份/列表/校验/下载/CSV/任务状态；1280/390 溢出 0px |
+
+### 2.14 M9 Capacitor 脚手架（本轮）
+
+| 项 | 现状 |
+| --- | --- |
+| 配置 | `capacitor.config.ts`：appId / webDir=dist / androidScheme=http / cleartext=true 四项齐全 |
+| 插件 | core/app/network/preferences/splash-screen/status-bar/local-notifications + secure-storage |
+| 脚本 | `scripts/cap-add-platforms.sh`（install → build → add android/ios → sync） |
+| 未完成 | 平台包未装、`android/` `ios/` 未生成（npm registry 不可达）；原生 ATS/cleartext/相机权限待生成后配置 |
+
+### 2.15 测试规模
 
 ```
 backend/tests/
@@ -220,8 +240,9 @@ backend/tests/
   acceptance/test_stats.py        ~250 行 统计口径与粒度（15 项）
   acceptance/test_nutrition_stage7.py ~230 行 营养项目/档案/快照/周期/达标率（11 项）
   acceptance/test_ai_assist.py    ~290 行 AI 闸门/条码/提醒/建议（16 项，阶段 8）
-  acceptance/test_recipes.py      ~280 行 菜谱 CRUD/匹配/合并清单（14 项，阶段 8）
-合计 214 项，全绿
+  acceptance/test_recipes.py      ~330 行 菜谱 CRUD/步骤/匹配/合并清单（17 项）
+  acceptance/test_backup.py       ~260 行 备份/导出/定时任务/清单增强（13 项，M7）
+合计 230 项，全绿
 ```
 
 ---
@@ -234,8 +255,8 @@ backend/tests/
 | 备份导出接口 | 未实现（脚本 `deploy/backup.sh` 可用，但无 API） |
 | APScheduler 定时任务 | 依赖已装，未启用（临期扫描/每日对账） |
 | 8.11 菜谱管理 / 8.12 匹配 / 8.13 采购清单 | `recipes`、`recipe_items`、`shopping_lists` 表已在 `0001`，接口与页面未做 |
-| PWA 通知（8.8 增强） | 通知中心已可用；Web Notification + Service Worker 未接 |
-| 清单勾选完成 / 一键入库 | 需补 `PATCH /shopping-list-items/{id}` 与批量入库 |
+| M9 平台目录 | `android/` `ios/` 未生成（npm registry 本会话不可达）；脚本与原生配置清单已备 |
+| 清单「一键全部入库」 | 勾选与整单完成已做；批量转入库未做 |
 | `PairView.vue` 遗留死文件 | 路由已用 `/login` 取代，该视图无任何引用（14 行），可安全删除 |
 | Capacitor 原生工程 | 未 `cap add`，`android/` `ios/` 不存在 |
 | NAS 部署验证 | 本机 compose 已通过；NAS 未跑过 |
@@ -270,10 +291,10 @@ backend/tests/
 
 | 能力 | 状态 | 说明 |
 | --- | --- | --- |
-| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 214 项可用 |
-| 本机 PostgreSQL | ✅ 16.15 | 库 `freshkeep` 与测试库 `freshkeep_test`；本机 `0003`，测试库建表用 `001_init.sql` |
+| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 230 项可用 |
+| 本机 PostgreSQL | ✅ 16.15 | 库 `freshkeep` 与测试库 `freshkeep_test`；本机 `0004`，测试库建表用 `001_init.sql` |
 | 容器三件套 | ✅ | `freshkeep-{db,api,web}` 全 healthy，对外 8080 |
-| 容器内迁移版本 | ✅ | `0003_recognition_drafts` |
+| 容器内迁移版本 | ✅ | `0004_recipe_steps` |
 | 前端构建 | ✅ | `npm run build` 通过（vue-tsc 零错误） |
 | Docker / Xcode / Node | ✅ | 4.98.0 / 27.2（外接盘）/ 22.22 |
 
@@ -292,7 +313,7 @@ head -120 docs/CHANGELOG.md
 
 ```bash
 git status --short && git log -3 --oneline
-cd backend && .venv/bin/python -m pytest          # 期望 214 passed
+cd backend && .venv/bin/python -m pytest          # 期望 230 passed
 export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
 docker compose ps                                  # 期望 3 个 healthy
 docker compose exec -T db psql -U freshkeep -d freshkeep -tAc "select version_num from alembic_version"
@@ -316,25 +337,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 16:41 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 17:01 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `e592ad4` |
-| 工作区 | 1 个未提交改动，未跟踪 0 个 |
+| 分支 / HEAD | `main` / `08d8767` |
+| 工作区 | 33 个未提交改动，未跟踪 9 个 |
 | 未推送提交 | 0 |
-| 数据库 | 可连，迁移版本 `0003_recognition_drafts`，26 张表 |
-| 后端测试 | 214 passed, 1 warning in 9.40s |
+| 数据库 | 可连，迁移版本 `0004_recipe_steps`，27 张表 |
+| 后端测试 | 230 passed, 1 warning in 10.82s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+08d8767 2026-11-11 chore: 刷新阶段 8（下）提交后的状态快照与留痕
 e592ad4 2026-11-11 feat(api): 阶段 8（下）菜谱管理 / 库存匹配 / 多菜谱合并采购清单
 f0b18a0 2026-11-11 chore: 刷新阶段 8（上）提交后的状态快照与留痕
 2e71b3b 2026-11-11 feat(api): 阶段 8（上）AI 识别闸门 + 条码/外部源 + 临期提醒 + 采购建议
 79452fe 2026-11-11 docs: 更正 M8 与翻页 UI 的滞后描述
-62f8adc 2026-11-11 chore: 刷新阶段 7 提交后的状态快照与留痕
 ```
 <!-- AUTO:STATUS:END -->

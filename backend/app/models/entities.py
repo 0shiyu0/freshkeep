@@ -404,3 +404,18 @@ class RecipeItem(Base):
         UUID(as_uuid=True), ForeignKey("units.id")
     )
     note: Mapped[str] = mapped_column(Text, default="")
+
+
+class RecipeStep(Base):
+    """菜谱步骤（阶段 8 收尾）：按 seq 排序，单步可带时长。"""
+
+    __tablename__ = "recipe_steps"
+
+    id: Mapped[uuid.UUID] = _pk()
+    recipe_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE")
+    )
+    seq: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    duration_minutes: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = _now()

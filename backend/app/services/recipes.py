@@ -15,7 +15,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.core.errors import not_found, validation_error
-from app.models import Ingredient, Recipe, RecipeItem, Unit
+from app.models import Ingredient, Recipe, RecipeItem, RecipeStep, Unit
 
 Q2, Q3, Q4 = Decimal("0.01"), Decimal("0.001"), Decimal("0.0001")
 
@@ -48,13 +48,30 @@ def _recipe_out(db: Session, recipe: Recipe) -> dict:
             text("SELECT ingredient_id, total_weight AS w FROM v_inventory")
         ).all()
     }
+    step_rows = db.scalars(
+        select(RecipeStep).where(RecipeStep.recipe_id == recipe.id).order_by(RecipeStep.seq)
+    ).all()
+    if step_rows:
+        steps = [
+            {"seq": r.seq, "text": r.text, "duration_minutes": r.duration_minutes, "legacy": False}
+            for r in step_rows
+        ]
+    else:
+        # 兼容旧数据：把 text 按行拆开，标 legacy 让前端知道可一键结构化
+        lines = [ln.strip() for ln in (recipe.steps or "").splitlines() if ln.strip()]
+        steps = [
+            {"seq": i, "text": t, "duration_minutes": None, "legacy": True}
+            for i, t in enumerate(lines)
+        ]
+
     return {
         "id": recipe.id,
         "name": recipe.name,
         "category": recipe.category,
         "servings": _s(Decimal(recipe.servings or 0), Q2),
         "duration_minutes": recipe.duration_minutes,
-        "steps": recipe.steps,
+        "steps": steps,
+        "steps_text": "\n".join(s["text"] for s in steps),
         "note": recipe.note,
         "created_at": recipe.created_at,
         "image_url": f"/api/v1/files/{recipe.image_asset_id}/raw" if recipe.image_asset_id else None,
@@ -140,6 +157,40 @@ def _replace_items(db: Session, recipe: Recipe, items: list) -> None:
     db.flush()
 
 
+def _normalize_steps(raw) -> list[dict]:
+    """把字符串或结构化数组统一成 [{text, duration_minutes}]，去空行。"""
+    out: list[dict] = []
+    if isinstance(raw, str):
+        for line in raw.splitlines():
+            text = line.strip().lstrip("0123456789.、)- ").strip() if line.strip() else ""
+            if text:
+                out.append({"text": text, "duration_minutes": None})
+    else:
+        for item in raw or []:
+            text = (getattr(item, "text", "") or "").strip()
+            if text:
+                out.append({
+                    "text": text,
+                    "duration_minutes": getattr(item, "duration_minutes", None),
+                })
+    return out
+
+
+def _replace_steps(db: Session, recipe: Recipe, raw) -> None:
+    steps = _normalize_steps(raw)
+    for old in db.scalars(select(RecipeStep).where(RecipeStep.recipe_id == recipe.id)).all():
+        db.delete(old)
+    db.flush()
+    for seq, item in enumerate(steps):
+        db.add(RecipeStep(
+            recipe_id=recipe.id, seq=seq,
+            text=item["text"], duration_minutes=item["duration_minutes"],
+        ))
+    # 保留旧列同步，便于 SQL 直接查看与旧客户端
+    recipe.steps = "\n".join(s["text"] for s in steps)
+    db.flush()
+
+
 def create_recipe(db: Session, payload) -> dict:
     name = (payload.name or "").strip()
     if not name:
@@ -151,12 +202,13 @@ def create_recipe(db: Session, payload) -> dict:
         category=(payload.category or "").strip(),
         servings=Decimal(str(payload.servings or 1)),
         duration_minutes=payload.duration_minutes,
-        steps=payload.steps or "",
+        steps="",  # 由 _replace_steps 统一写入（避免把 list 塞进 text 列）
         note=payload.note or "",
     )
     db.add(recipe)
     db.flush()
     _replace_items(db, recipe, payload.items)
+    _replace_steps(db, recipe, payload.steps)
     return _recipe_out(db, recipe)
 
 
@@ -173,9 +225,9 @@ def update_recipe(db: Session, recipe_id: uuid.UUID, payload) -> dict:
     recipe.category = (payload.category or "").strip()
     recipe.servings = Decimal(str(payload.servings or 1))
     recipe.duration_minutes = payload.duration_minutes
-    recipe.steps = payload.steps or ""
     recipe.note = payload.note or ""
     _replace_items(db, recipe, payload.items)
+    _replace_steps(db, recipe, payload.steps)
     return _recipe_out(db, recipe)
 
 
@@ -398,4 +450,67 @@ def get_shopping_list(db: Session, list_id: uuid.UUID) -> dict:
             }
             for r in items
         ],
+    }
+
+
+def set_item_completed(db: Session, item_id: uuid.UUID, done: bool) -> dict:
+    row = db.execute(
+        text("UPDATE shopping_list_items SET is_completed = :d WHERE id = CAST(:i AS uuid) "
+             "RETURNING id, is_completed"),
+        {"d": done, "i": str(item_id)},
+    ).first()
+    if row is None:
+        raise not_found("清单项不存在")
+    db.flush()
+    return {"id": row.id, "is_completed": row.is_completed}
+
+
+def complete_list(db: Session, list_id: uuid.UUID) -> dict:
+    head = db.execute(
+        text("SELECT id FROM shopping_lists WHERE id = CAST(:i AS uuid)"), {"i": str(list_id)}
+    ).first()
+    if head is None:
+        raise not_found("采购清单不存在")
+    db.execute(
+        text("UPDATE shopping_list_items SET is_completed = true WHERE shopping_list_id = CAST(:l AS uuid)"),
+        {"l": str(list_id)},
+    )
+    db.execute(
+        text("UPDATE shopping_lists SET status = 'completed', completed_at = now() "
+             "WHERE id = CAST(:l AS uuid)"),
+        {"l": str(list_id)},
+    )
+    db.flush()
+    return {"id": list_id, "status": "completed"}
+
+
+def build_from_low_stock(db: Session, *, name: str | None = None) -> dict:
+    """把低库存建议合并成采购清单（source='low_stock'）。"""
+    from app.services.purchase import suggestions as low_stock_suggestions
+
+    data = low_stock_suggestions(db, limit=100)
+    rows = [i for i in data["items"] if i.get("suggested_weight")]
+    list_name = (name or "").strip() or f"低库存补货（{len(rows)} 项）"
+    lid = db.execute(
+        text("INSERT INTO shopping_lists (name, status) VALUES (:n, 'open') RETURNING id"),
+        {"n": list_name},
+    ).scalar()
+    for r in rows:
+        db.execute(
+            text(
+                "INSERT INTO shopping_list_items "
+                "(shopping_list_id, ingredient_id, suggested_weight, source, note) "
+                "VALUES (CAST(:l AS uuid), CAST(:i AS uuid), CAST(:w AS numeric), 'low_stock', :n)"
+            ),
+            {"l": str(lid), "i": str(r["ingredient_id"]), "w": r["suggested_weight"], "n": "低于最低库存"},
+        )
+    db.flush()
+    return {
+        "id": lid, "name": list_name, "status": "open",
+        "items": [
+            {"ingredient_id": r["ingredient_id"], "ingredient_name": r["name"],
+             "suggested_weight": r["suggested_weight"], "source": "low_stock"}
+            for r in rows
+        ],
+        "message": "" if rows else "没有低库存食材",
     }

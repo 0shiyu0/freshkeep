@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -27,12 +28,26 @@ log = get_logger("app.main")
 
 API_PREFIX = "/api/v1"
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """启动定时任务（ENABLE_SCHEDULER=true 时）；关闭时优雅停止。"""
+    from app.tasks.scheduler import shutdown_scheduler, start_scheduler
+
+    start_scheduler()
+    try:
+        yield
+    finally:
+        shutdown_scheduler()
+
+
 app = FastAPI(
     title="鲜度 FreshKeep API",
     version=__version__,
     description="家庭食材库存与营养管理 · 自托管 API",
     docs_url="/docs",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 # 注册顺序＝执行顺序的反序（后加的先执行），因此最外层安全闸门最后加：

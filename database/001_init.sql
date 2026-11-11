@@ -391,6 +391,16 @@ CREATE TABLE recipes (
 );
 COMMENT ON TABLE recipes IS '菜谱。V1.2 仅用于库存匹配与采购建议，不自动扣库存';
 
+CREATE TABLE recipe_steps (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipe_id        uuid NOT NULL REFERENCES recipes (id) ON DELETE CASCADE,
+  seq              integer NOT NULL CHECK (seq >= 0),
+  text             text NOT NULL,
+  duration_minutes integer CHECK (duration_minutes >= 0),
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (recipe_id, seq)
+);
+
 CREATE TABLE recipe_items (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   recipe_id     uuid NOT NULL REFERENCES recipes (id) ON DELETE CASCADE,
