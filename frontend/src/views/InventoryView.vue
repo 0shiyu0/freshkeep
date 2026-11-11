@@ -205,6 +205,7 @@ onMounted(async () => {
       <p>共 {{ total }} 个食材 · 数据来自库存聚合（与后端一致）</p>
     </div>
     <div class="head-actions">
+      <button class="btn" @click="router.push('/scan')">扫码 / 识别</button>
       <button class="btn" @click="router.push('/stocktake')">盘点 / 报损</button>
       <button class="btn" @click="router.push('/batches')">批次</button>
       <button class="btn" @click="router.push('/purchase')">+ 采购入库</button>

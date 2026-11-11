@@ -212,6 +212,36 @@ P2（AI 识别 + 采购清单 + 菜谱 + 对账告警 + TLS）≈ 14 人日。
 
 ---
 
+## 阶段 8 · 智能辅助（2026-11-11，进行中）
+
+**硬约束**：AI 识别只写 `recognition_drafts`，禁止直接改库存；确认后才建档/入库。
+
+| # | 任务 | 交付物 | 状态 |
+| --- | --- | --- | --- |
+| 8.1 | 条码扫描 | `ScanView`：`BarcodeDetector` + 摄像头；不支持时手动输入兜底 | ✅ |
+| 8.2 | 条码查询 | `GET /products/lookup`：本地 `ingredient_barcodes` 优先 | ✅ |
+| 8.3 | 外部商品源 | `GET/PUT /products/source`：none / openfoodfacts / custom，拒绝内网地址 | ✅ |
+| 8.4 | 图片识别 | `POST /ai/recognitions` + 拍照上传 → 草稿 | ✅ |
+| 8.5 | 营养表识别 | provider 返回 nutrition 数组，规范化后进草稿 | ✅ |
+| 8.6 | 日期识别 | 生产/到期/保质期；`DATE_SWAPPED` 等 5 类校验 | ✅ |
+| 8.7 | 临期扫描 | `POST /alerts/scan`：幂等 SQL（expiring/expired/low_stock） | ✅ 手动触发；定时任务待接 |
+| 8.8 | 临期提醒 | `/alerts` 通知中心 + 首页入口；**PWA 通知未做** | 🔄 部分 |
+| 8.9 | 最低库存 | `ingredients.minimum_quantity/minimum_weight` + `is_low_stock` | ✅ 已有 |
+| 8.10 | 采购建议 | `GET /purchase/suggestions`：最低库存差额 / 近 30 天用量估算 | ✅ |
+| 8.11 | 菜谱管理 | `recipes` / `recipe_items` 表已有，CRUD 未做 | ⬜ |
+| 8.12 | 菜谱匹配 | 库存匹配与缺口计算 | ⬜ |
+| 8.13 | 采购清单 | 多菜谱合并 → `shopping_lists` | ⬜ |
+
+**已完成部分实测**：`tests/acceptance/test_ai_assist.py` 16 项全绿（含"识别/修正/拒绝三个阶段批次与流水零变化"的硬断言）；
+容器真实 HTTP 26 项全过；浏览器 390 实测手动链路：查询未命中 → 手动填写 → 待确认（含 `NAME_MISSING`）
+→ 填名 → 确认建档 → 跳转详情，DB 已创建；提醒页扫描后出现低库存通知与采购建议。
+
+**日期误识别处理**：生产晚于到期 → 自动交换 + `DATE_SWAPPED`；只有到期且已过期 → `EXPIRY_IN_PAST`；
+生产 + 保质期 → 推算并标 `EXPIRY_DERIVED`；两日期相同 → `SAME_DAY_FILLED`；超范围 → `DATE_OUT_OF_RANGE`。
+确认时若有日期告警，前端二次确认。
+
+---
+
 ## M0 · 骨架收尾（已完成）
 
 | # | 任务 | 完成判据 | 状态 |

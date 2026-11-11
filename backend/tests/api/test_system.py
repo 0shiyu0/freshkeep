@@ -29,7 +29,7 @@ def test_system_db_reports_structure(client, clean_db):
     assert body["success"] is True
     data = body["data"]
     assert data["connected"] is True
-    assert data["tables"] == 25          # 业务表数（不含 alembic_version）
+    assert data["tables"] == 26          # 业务表数（不含 alembic_version）；阶段 8 新增 recognition_drafts
     assert data["migration"] == "0001_init"
     assert data["pool"]["max_overflow"] >= 0
 

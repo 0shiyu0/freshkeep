@@ -501,3 +501,29 @@ COMMENT ON VIEW v_batch_reconcile IS
   '批次缓存余额 vs 分配聚合。三个 diff_* 应恒为 0；每日 03:00 对账任务检查并写 audit_logs';
 
 COMMIT;
+
+-- -----------------------------------------------------------------------------
+-- AI 识别草稿（阶段 8）：AI 结果只进本表，禁止直接改库存；人工确认后才建档/入库
+-- -----------------------------------------------------------------------------
+CREATE TABLE recognition_drafts (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  image_asset_id        uuid REFERENCES file_assets (id) ON DELETE SET NULL,
+  provider              text NOT NULL DEFAULT 'manual',
+  model                 text NOT NULL DEFAULT '',
+  status                text NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending', 'confirmed', 'rejected')),
+  draft                 jsonb NOT NULL DEFAULT '{}'::jsonb,
+  warnings              jsonb NOT NULL DEFAULT '[]'::jsonb,
+  confirmed_entity_type text CHECK (confirmed_entity_type IN ('ingredient', 'batch')),
+  confirmed_entity_id   uuid,
+  device_id             uuid REFERENCES devices (id) ON DELETE SET NULL,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  confirmed_at          timestamptz,
+  CONSTRAINT ck_recognition_confirmed CHECK (
+    (status = 'pending' AND confirmed_entity_type IS NULL AND confirmed_at IS NULL)
+    OR (status = 'confirmed' AND confirmed_entity_type IS NOT NULL AND confirmed_at IS NOT NULL)
+    OR (status = 'rejected' AND confirmed_entity_type IS NULL)
+  )
+);
+
+CREATE INDEX ix_recognition_status ON recognition_drafts (status, created_at DESC);

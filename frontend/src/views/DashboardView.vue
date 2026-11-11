@@ -93,6 +93,8 @@ onMounted(async () => {
     </div>
     <div class="head-actions">
       <span class="status-mini" :class="app.healthClass">{{ app.healthText }}</span>
+      <button class="btn" @click="router.push('/alerts')">提醒</button>
+      <button class="btn" @click="router.push('/scan')">扫码 / 识别</button>
       <button class="btn" @click="router.push('/purchase')">+ 采购入库</button>
       <button class="btn" @click="router.push('/consume')">− 记一笔消耗</button>
     </div>

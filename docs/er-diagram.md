@@ -24,6 +24,8 @@ erDiagram
 
   file_assets ||--o{ ingredients : "1:N 图片"
   file_assets ||--o{ recipes : "1:N 图片"
+  file_assets ||--o{ recognition_drafts : "1:N 包装图"
+  devices ||--o{ recognition_drafts : "1:N 发起"
 
   ingredients ||--o{ ingredient_barcodes : "1:N 条码"
   ingredients ||--o{ ingredient_nutrition : "1:N 营养档案"
@@ -122,8 +124,9 @@ flowchart LR
 | 唯一性/约束 | DDL 中的 `UNIQUE`、`CHECK`、partial unique index |
 | 视图 | `v_inventory`、`v_batch_reconcile` |
 | 状态机 | `ck_*` CHECK 约束 + 服务层状态迁移函数（M3 实现） |
+| AI 草稿（阶段 8） | `recognition_drafts`：`status` 三态 + `ck_recognition_confirmed` 约束保证「确认必有实体、pending 必无实体」 |
 
-> 迁移历史见 `docs/database.md` 的「迁移历史」小节（当前 head：`0002_ingredient_storage`）。
+> 迁移历史见 `docs/database.md` 的「迁移历史」小节（当前 head：`0003_recognition_drafts`）。
 >
 > 修改表结构时的顺序：先改 `001_init.sql` → 在本地库重建 → 更新本文档的 ER 图与关系表 → 再写服务层。
 > 三者不一致视为缺陷（见 `AGENTS.md` 的"文档同步"规则）。

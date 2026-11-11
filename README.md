@@ -2,11 +2,10 @@
 
 > NAS 私有部署 · 原生 App + Web · 批次级库存 · 成本核算 · 营养估算
 
-**当前状态：阶段 7（营养管理）已完成**（阶段 0~7 与 M0~M6 全部交付）。
-库存总览与筛选、快速/批量消耗、盘点报损、批次与流水、首页统计、营养管理
-（六项营养、版本化档案与来源标记、消耗快照、日/3天/周/月统计、目标与达标率）均已可用；
-pytest **184 项全绿**，成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)。
-三容器 `docker compose up -d` 一键起全，对外 8080。下一步是 M7 备份导出与定时任务。
+**当前状态：阶段 8（智能辅助）上半完成**（扫码/条码/外部商品源/AI 识别闸门/临期提醒/采购建议）。
+AI 识别只写 `recognition_drafts`，人工确认后才建档或入库，批次与流水在识别阶段零变化；
+pytest **200 项全绿**，成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)。
+菜谱管理与采购清单（8.11~8.13）待做。三容器 `docker compose up -d` 一键起全，对外 8080。
 
 | 文档 | 内容 |
 | --- | --- |

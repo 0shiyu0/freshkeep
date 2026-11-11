@@ -140,6 +140,18 @@
 | GET | `/inventory/ledger-stock` | — | **4.1** 按有效流水重算的库存，与批次缓存逐食材对照 |
 | GET | `/inventory/reconcile` | — | **4.12** 批次缓存与分配聚合的差异清单（正常为空） |
 | GET | `/dashboard/summary` | `from_date?, to_date?` | 首页：库存价值、期间采购/消耗/报损、消耗比例、最近 4 条入库、临期计数 |
+| POST | `/ai/recognitions` | `image_file_id?, hint?, manual?` | **阶段 8** 识别生成待确认草稿（不写库存） |
+| GET/PATCH | `/ai/recognitions/{id}` | `patch` | 查看 / 人工修正草稿（重新校验日期） |
+| POST | `/ai/recognitions/{id}/confirm` | `target=ingredient｜batch, ingredient_id?, patch?` | 确认后建档或入库（入库走五步事务） |
+| POST | `/ai/recognitions/{id}/reject` | — | 拒绝识别 |
+| GET/PUT | `/ai/settings` | `kind/base_url/api_key/model/enabled` | 视觉模型配置（密钥脱敏） |
+| GET | `/products/lookup` | `barcode` | 条码查询：本地优先，其次可配置外部源 |
+| GET/PUT | `/products/source` | `kind/base_url/api_key/enabled` | 外部商品源配置（拒绝内网地址） |
+| POST | `/alerts/scan` | `days=7` | 扫描临期/过期/低库存并生成通知（幂等） |
+| GET | `/alerts/summary` | — | 待处理计数（首页铃铛） |
+| GET | `/alerts/notifications` | `status, page…` | 通知中心 |
+| POST | `/alerts/notifications/{id}/read`、`/read-all` | — | 标记已读 |
+| GET | `/purchase/suggestions` | `limit` | 低库存采购建议（只读） |
 | GET | `/stats/overview` | `granularity=day｜week｜month｜year, from_date?, to_date?` | **阶段 6** 库存价值（剩余成本）、趋势序列、分类占比、消耗排行、周转、最近操作 |
 | GET | `/dashboard/nutrition` | `period=today｜3d｜week` | 六项营养汇总；`has_records=false` 表示窗口内无消耗 |
 | GET/PUT | `/nutrition/targets` | `items[{code, target_value, period}]` | 营养目标；同日重复设置覆盖 |

@@ -345,3 +345,26 @@ class IdempotencyKey(Base):
     status_code: Mapped[int] = mapped_column(Integer, nullable=False)
     response_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = _now()
+
+
+class RecognitionDraft(Base):
+    """AI 识别草稿（阶段 8）：与库存表零耦合，确认后才触发建档/入库。"""
+
+    __tablename__ = "recognition_drafts"
+
+    id: Mapped[uuid.UUID] = _pk()
+    image_asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("file_assets.id")
+    )
+    provider: Mapped[str] = mapped_column(Text, default="manual")
+    model: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(Text, default="pending")
+    draft: Mapped[dict] = mapped_column(JSONB, default=dict)
+    warnings: Mapped[list] = mapped_column(JSONB, default=list)
+    confirmed_entity_type: Mapped[str | None] = mapped_column(Text)
+    confirmed_entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    device_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("devices.id")
+    )
+    created_at: Mapped[datetime] = _now()
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

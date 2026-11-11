@@ -1,21 +1,21 @@
 {
   "BRANCH": "main",
-  "HEAD": "62f8adc",
-  "DIRTY": 4,
+  "HEAD": "79452fe",
+  "DIRTY": 36,
   "UNTRACKED": 0,
   "AHEAD": 0,
   "RECENT": [
+    "79452fe 2026-11-11 docs: 更正 M8 与翻页 UI 的滞后描述",
     "62f8adc 2026-11-11 chore: 刷新阶段 7 提交后的状态快照与留痕",
     "2df3c6e 2026-11-11 feat(api): 阶段 7 营养管理 —— month 周期/达标率按天数/档案来源与编辑",
     "3405838 2026-11-11 chore: 刷新阶段 6 提交后的状态快照与留痕",
-    "bb4d67e 2026-11-11 feat(api): 阶段 6 首页与统计 —— 趋势/占比/排行/周转 + 时间筛选",
-    "ca8a62f 2026-11-11 chore: 刷新阶段 5 提交后的状态快照与留痕"
+    "bb4d67e 2026-11-11 feat(api): 阶段 6 首页与统计 —— 趋势/占比/排行/周转 + 时间筛选"
   ],
-  "MIG": "0002_ingredient_storage",
-  "TABLES": "25",
+  "MIG": "0003_recognition_drafts",
+  "TABLES": "26",
   "DB_OK": true,
-  "TESTS": "184 passed, 1 warning in 7.72s",
+  "TESTS": "200 passed, 1 warning in 8.50s",
   "BUILD": "已构建",
   "DOCS_OK": true,
-  "NOW": "2026-11-11 15:04"
+  "NOW": "2026-11-11 16:28"
 }

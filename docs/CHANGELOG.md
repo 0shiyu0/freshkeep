@@ -570,6 +570,54 @@
 
 ---
 
+## 2026-11-11 · 阶段 8（上）：AI 识别闸门 / 条码 / 临时提醒 / 采购建议
+
+### 新增
+
+- **识别草稿表** `recognition_drafts`（迁移 `0003`）：AI 结果只落此表，
+  含 `draft`（规范化字段）、`warnings`（校验提示）、`status`、`confirmed_entity_*`。
+  与 `batches` / `inventory_transactions` 零耦合。
+- **AI 服务层** `services/ai/`：`config`（app_settings 读写、密钥脱敏）、
+  `provider`（stub / openai_compatible，超时与异常降级）、`validate`（日期校验纯函数）。
+- **识别接口**：`POST /ai/recognitions`、`GET/PATCH /ai/recognitions/{id}`、
+  `POST .../confirm`（ingredient 建档 / batch 入库）、`POST .../reject`、`GET/PUT /ai/settings`。
+  确认写 `audit_logs(action='recognition_confirm')`。
+- **条码与商品源**：`GET /products/lookup`（本地优先，其次外部源）、`GET/PUT /products/source`；
+  外部源 kinds：none / openfoodfacts / custom；**拒绝内网地址（SSRF）**。
+- **提醒** `services/alerts.py`：`POST /alerts/scan`（三条 `INSERT ... WHERE NOT EXISTS`，幂等）、
+  `GET /alerts/summary`、`GET /alerts/notifications`、单条/全部已读。
+- **采购建议** `GET /purchase/suggestions`：最低库存差额优先，未设最低时按近 30 天用量估算 7 天覆盖。
+- **前端**：`ScanView`（摄像头扫码 / 手动条码 / 拍照识别 / 待确认表单含警告与修正 / 确认建档或入库）、
+  `AlertsView`（统计卡 + 通知中心 + 采购建议）；库存页与首页加入口；`api/ai.ts`、`api/alerts.ts`、`api/files.ts`。
+
+### 变更
+
+- `database/001_init.sql` 同步新增 `recognition_drafts`；业务表数 25 → 26（`test_system` 断言同步）。
+- 所有直接返回 dict 的接口把 Decimal 转字符串（`purchase/suggestions` 曾因序列化成 float 丢精度）。
+
+### 数据库
+
+- 迁移 `0003_recognition_drafts`，本机库与容器库均已升级；`alembic heads` = `0003_recognition_drafts`。
+
+### 验证
+
+- pytest **200 passed**（原 184 + 阶段 8 的 16）。
+- 容器真实 HTTP **26 项全过**：识别/修正阶段批次与流水零变化、`DATE_SWAPPED` 自动交换、
+  确认建档（拼音可搜、审计已写）、确认入库（批次 +1 / 流水 +1 / 对账 0）、
+  条码本地命中、内网源被拒、扫描幂等（第二次 created=0）、已读计数、建议量为字符串。
+- 浏览器 390：手动链路 查询→手动填写→待确认（`NAME_MISSING`）→确认建档→跳详情，DB 落库；
+  提醒页扫描后出现低库存通知与采购建议；两页 1280/390 溢出 0px。
+- `npm run build` 通过（vue-tsc 零错误）。
+
+### 遗留（阶段 8 下半）
+
+- 8.11 菜谱管理、8.12 菜谱匹配、8.13 采购清单未做（表已在 `0001`）。
+- 8.8 的 PWA 通知未接（Web Notification + Service Worker）；目前是应用内通知中心。
+- 8.7 定时扫描未接 APScheduler（当前手动触发）；与 M7 一起做。
+- 视觉模型未配置时降级为空白草稿 + `AI_NOT_CONFIGURED` 提示（设计如此，非缺陷）。
+
+---
+
 ## [Unreleased]
 
 ### 新增

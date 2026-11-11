@@ -4,6 +4,10 @@ from fastapi import APIRouter
 from app.api.v1 import (
     auth,
     barcodes,
+    ai,
+    alerts,
+    products,
+    purchase,
     batches,
     categories,
     consumptions,
@@ -32,3 +36,7 @@ api_router.include_router(consumptions.router)
 api_router.include_router(inventory.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(stats.router)
+api_router.include_router(purchase.router)
+api_router.include_router(products.router)
+api_router.include_router(alerts.router)
+api_router.include_router(ai.router)
