@@ -1,18 +1,17 @@
 # 项目状态
 
-> 快照时间：2026-11-11 10:05（Asia/Shanghai）
+> 快照时间：2026-11-11 10:40（Asia/Shanghai）
 > 维护规则：每个里程碑结束、每次数据库结构变化、每次发现已知问题，都要更新本文与 `docs/CHANGELOG.md`。
 
 ---
 
 ## 1. 一句话现状
 
-**M6 首页与营养统计已完成**：`GET /dashboard/summary`（库存价值、期间采购/消耗/报损、
-消耗比例、最近入库、临期计数）、`GET /dashboard/nutrition`（六项营养按消耗快照汇总，
-`today/3d/week`，`has_records` 区分空白天）、`GET/PUT /nutrition/targets`（同日覆盖 + 达成率），
-首页从链路自检卡片改为业务数字。
-pytest **151 项通过**（含首页 11 项），容器真实 HTTP **21 项全过**，
-首页 1280/390 DOM 探针：空状态正确显示「没有消耗记录」而非「摄入 0」，有数据时 495/目标/免责声明齐全。
+**阶段 5 库存管理界面已完成**：库存总览改用 `/inventory` 聚合（与后端一致），
+支持搜索 + 分类 + **状态（正常/临期/过期/无库存）** + 位置四条件组合筛选；
+行内快速消耗、多选批量消耗、独立的盘点/报损页、详情页历史流水与单位成本、记录页日期与翻页。
+pytest **158 项通过**（含状态筛选 7 项），浏览器实测移动端 390 快速消耗 500→400g、
+批量消耗 440/450g 且 2 张消耗单、状态筛选只留 1 个食材。
 本轮**无 DDL 变更**，两库均为 `0002_ingredient_storage`。下一步是 **M7 备份导出与定时任务**。
 
 | 里程碑 | 状态 | 备注 |
@@ -29,12 +28,13 @@ pytest **151 项通过**（含首页 11 项），容器真实 HTTP **21 项全�
 | **阶段 3 采购入库** | ✅ **完成** | 独立入库页/批次列表/批次详情；证据见 §2.6 |
 | **阶段 4 库存引擎** | ✅ **完成** | 独立引擎层 + 8 项必须测试 + 成本报告；证据见 §2.7 |
 | **M6 首页与营养** | ✅ **完成** | summary / nutrition / targets + 首页改版；证据见 §2.8 |
+| **阶段 5 库存界面** | ✅ **完成** | 库存总览/状态筛选/快消/批量/盘点报损/记录；证据见 §2.9 |
 | M7 备份导出与定时任务 | ⬜ **下一步** | pg_dump、CSV/JSON 导出、APScheduler 对账 |
 | M8 前端页面 | 🔄 部分 | 登录/库存/详情(含批次)/编辑/设置/消耗/记录已完成；记录页完整流水待 M5 |
 | M9 原生 App | ⬜ | 需 Xcode（iOS 走真机自签） |
 | M10 联调验收 | ⬜ | |
 
-整体进度：**P0 完成 9/13 个里程碑（约 69%），另加阶段 3/4 的补齐**；按人日约 24/36。
+整体进度：**P0 完成 9/13 个里程碑（约 69%），另加阶段 3/4/5 的补齐**；按人日约 26/36。
 
 ---
 
@@ -138,7 +138,20 @@ pytest **151 项通过**（含首页 11 项），容器真实 HTTP **21 项全�
 | 营养目标 | `api/v1/nutrition.py` | 同日重复 PUT 覆盖为 2100、库中仅 1 行、达成率 0.2357 |
 | 首页 | `views/DashboardView.vue` | 空状态显示「这段时间没有消耗记录」；有数据时库存价值/批次号/495/免责声明/目标可见；1280/390 溢出 0px |
 
-### 2.9 测试规模
+### 2.9 阶段 5 库存管理界面（本轮）
+
+| 项 | 文件 | 验证方式与结果 |
+| --- | --- | --- |
+| 库存总览 | `views/InventoryView.vue` | 数据源 `/inventory`；显示总量/总值/批次数；状态标签「剩 2 天 / 已过期 2 天 / 无库存」 |
+| 状态筛选 | `api/v1/inventory.py` | `status=normal/expiring/expired/out_of_stock`；浏览器选「临期 7 天」→ 共 1 个食材 |
+| 组合筛选 | `tests/acceptance/test_stage5_filters.py` | 搜索 + 分类 + 状态 + 位置四条件交集；拼音 + 状态组合；冲突条件返回 0 |
+| 快速消耗 | `InventoryView` 弹层 | 移动端 390：点行内「− 消耗」→ 填 100 → 提交，DB 500 → 400，弹层关闭 |
+| 批量消耗 | 多选 + 批量弹层 | 勾选两项填 50/60 → 批次 440/450，生成 2 张消耗单 |
+| 盘点 / 报损 | `views/StocktakeView.vue` | 盘点按批次提交实际值（只发有差异行）；报损 FEFO 扣批次；下方最近记录可追溯 |
+| 详情 | `IngredientDetailView` | 批次 + 单位成本 + 历史记录（20 条流水） |
+| 记录 | `RecordsView` | 类型 + 日期区间 + 上一页/下一页 |
+
+### 2.10 测试规模
 
 ```
 backend/tests/
@@ -154,8 +167,9 @@ backend/tests/
   acceptance/test_purchase.py     ~200 行  采购入库与批次（7 项）
   unit/test_inventory_engine.py   ~230 行  库存引擎纯函数（17 项，阶段 4 新增）
   acceptance/test_stage4_engine.py ~230 行 阶段 4 八项必须测试 + 4.1/4.12（10 项）
-  acceptance/test_dashboard.py    ~200 行 首页汇总/营养/目标（11 项，M6 新增）
-合计 151 项，全绿
+  acceptance/test_dashboard.py    ~200 行 首页汇总/营养/目标（11 项）
+  acceptance/test_stage5_filters.py ~180 行 库存状态与组合筛选（7 项，阶段 5 新增）
+合计 158 项，全绿
 ```
 
 ---
@@ -200,7 +214,7 @@ backend/tests/
 
 | 能力 | 状态 | 说明 |
 | --- | --- | --- |
-| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 151 项可用 |
+| Python 3.13 + venv | ✅ | `backend/.venv`，pytest 158 项可用 |
 | 本机 PostgreSQL | ✅ 16.15 | 库 `freshkeep` 与测试库 `freshkeep_test`，均在 `0002` |
 | 容器三件套 | ✅ | `freshkeep-{db,api,web}` 全 healthy，对外 8080 |
 | 容器内迁移版本 | ✅ | `0002_ingredient_storage` |
@@ -222,7 +236,7 @@ head -120 docs/CHANGELOG.md
 
 ```bash
 git status --short && git log -3 --oneline
-cd backend && .venv/bin/python -m pytest          # 期望 151 passed
+cd backend && .venv/bin/python -m pytest          # 期望 158 passed
 export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
 docker compose ps                                  # 期望 3 个 healthy
 docker compose exec -T db psql -U freshkeep -d freshkeep -tAc "select version_num from alembic_version"
@@ -246,25 +260,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 09:49 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 10:07 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `e98e56b` |
-| 工作区 | 1 个未提交改动，未跟踪 0 个 |
+| 分支 / HEAD | `main` / `985e077` |
+| 工作区 | 14 个未提交改动，未跟踪 2 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0002_ingredient_storage`，25 张表 |
-| 后端测试 | 151 passed, 1 warning in 5.60s |
+| 后端测试 | 158 passed, 1 warning in 5.87s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+985e077 2026-11-11 chore: 刷新 M6 提交后的状态快照与留痕
 e98e56b 2026-11-11 feat(api): M6 首页与营养统计 —— summary/nutrition/targets + 首页改版
 682ef38 2026-11-10 chore: 刷新阶段 4 提交后的状态快照与留痕
 53f775d 2026-11-10 feat(api): 阶段 4 库存引擎 —— 独立纯函数层 + 流水口径库存 + 对账修复
 01b3185 2026-11-10 chore: 刷新阶段 3 提交后的状态快照与留痕
-fc309cf 2026-11-10 feat(web): 阶段 3 采购入库与批次管理 —— 独立入库页/批次列表/批次详情
 ```
 <!-- AUTO:STATUS:END -->

@@ -6,7 +6,7 @@ import { NButton, NInput, NModal, NSelect } from 'naive-ui'
 import { ingredientApi, fileApi, type IngredientDetail } from '@/api/ingredients'
 import { batchApi, expiryClass, expiryText, type BatchItem } from '@/api/batches'
 import { catalogApi, type StorageLocation } from '@/api/catalog'
-import { inventoryApi, trimNum } from '@/api/inventory'
+import { inventoryApi, TX_TYPE_LABEL, trimNum, type TransactionRow } from '@/api/inventory'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
 const route = useRoute()
@@ -19,6 +19,7 @@ const busy = ref(false)
 
 // 批次（M3）
 const batches = ref<BatchItem[]>([])
+const flows = ref<TransactionRow[]>([])
 const locations = ref<StorageLocation[]>([])
 const purchaseModal = ref(false)
 // 盘点（按批次提交实际值）与报损（按食材 FEFO 扣批次）
@@ -58,6 +59,8 @@ async function load() {
     ])
     batches.value = b.items
     locations.value = locs.items
+    const flow = await inventoryApi.transactions({ ingredient_id: id.value, page_size: 20 })
+    flows.value = flow.items
   } finally {
     loading.value = false
   }
@@ -340,10 +343,29 @@ onMounted(load)
         <div class="batch-row__nums">
           <span>剩余 <b>{{ remainingText(b) }}</b></span>
           <span v-if="b.remaining_cost !== '0.00'">成本 ¥{{ b.remaining_cost }}</span>
+          <span v-if="b.unit_cost" class="batch-unit">单位 {{ b.unit_cost }}</span>
           <span v-if="b.status === 'depleted'" class="tag tag--muted">已耗尽</span>
           <button class="btn btn--tiny" @click="openAdjust(b)">盘点</button>
           <button class="btn btn--tiny" @click="router.push(`/batches/${b.id}`)">详情</button>
         </div>
+      </div>
+    </section>
+
+    <!-- 历史流水（5.5 详情可查历史记录） -->
+    <section class="card">
+      <div class="card__head">
+        <h2>历史记录（{{ flows.length }}）</h2>
+        <button class="btn btn--ghost" @click="router.push('/records')">查看全部</button>
+      </div>
+      <div v-if="flows.length === 0" class="muted-line">还没有库存变动记录</div>
+      <div v-for="f in flows" :key="f.id" class="flow">
+        <span class="tx-tag" :class="`tx-tag--${f.type}`">{{ TX_TYPE_LABEL[f.type] || f.type }}</span>
+        <span class="mono">{{ f.transaction_no }}</span>
+        <span class="flow__delta">
+          <template v-if="Number(f.weight_delta)">{{ trimNum(f.weight_delta) }}g</template>
+          <template v-if="Number(f.cost_delta)"> · {{ f.cost_delta }} 元</template>
+        </span>
+        <span v-if="f.reason" class="muted">{{ f.reason }}</span>
       </div>
     </section>
 
@@ -539,7 +561,16 @@ onMounted(load)
   font-variant-numeric: tabular-nums;
 }
 .batch-row__nums b { font-size: 13.5px; color: var(--text-1); }
+.batch-unit { font-size: 11.5px; color: var(--text-3); }
 .btn--tiny { padding: 2px 8px; font-size: 11.5px; border-radius: 6px; }
+.flow { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px dashed var(--line); flex-wrap: wrap; }
+.flow__delta { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tx-tag { font-size: 11.5px; padding: 2px 9px; border-radius: 999px; font-weight: 500; }
+.tx-tag--purchase { background: var(--green-weak); color: var(--green); }
+.tx-tag--consume { background: #eef2fb; color: #3d5a9a; }
+.tx-tag--spoilage { background: #fbeae8; color: var(--red); }
+.tx-tag--adjustment { background: #fdf3e2; color: #b8860b; }
+.tx-tag--reverse { background: #f0efe9; color: var(--text-2); }
 
 .expiry { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
 .expiry--ok { background: var(--green-weak); color: var(--green); }

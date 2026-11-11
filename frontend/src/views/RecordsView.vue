@@ -14,6 +14,10 @@ const items = ref<TransactionRow[]>([])
 const total = ref(0)
 const loading = ref(false)
 const type = ref<string | null>(null)
+const fromDate = ref('')
+const toDate = ref('')
+const page = ref(1)
+const pageSize = 30
 const busyId = ref<string | null>(null)
 
 const typeOptions = [
@@ -30,8 +34,10 @@ const hasFilter = computed(() => !!type.value)
 async function load() {
   loading.value = true
   try {
-    const params: Record<string, unknown> = { page_size: 60 }
+    const params: Record<string, unknown> = { page: page.value, page_size: pageSize }
     if (type.value) params.type = type.value
+    if (fromDate.value) params.from_date = fromDate.value
+    if (toDate.value) params.to_date = toDate.value
     const res = await inventoryApi.transactions(params)
     items.value = res.items
     total.value = res.total
@@ -70,7 +76,12 @@ async function doReverse(row: TransactionRow) {
   }
 }
 
-watch(type, load)
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+function goto(next: number) {
+  page.value = Math.min(Math.max(1, next), totalPages.value)
+}
+watch([type, fromDate, toDate], () => { page.value = 1; load() })
+watch(page, load)
 onMounted(load)
 </script>
 
@@ -88,6 +99,8 @@ onMounted(load)
 
   <section class="card filters">
     <NSelect v-model:value="type" :options="typeOptions" placeholder="全部类型" size="small" style="width: 140px" />
+    <label class="date">从 <input v-model="fromDate" type="date" /></label>
+    <label class="date">到 <input v-model="toDate" type="date" /></label>
     <span class="muted">撤销通过反向流水恢复库存，原流水不会删除</span>
   </section>
 
@@ -125,11 +138,23 @@ onMounted(load)
         </NButton>
       </div>
     </section>
+
+    <div class="pager">
+      <button class="btn" :disabled="page <= 1" @click="goto(page - 1)">上一页</button>
+      <span class="muted">第 {{ page }} / {{ totalPages }} 页 · 共 {{ total }} 条</span>
+      <button class="btn" :disabled="page >= totalPages" @click="goto(page + 1)">下一页</button>
+    </div>
   </template>
 </template>
 
 <style scoped>
 .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.date { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-2); }
+.date input {
+  height: 30px; padding: 0 8px; border: 1px solid var(--line);
+  border-radius: 7px; font-size: 12.5px; background: var(--surface); color: var(--text);
+}
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 0; flex-wrap: wrap; }
 .muted { color: var(--text-3); font-size: 12px; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-3); }
 .empty { text-align: center; padding: 26px 0; }

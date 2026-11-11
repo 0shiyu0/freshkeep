@@ -68,6 +68,20 @@ SELECT v.ingredient_id, v.name, v.category_id, v.total_quantity, v.total_weight,
                       AND b.storage_location_id = CAST(:location_id AS uuid)
                       AND b.status = 'active'
                       AND (b.remaining_weight > 0 OR b.remaining_quantity > 0)))
+   AND (CAST(:status AS text) IS NULL OR (
+        (CAST(:status AS text) = 'normal'
+          AND (v.total_weight > 0 OR v.total_quantity > 0)
+          AND (v.nearest_expiry IS NULL OR v.nearest_expiry > CAST(:until AS date)))
+     OR (CAST(:status AS text) = 'expiring'
+          AND (v.total_weight > 0 OR v.total_quantity > 0)
+          AND v.nearest_expiry >= CAST(:today AS date)
+          AND v.nearest_expiry <= CAST(:until AS date))
+     OR (CAST(:status AS text) = 'expired'
+          AND (v.total_weight > 0 OR v.total_quantity > 0)
+          AND v.nearest_expiry < CAST(:today AS date))
+     OR (CAST(:status AS text) = 'out_of_stock'
+          AND v.total_weight <= 0 AND v.total_quantity <= 0)
+   ))
 """
 
 
@@ -77,16 +91,25 @@ def list_inventory(
     q: str | None = None,
     category_id: uuid.UUID | None = None,
     location_id: uuid.UUID | None = None,
+    status: str | None = Query(
+        default=None, pattern="^(normal|expiring|expired|out_of_stock)$",
+        description="库存状态：正常 / 临期 7 天 / 已过期 / 无库存",
+    ),
     is_low_stock: bool = False,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
     auth: AuthContext = Depends(get_current),
 ):
+    from datetime import timedelta
+
     keyword = (q or "").strip()
     params = {
         "category_id": str(category_id) if category_id else None,
         "location_id": str(location_id) if location_id else None,
+        "status": status,
+        "today": biz_today(),
+        "until": biz_today() + timedelta(days=7),
         "low_stock": is_low_stock,
         "q_like": f"%{keyword.lower()}%" if keyword else None,
         "q_raw": keyword.lower() if keyword else None,

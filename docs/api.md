@@ -135,7 +135,7 @@
 
 | 方法 | 路径 | 关键请求 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/inventory` | `category_id, is_low_stock, location_id, q, page…` | 读 `v_inventory` |
+| GET | `/inventory` | `q, category_id, status, location_id, is_low_stock, page…` | 读 `v_inventory`；`status` 支持 normal/expiring/expired/out_of_stock |
 | GET | `/inventory/summary` | `as_of?` | 总数量/总重量/总成本/食材数/临期数 |
 | GET | `/inventory/ledger-stock` | — | **4.1** 按有效流水重算的库存，与批次缓存逐食材对照 |
 | GET | `/inventory/reconcile` | — | **4.12** 批次缓存与分配聚合的差异清单（正常为空） |

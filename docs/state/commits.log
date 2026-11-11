@@ -17,3 +17,4 @@
 2026-11-10 17:09 | 53f775d | feat(api): 阶段 4 库存引擎 —— 独立纯函数层 + 流水口径库存 + 对账修复 | 14 文件 | api docs | main
 2026-11-10 17:10 | 682ef38 | chore: 刷新阶段 4 提交后的状态快照与留痕 |  4 文件 | docs | main
 2026-11-11 09:49 | e98e56b | feat(api): M6 首页与营养统计 —— summary/nutrition/targets + 首页改版 | 16 文件 | api web docs | main
+2026-11-11 09:49 | 985e077 | chore: 刷新 M6 提交后的状态快照与留痕 |  4 文件 | docs | main
