@@ -1,0 +1,93 @@
+{
+  "base": "http://192.168.31.198:18080",
+  "https": "https://192.168.31.198:18443",
+  "checks": {
+    "no_credentials_in_repo": {
+      "ok": true,
+      "tracked_files": 218,
+      "matches": [],
+      "note": "凭据只在本次会话临时文件中，未写入源码/日志/版本库"
+    },
+    "secrets_gitignored": {
+      "ok": true,
+      "ignored_paths": [
+        "storage/certs/freshkeep.key",
+        "storage/certs/freshkeep.crt",
+        ".env"
+      ]
+    },
+    "pwa_assets": {
+      "ok": true,
+      "assets": {
+        "/manifest.webmanifest": {
+          "ok": true,
+          "status": 200,
+          "bytes": 1210
+        },
+        "/sw.js": {
+          "ok": true,
+          "status": 200,
+          "bytes": 2854
+        },
+        "/offline.html": {
+          "ok": true,
+          "status": 200,
+          "bytes": 2117
+        },
+        "/icons/icon-192.png": {
+          "ok": true,
+          "status": 200,
+          "bytes": 28896
+        }
+      }
+    },
+    "https_and_headers": {
+      "status": 200,
+      "hsts": "max-age=31536000",
+      "csp": true,
+      "x_frame": "SAMEORIGIN",
+      "nosniff": "nosniff",
+      "referrer": "same-origin",
+      "ok": true
+    },
+    "certificate_san": {
+      "ok": true,
+      "san": "X509v3 Subject Alternative Name:      DNS:freshkeep.local, DNS:localhost, IP Address:192.168.31.198, IP Address:127.0.0.1"
+    },
+    "api_requires_auth": {
+      "ok": true,
+      "expected_status": 401
+    },
+    "latency_health": {
+      "ok": true,
+      "samples": 20,
+      "min_ms": 14.07,
+      "p50_ms": 17.07,
+      "p95_ms": 108.3,
+      "max_ms": 108.3
+    },
+    "latency_spa": {
+      "ok": true,
+      "samples": 20,
+      "min_ms": 8.52,
+      "p50_ms": 10.09,
+      "p95_ms": 100.58,
+      "max_ms": 100.58
+    },
+    "containers": {
+      "ok": true,
+      "ps": [
+        "freshkeep-api|Up 27 minutes (healthy)",
+        "freshkeep-db|Up 27 minutes (healthy)",
+        "freshkeep-web|Up 27 minutes (healthy)"
+      ]
+    },
+    "restore_drill": {
+      "ok": true,
+      "backup": "freshkeep-backup-20261111-190543.tar.gz",
+      "tables": 27
+    }
+  },
+  "ok": true,
+  "generated_at": "2026-11-11 19:06:24"
+}

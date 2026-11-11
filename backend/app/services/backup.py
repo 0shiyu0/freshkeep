@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import json
 import tarfile
 from datetime import datetime
@@ -59,8 +60,22 @@ def create_backup(db: Session) -> dict:
     name = f"freshkeep-backup-{stamp}.tar.gz"
     path = _dir() / name
 
-    schema_path = Path(__file__).resolve().parents[3] / "database" / "001_init.sql"
-    schema = schema_path.read_bytes() if schema_path.exists() else "-- schema.sql 缺失\n".encode()
+    # 本机（repo root/database）与容器（/app/database）的层级不同，逐个探测
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parents[3] / "database" / "001_init.sql",
+        here.parents[2] / "database" / "001_init.sql",
+        Path("/app/database/001_init.sql"),
+    ]
+    schema_path = next((p for p in candidates if p.exists()), None)
+    if schema_path is None:
+        raise RuntimeError("找不到 database/001_init.sql，无法生成含 schema 的备份")
+    schema_text = schema_path.read_text(encoding="utf-8")
+    # 001_init.sql 用 BEGIN; 包裹但没有 COMMIT;，psql 会话结束会回滚整段 DDL；
+    # 备份里补上 COMMIT，保证恢复时可直接 psql -f 执行。
+    if "BEGIN;" in schema_text[:600] and "COMMIT;" not in schema_text.upper():
+        schema_text = schema_text.rstrip() + "\n\nCOMMIT;\n"
+    schema = schema_text.encode("utf-8")
 
     counts: dict[str, int] = {}
     payloads: dict[str, bytes] = {}
@@ -92,6 +107,8 @@ def create_backup(db: Session) -> dict:
 
     size = path.stat().st_size
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    keep = int(os.environ.get("BACKUP_KEEP", "7") or 7)
+    prune_backups(keep)
     return {
         "name": name,
         "size_bytes": size,
@@ -100,6 +117,18 @@ def create_backup(db: Session) -> dict:
         "total_rows": manifest["total_rows"],
         "created_at": datetime.now(BIZ).isoformat(),
     }
+
+
+def prune_backups(keep: int = 7) -> dict:
+    """只保留最近 keep 份备份（按文件名时间戳倒序），返回被删除的文件。"""
+    if keep < 1:
+        keep = 7
+    files = sorted(_dir().glob("freshkeep-backup-*.tar.gz"), reverse=True)
+    removed = []
+    for old in files[keep:]:
+        old.unlink(missing_ok=True)
+        removed.append(old.name)
+    return {"keep": keep, "total": len(files), "removed": removed}
 
 
 def list_backups() -> list[dict]:

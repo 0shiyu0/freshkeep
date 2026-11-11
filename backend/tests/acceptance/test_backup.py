@@ -226,3 +226,17 @@ def test_tick_item_and_complete_list(seeded, ing):
 def test_shopping_endpoints_require_login(client):
     assert client.get("/api/v1/backups").status_code == 401
     assert client.get("/api/v1/tasks").status_code == 401
+
+
+def test_prune_keeps_only_latest(seeded, backup_dir):
+    """阶段 9：自动备份保留最近 N 份，避免无限增长。"""
+    from app.services.backup import prune_backups
+
+    for i in range(9):
+        (backup_dir / f"freshkeep-backup-20261110-12000{i}.tar.gz").write_bytes(b"fake")
+    out = prune_backups(3)
+    assert out["keep"] == 3 and out["total"] == 9 and len(out["removed"]) == 6
+    assert len(list(backup_dir.glob("freshkeep-backup-*.tar.gz"))) == 3
+    # 留下的应是文件名最大的 3 个
+    names = sorted(p.name for p in backup_dir.glob("freshkeep-backup-*.tar.gz"))
+    assert names == [f"freshkeep-backup-20261110-12000{i}.tar.gz" for i in (6, 7, 8)]

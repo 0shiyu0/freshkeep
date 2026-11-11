@@ -19,10 +19,14 @@ data/
 
 # 密钥与证书（绝不入库）
 .env
+.env.*
 *.jks
 *.keystore
 *.p12
 *.mobileprovision
+*.pem
+storage/certs/
+storage/certs/*
 
 # 但状态留痕文件要入库（覆盖上面的 *.log）
 !docs/state/commits.log

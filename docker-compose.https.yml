@@ -1,0 +1,14 @@
+# 阶段 9 · HTTPS / 独立端口 override
+# 用法：docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+# 证书由 ./scripts/gen-self-signed-cert.sh 生成到 storage/certs/（已在 .gitignore）
+services:
+  web:
+    # !override：compose 对 ports 列表默认是追加合并，必须显式覆盖 base 的 8080
+    ports: !override
+      - "${FK_HTTP_PORT:-18080}:80"
+      - "${FK_HTTPS_PORT:-18443}:443"
+    volumes:
+      - ./frontend/nginx.https.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./storage/certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]

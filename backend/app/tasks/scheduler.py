@@ -70,10 +70,11 @@ def job_reconcile() -> dict:
 
 
 def job_backup() -> dict:
-    from app.services.backup import create_backup
+    from app.services.backup import create_backup, prune_backups
 
     with SessionLocal() as db:
         info = create_backup(db)
+        info["pruned"] = len(prune_backups(7)["removed"])
         _audit(db, "scheduler_backup", info)
         db.commit()
     log.info("备份作业完成：%s", info["name"])

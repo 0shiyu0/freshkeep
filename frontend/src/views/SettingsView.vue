@@ -8,6 +8,7 @@ import { catalogApi, type Category, type StorageLocation, type Unit } from '@/ap
 import { useAuthStore } from '@/stores/auth'
 import { request } from '@/api/http'
 import { notifyError, notifySuccess } from '@/utils/notify'
+import { browserNotifications } from '@/utils/notifications'
 
 const auth = useAuthStore()
 
@@ -196,6 +197,36 @@ function downloadCsv(kind: 'transactions' | 'consumptions') {
 }
 
 onMounted(loadBackupData)
+
+// ---- 浏览器通知权限（阶段 9，默认关闭，需用户显式授权） ----
+const notifyPermission = ref<string>('default')
+const notifyOn = ref(false)
+
+function refreshNotify() {
+  notifyPermission.value = browserNotifications.permission()
+  notifyOn.value = browserNotifications.enabled()
+}
+
+async function askNotify() {
+  const result = await browserNotifications.request()
+  refreshNotify()
+  if (result === 'granted') notifySuccess('已获得通知权限')
+  else if (result === 'denied') notifyError('浏览器已拒绝通知权限，请在站点设置里允许')
+  else notifyError('当前浏览器不支持通知')
+}
+
+function toggleNotify(v: boolean) {
+  browserNotifications.setEnabled(v)
+  refreshNotify()
+}
+
+function testNotify() {
+  const ok = browserNotifications.show('鲜度 · 测试通知', '临期提醒已就绪，这条通知不会改动库存。', 'freshkeep-test')
+  if (ok) notifySuccess('测试通知已发送')
+  else notifyError('尚未开启通知权限')
+}
+
+onMounted(refreshNotify)
 </script>
 
 <template>
@@ -391,6 +422,28 @@ onMounted(loadBackupData)
       </div>
     </div>
   </section>
+
+  <!-- 通知权限（阶段 9） -->
+  <section class="card">
+    <div class="card__head">
+      <h2>通知权限</h2>
+      <span class="tag" :class="notifyPermission === 'granted' ? '' : 'tag--muted'">
+        浏览器权限：{{ notifyPermission }}
+      </span>
+    </div>
+    <p class="muted">
+      应用内通知中心始终可用；浏览器通知需 HTTPS（或 localhost）并显式授权，默认关闭。
+      通知只做提醒，不会修改库存。
+    </p>
+    <div class="notify-actions">
+      <button class="btn" @click="askNotify">申请通知权限</button>
+      <label class="notify-toggle">
+        <input type="checkbox" :checked="notifyOn" @change="toggleNotify(($event.target as HTMLInputElement).checked)" />
+        扫描到临期提醒时发送浏览器通知
+      </label>
+      <button class="btn btn--ghost" :disabled="!notifyOn" @click="testNotify">发送测试通知</button>
+    </div>
+  </section>
 </template>
 
 <style scoped>
@@ -412,4 +465,7 @@ onMounted(loadBackupData)
 .tasks { margin-top: 16px; }
 .tasks h3 { font-size: 13px; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
 .task { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px dashed var(--line); font-size: 12.5px; }
+
+.notify-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.notify-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-2); }
 </style>

@@ -712,6 +712,67 @@
 
 ---
 
+## 2026-11-11 · 阶段 9：部署上线（9/9）
+
+### PWA / 移动端 / 离线（9.1~9.3）
+
+- 新增 `frontend/public/manifest.webmanifest`（standalone、shortcuts、icons）与 `public/icons/*`，
+  `index.html` 补 PWA/Apple meta 与图标，`main.ts` 在正式构建注册 Service Worker。
+- 新增 `public/sw.js`：**`/api/` 与所有写操作不缓存**，导航 network-first 失败回退 `public/offline.html`，
+  带 hash 产物 cache-first。离线页明确告知「离线期间不记录消耗/盘点/入库」。
+- `main.css` 补 `100dvh`、安全区、16px 输入防 iOS 缩放、touch-action、standalone 状态栏留白。
+
+### 通知权限（9.4）
+
+- `utils/notifications.ts`：权限查询/申请/开关/发送；设置页加「通知权限」卡片（申请、开关、测试），
+  提醒页扫描到新增提醒时可选发送。**默认关闭，需用户显式授权**，不改动库存逻辑。
+  与 8.8「不做系统级推送」的边界：应用内通知中心仍是主通道，浏览器通知是用户主动开启的增强。
+
+### HTTPS（9.5）
+
+- `frontend/nginx.https.conf`：80 + 443 双 server，TLSv1.2/1.3，HSTS / CSP / X-Frame-Options /
+  X-Content-Type-Options / Referrer-Policy / Permissions-Policy；`/sw.js` 等禁用长缓存。
+- `docker-compose.https.yml`：独立端口 18080/18443 + 证书卷；`scripts/gen-self-signed-cert.sh`
+  生成含 `192.168.31.198` SAN 的自签证书（`storage/certs/`，已 gitignore）。
+
+### NAS Docker 部署（9.6）
+
+- `scripts/deploy-nas.sh`：打包 → 上传 → 远端随机生成 `.env` 与证书 → compose up；脚本本身不含凭据。
+- 实际部署到 NAS（fnOS / Docker 28.5.2 / Compose 2.40.3），项目目录 `/vol1/docker/freshkeep`，
+  使用独立端口避免与既有容器冲突；`entrypoint.sh` 自动执行迁移与字典种子。
+- **镜像来源**：NAS 的 registry 代理返回 401，无法直接拉基础镜像；本机为 arm64、NAS 为 x86_64，
+  因此用 `buildx --platform linux/amd64` 交叉构建后 `docker save` 导入 NAS，不修改 NAS 全局 Docker 配置。
+
+### 自动备份与恢复演练（9.7~9.8）
+
+- `prune_backups(keep=7)` 保留策略接入 `create_backup` 与调度作业；保留 N 份避免无限增长。
+- `scripts/restore_drill.py`：备份 → 建临时库 `freshkeep_drill_*` → `schema.sql` → 27 表 `COPY FROM`
+  → 逐表行数核对 → 删演练库；产出 `docs/reports/restore-drill.json`。
+- **演练抓到并修复两个真实缺陷**：
+  1. `services/backup.py` 在容器里把 `database/001_init.sql` 路径算成 `/database/...`，
+     导致备份内 `schema.sql` 是占位文本；改为多候选路径探测，找不到就报错而不是静默产出坏备份。
+  2. `001_init.sql` 以 `BEGIN;` 开头却没有 `COMMIT;`，`psql -f` 结束时事务回滚、表全部消失；
+     备份写入时自动补 `COMMIT;`，演练脚本也做了兜底并校验「至少建出 20 张表」。
+- 修复后重新生成备份，演练 `ok=true`：27 表、27 个 CSV、schema 生效、逐表行数一致。
+
+### 安全与性能验收（9.9）
+
+- `scripts/stage9_acceptance.py`：凭据泄漏扫描（`git ls-files` 逐文件比对，只报告命中数不打印值）、
+  敏感路径 gitignore、PWA 资产、HTTPS 与安全响应头、证书 SAN、API 401 鉴权、
+  `/health` 与首页 p95 延迟、容器健康、恢复演练记录；产出 `docs/reports/stage9-acceptance.json`。
+
+### 文档修正
+
+- 修正 `PROJECT_STATUS §3`（删除 5 条已完成的过期未完成项与 NAS/M9 旧描述）、`§4 K21`（改为已修复）、
+  `§7`（从 M7 计划改为阶段 9 之后的运维事项），消除文档与代码状态矛盾。
+
+### 安全约束
+
+- NAS 账户密码只在本次会话的临时文件中（本机 `/tmp/fk_nas_pass`、NAS `/tmp/.fk_pw`）使用，
+  用后删除；未写入源码、日志、`.env` 或版本库，验收脚本逐文件扫描确认 0 命中。
+
+---
+
 ## [Unreleased]
 
 ### 新增

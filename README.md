@@ -2,12 +2,14 @@
 
 > NAS 私有部署 · 原生 App + Web · 批次级库存 · 成本核算 · 营养估算
 
-**当前状态：阶段 8 + M7 完成，M9 脚手架就绪**（扫码/条码/外部源/AI 识别闸门/临期提醒/采购建议/
-菜谱结构化与匹配/采购清单/备份导出/定时任务）。
+**当前状态：阶段 0~9 全部完成，已部署上线**。
+NAS 访问：HTTP `http://192.168.31.198:18080`、HTTPS `https://192.168.31.198:18443`（自签证书，首次需信任）。
+包含 PWA / 离线基础页 / 通知权限（默认关闭）/ HTTPS / 自动备份（保留 7 份）/ 恢复演练 / 安全与性能验收。
 AI 识别只写 `recognition_drafts`，人工确认后才建档或入库；备份与采购清单都不产生库存流水。
-pytest **230 项全绿**，成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)。
-待补：M9 平台目录（需联网执行 `scripts/cap-add-platforms.sh`）、清单一键入库、M10 联调。
-三容器 `docker compose up -d` 一键起全，对外 8080。
+pytest **230 项全绿**；成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)，
+恢复演练记录见 [docs/reports/restore-drill.md](docs/reports/restore-drill.md)。
+本地开发仍可 `docker compose up -d` 起在 8080；NAS 部署用 `scripts/deploy-nas.sh`。
+剩余运维项：M9 原生平台目录与 APK/IPA 出包（需联网）。
 
 | 文档 | 内容 |
 | --- | --- |

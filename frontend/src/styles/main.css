@@ -131,7 +131,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
   gap: 12px;
   position: sticky;
   top: calc(var(--topbar-h) + env(safe-area-inset-top));
-  height: calc(100vh - var(--topbar-h) - env(safe-area-inset-top));
+  height: calc(100dvh - var(--topbar-h) - env(safe-area-inset-top));
 }
 
 .sidebar__nav { display: flex; flex-direction: column; gap: 4px; }
@@ -279,4 +279,22 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 
 @media (min-width: 1024px) {
   .content { padding-top: 24px; }
+}
+
+/* ---- 阶段 9 移动端适配补充 ---- */
+html { -webkit-text-size-adjust: 100%; }
+body { -webkit-tap-highlight-color: transparent; }
+button, .btn, a, input[type="checkbox"] { touch-action: manipulation; }
+@media (max-width: 720px) {
+  /* iOS Safari 对小于 16px 的输入框会自动缩放页面 */
+  input, select, textarea { font-size: 16px; }
+  .content { padding-bottom: calc(var(--bottomnav-h) + 32px + env(safe-area-inset-bottom)); }
+  .page-head { flex-wrap: wrap; gap: 10px; }
+  .head-actions { flex-wrap: wrap; }
+  .card { border-radius: 12px; }
+  table { display: block; overflow-x: auto; }
+}
+@media (display-mode: standalone) {
+  /* PWA 独立窗口里顶部状态栏由系统绘制，避免内容贴边 */
+  body { padding-top: env(safe-area-inset-top); }
 }

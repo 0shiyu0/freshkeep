@@ -6,6 +6,7 @@ import { NButton } from 'naive-ui'
 
 import { alertsApi, type AlertSummary, type NotificationRow, type PurchaseSuggestion } from '@/api/alerts'
 import { notifyError, notifySuccess } from '@/utils/notify'
+import { browserNotifications } from '@/utils/notifications'
 
 const router = useRouter()
 const tab = ref<'notifications' | 'purchase'>('notifications')
@@ -57,6 +58,9 @@ async function scanNow() {
   try {
     const res = await alertsApi.scan(7)
     notifySuccess(res.created > 0 ? `新增 ${res.created} 条提醒` : '没有新的提醒')
+    if (res.created > 0) {
+      browserNotifications.show('鲜度 · 临期提醒', `新增 ${res.created} 条提醒，请查看通知中心。`, 'freshkeep-alerts')
+    }
     await Promise.all([loadSummary(), loadList()])
   } catch (err) {
     notifyError(err instanceof Error ? err.message : '扫描失败')

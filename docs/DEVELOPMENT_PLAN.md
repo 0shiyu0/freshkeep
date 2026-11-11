@@ -246,6 +246,28 @@ P2（AI 识别 + 采购清单 + 菜谱 + 对账告警 + TLS）≈ 14 人日。
 
 ---
 
+## 阶段 9 · 部署上线（2026-11-11）
+
+| # | 任务 | 交付物 | 状态 |
+| --- | --- | --- | --- |
+| 9.1 | PWA 配置 | `frontend/public/manifest.webmanifest`（含 shortcuts/icons）、`index.html` PWA meta、`main.ts` 注册 SW | ✅ |
+| 9.2 | 手机端适配 | `main.css` 安全区 / `100dvh` / 16px 输入防缩放 / touch-action；1280 与 390 双端 DOM 探针 | ✅ |
+| 9.3 | 离线基础页面 | `public/offline.html` + `sw.js`（API 与写操作不缓存、导航 network-first 回退离线页） | ✅ |
+| 9.4 | 通知权限 | `utils/notifications.ts` + 设置页申请/开关/测试；提醒页扫描后可选发送；**默认关闭，需显式授权** | ✅ |
+| 9.5 | HTTPS | `frontend/nginx.https.conf`（443 + 安全响应头 + HSTS/CSP）、`docker-compose.https.yml`、自签证书脚本 | ✅ |
+| 9.6 | NAS Docker 部署 | `scripts/deploy-nas.sh`；三容器跑在 NAS `192.168.31.198`，独立端口 18080/18443 | ✅ |
+| 9.7 | 自动备份 | `ENABLE_SCHEDULER=true` 三作业 + `prune_backups(keep=7)` 保留策略 | ✅ |
+| 9.8 | 恢复演练 | `scripts/restore_drill.py`：备份 → 临时库 → schema → 27 表 COPY → 逐表核对 → 删演练库 | ✅ |
+| 9.9 | 安全和性能验收 | `scripts/stage9_acceptance.py`：凭据扫描 / HTTPS 头 / 鉴权 / p95 延迟 / PWA 资产 | ✅ |
+
+**边界**：8.8 阶段曾按需求收敛为「应用内通知中心、不做系统级推送」；阶段 9 的 9.4 是**用户显式授权后才可选的浏览器通知**，
+默认关闭、不改动任何库存逻辑，两者不冲突。
+
+**凭据处理**：NAS 账户密码只在本次会话的临时文件中使用（`/tmp/fk_nas_pass` 与 NAS `/tmp/.fk_pw`），
+用后删除；未写入源码、日志、`.env` 或版本库（验收脚本逐文件扫描确认 0 命中）。
+
+---
+
 ## M0 · 骨架收尾（已完成）
 
 | # | 任务 | 完成判据 | 状态 |

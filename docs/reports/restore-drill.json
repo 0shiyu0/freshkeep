@@ -1,0 +1,174 @@
+{
+  "backup": "freshkeep-backup-20261111-190543.tar.gz",
+  "backup_size_bytes": 11521,
+  "drill_database": "freshkeep_drill_1794395143",
+  "started_at": "2026-11-11 19:05:43",
+  "steps": [
+    {
+      "step": "extract",
+      "ok": true,
+      "files": 27
+    },
+    {
+      "step": "create_database",
+      "ok": true
+    },
+    {
+      "step": "restore_schema",
+      "ok": true,
+      "base_tables": 27
+    },
+    {
+      "step": "restore_tables",
+      "ok": true,
+      "tables": 27,
+      "errors": []
+    }
+  ],
+  "ok": true,
+  "manifest_tables": 27,
+  "manifest_rows": 43,
+  "tables": {
+    "users": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "devices": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "pair_codes": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "file_assets": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "categories": {
+      "expected": 17,
+      "actual": 17,
+      "match": true
+    },
+    "units": {
+      "expected": 9,
+      "actual": 9,
+      "match": true
+    },
+    "storage_locations": {
+      "expected": 4,
+      "actual": 4,
+      "match": true
+    },
+    "ingredients": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "ingredient_barcodes": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "nutrition_definitions": {
+      "expected": 6,
+      "actual": 6,
+      "match": true
+    },
+    "ingredient_nutrition": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "nutrition_targets": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "batches": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "inventory_transactions": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "transaction_allocations": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "consumption_records": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "consumption_nutrition": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "shopping_lists": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "shopping_list_items": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "recipes": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "recipe_items": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "recipe_steps": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "notifications": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "app_settings": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "audit_logs": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "idempotency_keys": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    },
+    "recognition_drafts": {
+      "expected": 0,
+      "actual": 0,
+      "match": true
+    }
+  },
+  "samples": {
+    "ingredients": "1",
+    "batches": "1",
+    "inventory_transactions": "1"
+  },
+  "finished_at": "2026-11-11 19:05:56"
+}
