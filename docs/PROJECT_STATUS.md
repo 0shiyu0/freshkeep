@@ -316,25 +316,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 16:39 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 16:41 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `f0b18a0` |
-| 工作区 | 22 个未提交改动，未跟踪 9 个 |
+| 分支 / HEAD | `main` / `e592ad4` |
+| 工作区 | 1 个未提交改动，未跟踪 0 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0003_recognition_drafts`，26 张表 |
-| 后端测试 | 214 passed, 1 warning in 9.24s |
+| 后端测试 | 214 passed, 1 warning in 9.40s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+e592ad4 2026-11-11 feat(api): 阶段 8（下）菜谱管理 / 库存匹配 / 多菜谱合并采购清单
 f0b18a0 2026-11-11 chore: 刷新阶段 8（上）提交后的状态快照与留痕
 2e71b3b 2026-11-11 feat(api): 阶段 8（上）AI 识别闸门 + 条码/外部源 + 临期提醒 + 采购建议
 79452fe 2026-11-11 docs: 更正 M8 与翻页 UI 的滞后描述
 62f8adc 2026-11-11 chore: 刷新阶段 7 提交后的状态快照与留痕
-2df3c6e 2026-11-11 feat(api): 阶段 7 营养管理 —— month 周期/达标率按天数/档案来源与编辑
 ```
 <!-- AUTO:STATUS:END -->
