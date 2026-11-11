@@ -337,11 +337,27 @@ dashboard 五组接口 → 营养定义/目标 → 日汇总（区分"无记录"
 
 ---
 
-## M8 · 前端 5 页
+## M8 · 前端页面（2026-11-11 完成）
 
 配对页 → 首页 → 库存（含批次详情）→ 记录 → 设置（设备/分类/单位/目标/备份）。
 
-**完成判据**：手机浏览器全流程可用；三态（加载/空/错误）齐全；401 自动跳配对页。
+| 页面 | 状态 |
+| --- | --- |
+| 登录（配对码/密码） | ✅ `LoginView` |
+| 首页 | ✅ `DashboardView` + `StatsPanel`（统计/营养） |
+| 库存总览 | ✅ `InventoryView`（四条件筛选、快速/批量消耗） |
+| 食材详情 / 新增 / 编辑 | ✅ `IngredientDetailView`、`IngredientFormView` |
+| 批次列表 / 批次详情 | ✅ `BatchesView`、`BatchDetailView` |
+| 采购入库 | ✅ `PurchaseView` |
+| 消耗录入 | ✅ `ConsumeView` |
+| 盘点 / 报损 | ✅ `StocktakeView` |
+| 记录 | ✅ `RecordsView`（类型/日期/翻页/撤销） |
+| 设置 | ✅ `SettingsView`（备份区块随 M7 一起加） |
+
+**完成判据**：手机浏览器全流程可用（阶段 5 已实测移动端消耗）；三态（加载/空/错误）在库存、
+批次、记录、首页四个列表页均有；401 由 `AppLayout` 的全局 handler 跳登录。
+
+**遗留**：`PairView.vue` 无引用，可删除。
 
 ---
 
