@@ -260,25 +260,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 10:07 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 10:08 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `985e077` |
-| 工作区 | 14 个未提交改动，未跟踪 2 个 |
+| 分支 / HEAD | `main` / `61ac382` |
+| 工作区 | 1 个未提交改动，未跟踪 0 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0002_ingredient_storage`，25 张表 |
-| 后端测试 | 158 passed, 1 warning in 5.87s |
+| 后端测试 | 158 passed, 1 warning in 5.57s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+61ac382 2026-11-11 feat(web): 阶段 5 库存管理界面 —— 状态筛选/快速消耗/批量消耗/盘点报损页
 985e077 2026-11-11 chore: 刷新 M6 提交后的状态快照与留痕
 e98e56b 2026-11-11 feat(api): M6 首页与营养统计 —— summary/nutrition/targets + 首页改版
 682ef38 2026-11-10 chore: 刷新阶段 4 提交后的状态快照与留痕
 53f775d 2026-11-10 feat(api): 阶段 4 库存引擎 —— 独立纯函数层 + 流水口径库存 + 对账修复
-01b3185 2026-11-10 chore: 刷新阶段 3 提交后的状态快照与留痕
 ```
 <!-- AUTO:STATUS:END -->
