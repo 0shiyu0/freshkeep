@@ -296,6 +296,9 @@ def detail(
             "unit": defs[n.nutrition_definition_id].unit if n.nutrition_definition_id in defs else "",
             "value": format(n.value.normalize(), "f"),
             "basis_amount": format(n.basis_amount.normalize(), "f"),
+            "source": n.source,  # 7.9 数据来源：manual / packaging_label / database
+            "version": n.version,
+            "basis_unit_id": str(n.basis_unit_id),  # 前端编辑后整体替换时要回传
         }
         for n in sorted(ing.nutrition, key=lambda x: (defs.get(x.nutrition_definition_id).sort_order if defs.get(x.nutrition_definition_id) else 99))
         if n.is_current
@@ -338,7 +341,7 @@ def _apply_nutrition(db: Session, ing: Ingredient, items) -> None:
                 value=item.value,
                 basis_amount=item.basis_amount,
                 basis_unit_id=item.basis_unit_id,
-                source="manual",
+                source=item.source,
                 version=1,
                 is_current=True,
             )
@@ -547,7 +550,7 @@ def replace_nutrition(
                 value=item.value,
                 basis_amount=item.basis_amount,
                 basis_unit_id=item.basis_unit_id,
-                source="manual",
+                source=item.source,
                 version=versions.get(defn.id, 0) + 1,
                 is_current=True,
             )

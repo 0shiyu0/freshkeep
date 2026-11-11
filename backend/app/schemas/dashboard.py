@@ -51,8 +51,9 @@ class NutritionItem(BaseModel):
     name: str
     unit: str
     actual_value: Dec4
-    target_value: Dec4 | None
-    achievement: Dec4 | None  # 实际 / 目标，目标为空则 null
+    target_value: Dec4 | None       # 日目标
+    period_target: Dec4 | None      # 本窗口累计目标（日目标 × 天数）
+    achievement: Dec4 | None        # 实际 / 窗口累计目标，目标为空则 null
 
 
 class DashboardNutrition(BaseModel):

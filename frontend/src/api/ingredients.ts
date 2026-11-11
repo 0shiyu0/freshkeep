@@ -29,6 +29,9 @@ export interface NutritionItem {
   unit: string
   value: string
   basis_amount: string
+  source: string
+  version: number
+  basis_unit_id: string
 }
 
 export interface IngredientDetail extends IngredientListItem {
@@ -88,6 +91,11 @@ export const ingredientApi = {
       barcode,
       barcode_type: barcodeType,
     }),
+  /** 整体替换营养档案（版本化，历史快照不受影响） */
+  updateNutrition: (
+    id: string,
+    items: Array<{ code: string; value: string; basis_amount: string; basis_unit_id: string; source: string }>
+  ) => request<{ updated: number }>({ url: `/ingredients/${id}/nutrition`, method: 'PUT', data: { items } }),
   unbindBarcode: (barcodeId: string) =>
     request<{ deleted: boolean }>({ url: `/barcodes/${barcodeId}`, method: 'DELETE' }),
 }

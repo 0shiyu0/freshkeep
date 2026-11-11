@@ -143,6 +143,8 @@
 | GET | `/stats/overview` | `granularity=day｜week｜month｜year, from_date?, to_date?` | **阶段 6** 库存价值（剩余成本）、趋势序列、分类占比、消耗排行、周转、最近操作 |
 | GET | `/dashboard/nutrition` | `period=today｜3d｜week` | 六项营养汇总；`has_records=false` 表示窗口内无消耗 |
 | GET/PUT | `/nutrition/targets` | `items[{code, target_value, period}]` | 营养目标；同日重复设置覆盖 |
+| GET | `/dashboard/nutrition` | `period=today｜3d｜week｜month` | 营养汇总；多日窗口返回 `period_target`（日目标 × 天数） |
+| PUT | `/ingredients/{id}/nutrition` | `items[{code, value, basis_amount, basis_unit_id, source}]` | **阶段 7** 版本化替换档案；`source` 支持 manual/packaging_label/database |
 | POST | `/inventory/reconcile/repair` | `batch_ids?, reason?` | **4.12** 按流水修正缓存，写 `audit_logs` |
 | GET | `/inventory/transactions` | `type, ingredient_id, batch_id, from, to, page…` | 全部流水；`batch_id` 经分配表反查 |
 | POST | `/inventory/adjustments` | `ingredient_id, batch_id?, actual_weight, actual_quantity, reason` | 盘点调整：**提交实际值**，服务端反算 delta |

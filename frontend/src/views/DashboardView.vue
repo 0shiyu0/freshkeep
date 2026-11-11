@@ -13,7 +13,7 @@ const app = useAppStore()
 
 const summary = ref<DashboardSummary | null>(null)
 const nutrition = ref<DashboardNutrition | null>(null)
-const period = ref<'today' | '3d' | 'week'>('today')
+const period = ref<'today' | '3d' | 'week' | 'month'>('today')
 const loading = ref(false)
 const targetModal = ref(false)
 const targetDraft = ref<Record<string, string>>({})
@@ -23,6 +23,7 @@ const periods = [
   { key: 'today', label: '今日' },
   { key: '3d', label: '近三天' },
   { key: 'week', label: '本周' },
+  { key: 'month', label: '本月' },
 ] as const
 
 async function loadSummary() {
@@ -155,6 +156,7 @@ onMounted(async () => {
       <div v-else-if="!nutrition.has_records" class="empty-nutrition">
         <p><strong>这段时间没有消耗记录</strong></p>
         <p class="muted">{{ nutrition.start_date }} ~ {{ nutrition.end_date }} · 不是「摄入为 0」，只是还没记录</p>
+        <p class="disclaimer">{{ nutrition.disclaimer }}</p>
         <button class="btn" style="margin-top: 8px" @click="router.push('/consume')">去记一笔消耗</button>
       </div>
 
@@ -164,7 +166,11 @@ onMounted(async () => {
             <span class="nutri__name">{{ n.name }}</span>
             <strong class="nutri__value">{{ Number(n.actual_value) }}<small>{{ n.unit }}</small></strong>
             <span v-if="n.target_value" class="nutri__target">
-              目标 {{ Number(n.target_value) }} · {{ pct(n.achievement) }}
+              日目标 {{ Number(n.target_value) }}
+              <template v-if="nutrition && nutrition.days > 0">
+                · 窗口 {{ Number(n.period_target) }}
+              </template>
+              · {{ pct(n.achievement) }}
             </span>
             <span v-else class="nutri__target muted">未设目标</span>
           </div>

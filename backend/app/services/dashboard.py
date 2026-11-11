@@ -23,6 +23,7 @@ from app.core.time import biz_today
 BIZ_TZ = ZoneInfo("Asia/Shanghai")
 Q2, Q3, Q4 = Decimal("0.01"), Decimal("0.001"), Decimal("0.0001")
 PERIOD_DAYS = {"today": 0, "3d": 2, "week": 6}
+PERIODS = ("today", "3d", "week", "month")
 DEFAULT_SUMMARY_DAYS = 30
 
 
@@ -38,11 +39,17 @@ def day_window(start_date: date, end_date: date) -> tuple[datetime, datetime]:
 
 
 def nutrition_window(period: str) -> tuple[date, date, int]:
-    """period → (起始日, 结束日, 天数跨度)；today 跨度为 0。"""
-    if period not in PERIOD_DAYS:
+    """period → (起始日, 结束日, 天数跨度)；today 跨度为 0。
+
+    month 取「本月 1 日 ~ 今天」的自然月至今，跨度 = 已过天数。
+    """
+    if period not in PERIODS:
         raise ValueError(f"未知周期：{period}")
-    days = PERIOD_DAYS[period]
     today = biz_today()
+    if period == "month":
+        start = today.replace(day=1)
+        return start, today, (today - start).days
+    days = PERIOD_DAYS[period]
     return today - timedelta(days=days), today, days
 
 
@@ -167,11 +174,15 @@ def nutrition(db: Session, *, period: str = "today") -> dict:
     for r in rows:
         total = _q(Decimal(r.total), Q4)
         target = targets.get((r.code, "daily"))
+        # 目标按「日」设置；多日窗口要把日目标累加，否则达成率会被算高
+        span = days + 1
+        period_target = (target * span) if target else None
         items.append({
             "code": r.code, "name": r.name, "unit": r.unit,
             "actual_value": total,
-            "target_value": target,
-            "achievement": _q(total / target, Q4) if target else None,
+            "target_value": target,          # 日目标，前端展示用
+            "period_target": period_target,  # 本窗口累计目标
+            "achievement": _q(total / period_target, Q4) if period_target else None,
         })
 
     return {

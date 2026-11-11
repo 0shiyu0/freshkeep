@@ -30,6 +30,50 @@ const adjustForm = reactive({ actual_weight: '', reason: '盘点' })
 const spoilModal = ref(false)
 const spoiling = ref(false)
 const spoilForm = reactive({ weight: '', reason: '变质' })
+// 营养档案编辑（阶段 7）：整体替换当前版本，历史快照不变
+const nutritionModal = ref(false)
+const nutritionBusy = ref(false)
+const nutritionDraft = ref<Array<{ code: string; name: string; unit: string; value: string; basis_amount: string; basis_unit_id: string; source: string }>>([])
+const SOURCE_LABEL: Record<string, string> = {
+  manual: '手动录入',
+  packaging_label: '包装标识',
+  database: '数据库',
+}
+
+function openNutrition() {
+  const list = data.value?.nutrition ?? []
+  nutritionDraft.value = list.map((n) => ({
+    code: n.code, name: n.name, unit: n.unit,
+    value: n.value, basis_amount: n.basis_amount,
+    basis_unit_id: n.basis_unit_id, source: n.source || 'manual',
+  }))
+  nutritionModal.value = true
+}
+
+async function saveNutrition() {
+  if (nutritionBusy.value) return
+  const items = nutritionDraft.value
+    .filter((n) => n.value.trim() !== '' && Number(n.value) >= 0)
+    .map((n) => ({
+      code: n.code, value: n.value.trim(), basis_amount: n.basis_amount,
+      basis_unit_id: n.basis_unit_id, source: n.source,
+    }))
+  if (items.length === 0) {
+    notifyError('至少保留一项营养数据')
+    return
+  }
+  nutritionBusy.value = true
+  try {
+    await ingredientApi.updateNutrition(id.value, items)
+    notifySuccess('营养档案已保存（历史消耗快照不受影响）')
+    nutritionModal.value = false
+    await load()
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : '保存失败')
+  } finally {
+    nutritionBusy.value = false
+  }
+}
 const purchasing = ref(false)
 const purchaseForm = reactive({
   purchase_date: new Date().toISOString().slice(0, 10),
@@ -386,15 +430,47 @@ onMounted(load)
       </div>
     </section>
 
-    <!-- 营养档案 -->
+    <!-- 营养档案（阶段 7） -->
     <section class="card">
-      <h2>营养档案（{{ data.nutrition_basis_display }}）</h2>
-      <div v-if="data.nutrition.length === 0" class="muted-line">未录入营养数据</div>
-      <div v-for="n in data.nutrition" :key="n.code" class="attr">
-        <span class="attr__label">{{ n.name }}</span>
-        <span class="attr__value">{{ n.value }} {{ n.unit }}</span>
+      <div class="card__head">
+        <h2>营养档案（{{ data.nutrition_basis_display }}）</h2>
+        <button class="btn" @click="openNutrition">
+          {{ data.nutrition.length === 0 ? '录入营养' : '编辑' }}
+        </button>
       </div>
+      <div v-if="data.nutrition.length === 0" class="muted-line">
+        未录入营养数据，录入后消耗时才能估算摄入。
+      </div>
+      <div v-for="n in data.nutrition" :key="n.code" class="attr">
+        <span class="attr__label">
+          {{ n.name }}
+          <small class="src">{{ SOURCE_LABEL[n.source] || n.source }}</small>
+        </span>
+        <span class="attr__value">{{ n.value }} {{ n.unit }} / {{ n.basis_amount }}g</span>
+      </div>
+      <p class="form-tip">
+        修改档案只影响之后的新消耗；已记录的消耗保留当时的营养快照（v{{ data.nutrition[0]?.version || 1 }}）。
+      </p>
     </section>
+
+    <!-- 营养编辑弹层 -->
+    <NModal v-model:show="nutritionModal" preset="card" title="编辑营养档案（每 100g 或每 100ml）"
+            style="max-width: 520px">
+      <div v-for="n in nutritionDraft" :key="n.code" class="nutri-edit">
+        <span class="nutri-edit__name">{{ n.name }}（{{ n.unit }}）</span>
+        <input v-model="n.value" inputmode="decimal" placeholder="含量" />
+        <select v-model="n.source">
+          <option v-for="(label, key) in SOURCE_LABEL" :key="key" :value="key">{{ label }}</option>
+        </select>
+      </div>
+      <p class="form-tip">留空的项目不会提交；保存后旧版本保留在库里，历史消耗不受影响。</p>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px">
+          <NButton @click="nutritionModal = false">取消</NButton>
+          <NButton type="primary" :loading="nutritionBusy" @click="saveNutrition">保存</NButton>
+        </div>
+      </template>
+    </NModal>
 
     <!-- 条码 -->
     <section class="card">
@@ -541,6 +617,17 @@ onMounted(load)
 .card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .card__head h2 { margin: 0; }
 .muted-line { font-size: 13px; color: var(--text-3); padding: 6px 0; }
+.src { font-size: 10.5px; color: var(--text-3); margin-left: 4px; }
+.nutri-edit { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px dashed var(--line); }
+.nutri-edit__name { flex: 1; font-size: 13px; }
+.nutri-edit input {
+  width: 90px; height: 32px; padding: 0 8px; border: 1px solid var(--line);
+  border-radius: 7px; font-size: 13px; text-align: right;
+}
+.nutri-edit select {
+  height: 32px; padding: 0 6px; border: 1px solid var(--line);
+  border-radius: 7px; font-size: 12.5px; background: #fff;
+}
 
 .img-box { display: flex; align-items: center; gap: 14px; }
 .img-box img { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }

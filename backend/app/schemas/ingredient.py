@@ -35,6 +35,8 @@ class NutritionIn(BaseModel):
     value: Dec4 = Field(gt=-1)
     basis_amount: Dec3 = Field(gt=0, description="基准量，如 100")
     basis_unit_id: uuid.UUID
+    # 7.9 数据来源：手动录入 / 包装标识 / 数据库
+    source: str = Field(default="manual", pattern="^(manual|packaging_label|database)$")
 
 
 class IngredientIn(BaseModel):

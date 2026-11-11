@@ -34,7 +34,8 @@ export interface NutritionItem {
   name: string
   unit: string
   actual_value: string
-  target_value: string | null
+  target_value: string | null      // 日目标
+  period_target: string | null     // 本窗口累计目标（日目标 × 天数）
   achievement: string | null
 }
 

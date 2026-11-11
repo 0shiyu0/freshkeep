@@ -35,7 +35,7 @@ def summary(
 @router.get("/nutrition", summary="营养摄入汇总（按消耗快照估算）")
 def nutrition(
     request: Request,
-    period: str = Query(default="today", pattern="^(today|3d|week)$"),
+    period: str = Query(default="today", pattern="^(today|3d|week|month)$"),
     db: Session = Depends(get_db),
     auth: AuthContext = Depends(get_current),
 ):

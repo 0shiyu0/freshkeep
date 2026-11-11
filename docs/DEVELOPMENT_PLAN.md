@@ -188,6 +188,30 @@ P2（AI 识别 + 采购清单 + 菜谱 + 对账告警 + TLS）≈ 14 人日。
 
 ---
 
+## 阶段 7 · 营养管理（2026-11-11 完成）
+
+| # | 任务 | 交付物 | 状态 |
+| --- | --- | --- | --- |
+| 7.1 | 营养项目 | `nutrition_definitions` 六项：热量/蛋白/脂肪/碳水/纤维/钠 | ✅ |
+| 7.2 | 食材营养档案 | `ingredient_nutrition` 版本化（`is_current` + `version`） | ✅ 改档案旧行退役、新行 version+1 |
+| 7.3 | 线性换算 | `weight × value ÷ basis_amount` | ✅ 200g × 165/100 = 330 |
+| 7.4 | 营养快照 | `consumption_nutrition` 冻结值 + `basis_snapshot` | ✅ 改档案后历史不变 |
+| 7.5 | 每日统计 | `/dashboard/nutrition?period=today` | ✅ |
+| 7.6 | 周期统计 | `today / 3d / week / **month**` | ✅ 本月取「1 日 ~ 今天」 |
+| 7.7 | 营养目标 | `GET/PUT /nutrition/targets` | ✅ 同日覆盖、历史保留 |
+| 7.8 | 达标率 | `achievement = 实际 ÷ (日目标 × 天数)` | ✅ 返回 `period_target` 供展示 |
+| 7.9 | 数据来源 | 档案 `source` + 快照 `basis_snapshot.source` | ✅ manual / packaging_label / database |
+
+**验收实测**：`tests/acceptance/test_nutrition_stage7.py` 11 项全绿；容器 14 项全过：
+200g 鸡胸肉 → **330 / 62 / 7.2**；改档案蛋白 30g 后历史快照仍 62、今日统计仍 62，
+新消耗按新档案 60（累计 122）；month 窗口 `2026-11-01~2026-11-11`（days=10），
+达成率按 `2000×11` 换算；详情页显示「手动录入 / 包装标识」，编辑弹层真实保存 160 且历史快照仍 330。
+
+**口径声明**：所有营养值是**按库存消耗量推算**，不等于实际摄入体内的量；前端在
+有记录与空态两种情况下都展示该说明。
+
+---
+
 ## M0 · 骨架收尾（已完成）
 
 | # | 任务 | 完成判据 | 状态 |
