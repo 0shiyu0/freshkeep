@@ -14,7 +14,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
-from app.core.errors import not_found, validation_error
+from app.core.errors import ApiError, not_found, validation_error
 from app.models import Ingredient, Recipe, RecipeItem, RecipeStep, Unit
 
 Q2, Q3, Q4 = Decimal("0.01"), Decimal("0.001"), Decimal("0.0001")
@@ -513,4 +513,104 @@ def build_from_low_stock(db: Session, *, name: str | None = None) -> dict:
             for r in rows
         ],
         "message": "" if rows else "没有低库存食材",
+    }
+
+
+def import_shopping_list(db: Session, list_id: uuid.UUID, *, device_id: uuid.UUID | None) -> dict:
+    """清单一键入库：每项按建议量走五步事务；成本按最近一次采购单价估算。
+
+    - 清单必须 status='open' 且仍有未完成项；
+    - 项必须有 ingredient_id（自由文本项跳过）；
+    - 单价取最近一次采购的 unit_cost（transaction_allocations），无采购记录时按 0 记账
+      并在响应中标注，提醒用户在批次详情里补录成本；
+    - 完成后清单自动标记 completed。
+    """
+    head = db.execute(
+        text("SELECT id, name, status FROM shopping_lists WHERE id = CAST(:i AS uuid)"),
+        {"i": str(list_id)},
+    ).first()
+    if head is None:
+        raise not_found("采购清单不存在")
+    if head.status != "open":
+        raise ApiError("LIST_NOT_OPEN", "清单已完成或已归档，不能再次入库", 409)
+
+    items = db.execute(
+        text(
+            "SELECT id, ingredient_id, suggested_weight, suggested_quantity, is_completed "
+            "FROM shopping_list_items WHERE shopping_list_id = CAST(:l AS uuid) "
+            "ORDER BY is_completed, id"
+        ),
+        {"l": str(list_id)},
+    ).all()
+    pending = [i for i in items if not i.is_completed and i.ingredient_id is not None]
+    if not pending:
+        raise ApiError("LIST_EMPTY", "清单没有待入库的项（可能已全部完成）", 409)
+
+    # 最近一次采购单价
+    unit_cost = {
+        r.ingredient_id: Decimal(r.cost)
+        for r in db.execute(
+            text(
+                "SELECT DISTINCT ON (t.ingredient_id) t.ingredient_id, a.unit_cost AS cost "
+                "FROM inventory_transactions t JOIN transaction_allocations a ON a.transaction_id = t.id "
+                "WHERE t.type = 'purchase' AND a.unit_cost IS NOT NULL "
+                "ORDER BY t.ingredient_id, t.created_at DESC"
+            )
+        ).all()
+    }
+
+    from app.services.inventory import create_batch
+
+    created = []
+    total_cost = Decimal(0)
+    zero_cost = []
+    for i in pending:
+        ing = db.get(Ingredient, i.ingredient_id)
+        weight = Decimal(i.suggested_weight or 0)
+        quantity = Decimal(i.suggested_quantity or 0)
+        if weight <= 0 and quantity <= 0:
+            continue
+        cost = (weight * unit_cost.get(i.ingredient_id, Decimal(0))).quantize(Q2)
+        if unit_cost.get(i.ingredient_id) is None:
+            zero_cost.append(ing.name)
+        batch, _tx = create_batch(
+            db,
+            ingredient_id=i.ingredient_id,
+            purchase_date=None,
+            production_date=None,
+            expiry_date=None,
+            opened_date=None,
+            storage_location_id=None,
+            quantity=quantity,
+            weight_in=weight,
+            purchase_cost=cost,
+            quantity_unit_id=ing.default_quantity_unit_id,
+            weight_unit_id=ing.default_weight_unit_id,
+            note=f"采购清单「{head.name}」一键入库",
+            device_id=device_id,
+        )
+        created.append({"batch_id": batch.id, "ingredient_id": i.ingredient_id,
+                        "ingredient_name": ing.name, "weight": _s(weight), "cost": _s(cost, Q2)})
+        total_cost += cost
+
+    if not created:
+        raise ApiError("LIST_EMPTY", "清单没有可入库的项", 409)
+
+    db.execute(
+        text("UPDATE shopping_list_items SET is_completed = true WHERE shopping_list_id = CAST(:l AS uuid)"),
+        {"l": str(list_id)},
+    )
+    db.execute(
+        text("UPDATE shopping_lists SET status = 'completed', completed_at = now() "
+             "WHERE id = CAST(:l AS uuid)"),
+        {"l": str(list_id)},
+    )
+    db.flush()
+    return {
+        "list_id": list_id,
+        "list_name": head.name,
+        "batches": created,
+        "total_cost": _s(total_cost, Q2),
+        "zero_cost_ingredients": zero_cost,
+        "note": ("部分食材无历史采购价，已按 0 成本入库，请在批次详情补录" if zero_cost else None),
     }

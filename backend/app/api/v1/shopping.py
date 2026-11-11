@@ -93,3 +93,16 @@ def patch_item(
     data = svc.set_item_completed(db, item_id, payload.is_completed)
     db.commit()
     return ok(request, data)
+
+
+@router.post("/{list_id}/import", summary="清单一键入库（成本按最近单价估算）")
+def import_list(
+    request: Request,
+    list_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_current),
+):
+    """逐项走五步事务入库；完成后清单自动标记 completed。"""
+    data = svc.import_shopping_list(db, list_id, device_id=auth.device.id)
+    db.commit()
+    return ok(request, data, f"已入库 {len(data['batches'])} 个批次")

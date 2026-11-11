@@ -51,6 +51,19 @@ async function completeAll() {
   }
 }
 
+async function importNow() {
+  if (!detail.value) return
+  if (!window.confirm(`按清单「${detail.value.name}」一键入库？成本按最近采购单价估算。`)) return
+  try {
+    const res = await recipeApi.importList(detail.value.id)
+    notifySuccess(`已入库 ${res.batches.length} 个批次，估算成本 ¥${res.total_cost}` +
+      (res.zero_cost_ingredients.length ? `（${res.zero_cost_ingredients.length} 项无历史价按 0 记，请补录）` : ''))
+    await load()
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : '入库失败')
+  }
+}
+
 async function fromLowStock() {
   try {
     const res = await recipeApi.fromLowStock('低库存补货')
@@ -109,6 +122,7 @@ onMounted(load)
         <h2>{{ detail.name }}</h2>
         <div class="head-actions">
           <span class="tag">{{ detail.items.length }} 项</span>
+          <button v-if="detail.status === 'open'" class="btn btn--tiny" @click="importNow">一键入库</button>
           <button v-if="detail.status === 'open'" class="btn btn--tiny" @click="completeAll">全部完成</button>
         </div>
       </div>

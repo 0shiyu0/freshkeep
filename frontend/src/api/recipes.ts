@@ -98,6 +98,9 @@ export const recipeApi = {
       data: { is_completed: isCompleted },
     }),
   completeList: (id: string) => apiPost<{ id: string; status: string }>(`/shopping-lists/${id}/complete`, {}),
+  importList: (id: string) =>
+    apiPost<{ list_id: string; list_name: string; batches: Array<{ batch_id: string; ingredient_name: string; weight: string; cost: string }>; total_cost: string; zero_cost_ingredients: string[]; note: string | null }>(
+      `/shopping-lists/${id}/import`, {}),
   fromLowStock: (name = '') =>
     apiPost<{ id: string; name: string; items: Array<Record<string, unknown>>; message: string }>(
       `/shopping-lists/from-low-stock${name ? `?name=${encodeURIComponent(name)}` : ''}`, {}

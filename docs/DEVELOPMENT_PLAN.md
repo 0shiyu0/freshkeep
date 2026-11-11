@@ -435,11 +435,12 @@ dashboard 五组接口 → 营养定义/目标 → 日汇总（区分"无记录"
 | --- | --- |
 | Capacitor 配置 | ✅ `frontend/capacitor.config.ts`：`appId=com.0shiyu0.freshkeep`、`webDir=dist`、`androidScheme='http'`、`cleartext=true` |
 | 插件依赖 | ✅ core/app/network/preferences/splash-screen/status-bar/local-notifications + secure-storage（已在 `package.json`） |
-| 平台包 | ⬜ `@capacitor/android`、`@capacitor/ios` **未安装**（本会话 npm registry 不可达）；已写入一键脚本 |
-| 平台目录 | ⬜ `android/`、`ios/` 未生成 |
+| 平台包 | ✅ `@capacitor/android@8.6.0`、`@capacitor/ios@8.6.0` 已装入 `package.json` 并生成 `android/` 平台（iOS 需 Xcode，目录未生成） |
+| 平台目录 | ✅ `frontend/android/` 已生成并入库（含 cleartext 与 CAMERA 权限）；`ios/` 需 Xcode 未生成 |
 | 一键脚本 | ✅ `scripts/cap-add-platforms.sh`：install 平台包 → build → `cap add android/ios` → `cap sync` |
-| 原生配置 | ⬜ 待平台目录生成后手工加：Android `usesCleartextTraffic` + `CAMERA` 权限；iOS `NSCameraUsageDescription` + `NSAllowsArbitraryLoads` |
-| 出包验收 | ⬜ APK 真机可配对可记账；IPA 重签后可用 |
+| 原生配置 | ✅ Android：`AndroidManifest.xml` 已加 `usesCleartextTraffic` 与 `CAMERA` 权限；iOS 待生成后补 `NSCameraUsageDescription` + `NSAllowsArbitraryLoads` |
+| App ID | ✅ 修正为 `com.shiyu.freshkeep`（原 `com.0shiyu0.*` 段以数字开头，Android 校验不通过） |
+| 出包验收 | ⬜ 需 Android SDK / Xcode 环境：`cd frontend/android && ./gradlew assembleDebug` 产 APK；真机配对记账后验收 |
 
 **为什么平台包不进 `package.json`**：加进 `dependencies` 会让 `docker compose build web` 在构建时
 联网安装这两个包，而镜像构建环境无外网，实测直接失败。平台包属于「打包期依赖」，

@@ -10,7 +10,7 @@
 **阶段 9 部署上线完成（9/9）**：PWA / 手机端适配 / 离线基础页 / 通知权限 / HTTPS /
 NAS Docker 部署 / 自动备份 / 恢复演练 / 安全与性能验收全部落地。
 服务已部署到 NAS `192.168.31.198`（HTTP 18080、HTTPS 18443），三容器健康；
-pytest **230 项通过**，恢复演练 27 表逐表核对通过，版本库凭据扫描 0 命中。
+pytest **232 项通过**（含清单一键入库），NAS 三容器 healthy，恢复演练 27 表逐表核对通过，版本库凭据扫描 0 命中。
 两库均为 `0004_recipe_steps`，业务表 27 张；**AI 只写草稿表**，备份与采购清单不产生库存流水。
 
 | 里程碑 | 状态 | 备注 |
@@ -34,7 +34,7 @@ pytest **230 项通过**，恢复演练 27 表逐表核对通过，版本库凭�
 | **M7 备份导出与定时任务** | ✅ **完成** | 逻辑备份 + CSV + APScheduler 三作业；证据见 §2.13 |
 | **M8 前端页面** | ✅ **完成** | 13 个视图：登录/首页/库存总览/食材详情与编辑/批次列表与详情/采购入库/消耗录入/盘点报损/记录/设置；401 由全局 handler 跳登录 |
 | **阶段 9 部署上线** | ✅ **完成** | 9/9：PWA/移动端/离线/通知/HTTPS/NAS/备份/演练/验收；证据见 §2.16 |
-| M9 原生 App | 🔄 **脚手架就绪** | 配置/插件/脚本已备；`android/` `ios/` 未生成（npm 不可达），APK/IPA 出包未做 |
+| M9 原生 App | 🔄 **大半完成** | `android/` 平台已生成并配置权限（App ID 修正为 com.shiyu.freshkeep）；缺 APK 出包与 iOS 工程；证据见 §2.14 |
 | M10 联调验收 | ✅ **完成** | 本次在 NAS 完成部署联调与安全/性能验收；证据见 §2.16 |
 
 整体进度：**阶段 0~9 全部完成，M0~M8、M10 完成；M9 仅剩原生平台目录与 APK/IPA 出包（需联网）**。按人日约 35.5/36。
@@ -210,14 +210,16 @@ pytest **230 项通过**，恢复演练 27 表逐表核对通过，版本库凭�
 | 定时任务 | `app/tasks/scheduler.py` | 容器内 `enabled=true / running=true`；三作业可手动执行；写 `audit_logs(scheduler_*)` |
 | 前端 | `SettingsView` | 「备份与导出」区块：立即备份/列表/校验/下载/CSV/任务状态；1280/390 溢出 0px |
 
-### 2.14 M9 Capacitor 脚手架（本轮）
+### 2.14 M9 Capacitor（Android 已生成）
 
 | 项 | 现状 |
 | --- | --- |
-| 配置 | `capacitor.config.ts`：appId / webDir=dist / androidScheme=http / cleartext=true 四项齐全 |
-| 插件 | core/app/network/preferences/splash-screen/status-bar/local-notifications + secure-storage |
-| 脚本 | `scripts/cap-add-platforms.sh`（install → build → add android/ios → sync） |
-| 未完成 | 平台包未装、`android/` `ios/` 未生成（npm registry 不可达）；原生 ATS/cleartext/相机权限待生成后配置 |
+| 配置 | `capacitor.config.ts`：appId=`com.shiyu.freshkeep`（已修正，原段以数字开头不合法）/ webDir=dist / androidScheme=http / cleartext=true |
+| 插件 | core/app/network/preferences/splash-screen/status-bar/local-notifications + secure-storage；平台包 `@capacitor/android|ios@8.6.0` 已装 |
+| 平台 | ✅ `frontend/android/` 已生成入库；`AndroidManifest.xml` 已加 `usesCleartextTraffic` 与 `CAMERA` 权限；`cap sync` 通过 |
+| iOS | ⬜ 需 Xcode（本机仅 CLT）；生成后补 `NSCameraUsageDescription` + `NSAllowsArbitraryLoads` |
+| 出包 | ⬜ `cd frontend/android && ./gradlew assembleDebug` 出 APK，真机配对记账后验收 |
+| 脚本 | `scripts/cap-add-platforms.sh` 保留（iOS 复用） |
 
 ### 2.16 阶段 9 部署上线（本轮）
 
@@ -266,7 +268,7 @@ backend/tests/
 | 项 | 现状 |
 | --- | --- |
 | M9 平台目录 | `android/` `ios/` 未生成（npm registry 本会话不可达）；脚本与原生配置清单已备 |
-| M9 原生平台目录 | `android/` `ios/` 未生成（本会话 npm registry 不可达）；脚本与原生配置清单已备，需联网机器执行 |
+| M9 出包 | `android/` 已生成且权限已配；缺 Android SDK 跑 `gradlew assembleDebug` 出 APK；iOS 需 Xcode |
 | 清单「一键全部入库」 | 勾选与整单完成已做；批量转入库接口未做 |
 | `PairView.vue` 遗留死文件 | 路由已用 `/login` 取代，该视图无任何引用（14 行），可安全删除 |
 
@@ -321,7 +323,7 @@ head -120 docs/CHANGELOG.md
 
 ```bash
 git status --short && git log -3 --oneline
-cd backend && .venv/bin/python -m pytest          # 期望 230 passed
+cd backend && .venv/bin/python -m pytest          # 期望 232 passed
 export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
 docker compose ps                                  # 期望 3 个 healthy
 docker compose exec -T db psql -U freshkeep -d freshkeep -tAc "select version_num from alembic_version"
@@ -347,25 +349,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 19:09 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-11 20:26 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `e41e498` |
-| 工作区 | 26 个未提交改动，未跟踪 16 个 |
+| 分支 / HEAD | `main` / `55a56c9` |
+| 工作区 | 15 个未提交改动，未跟踪 53 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0004_recipe_steps`，27 张表 |
-| 后端测试 | 231 passed, 1 warning in 14.08s |
+| 后端测试 | 232 passed, 1 warning in 11.75s |
 | 前端产物 | 已构建 |
 | 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+55a56c9 2026-11-11 feat: 阶段 9 部署上线 —— PWA/移动端/离线/通知/HTTPS/NAS/备份/演练/验收（9/9）
 e41e498 2026-11-11 chore: 刷新本轮提交后的状态快照与留痕
 2ac1e31 2026-11-11 feat: 阶段 8 收尾 + M7 备份/调度 + M9 脚手架
 08d8767 2026-11-11 chore: 刷新阶段 8（下）提交后的状态快照与留痕
 e592ad4 2026-11-11 feat(api): 阶段 8（下）菜谱管理 / 库存匹配 / 多菜谱合并采购清单
-f0b18a0 2026-11-11 chore: 刷新阶段 8（上）提交后的状态快照与留痕
 ```
 <!-- AUTO:STATUS:END -->

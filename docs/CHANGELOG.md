@@ -773,6 +773,32 @@
 
 ---
 
+## 2026-11-11 · M9 Android 平台生成 + 清单一键入库
+
+### 新增
+
+- **Capacitor Android 平台**：`frontend/android/`（App ID 修正为 `com.shiyu.freshkeep`，
+  原段以数字开头不合法）；`AndroidManifest.xml` 已加 `usesCleartextTraffic` 与 `CAMERA` 权限；
+  `@capacitor/android|ios@8.6.0` 装入 dependencies（本会话 npm 网络恢复）。
+- **清单一键入库**：`POST /shopping-lists/{id}/import`——逐项按建议量走五步事务，
+  成本按最近采购单价估算（无历史价按 0 记并提示补录），完成后清单自动 completed；
+  前端清单页「一键入库」按钮；测试 2 项（含重复导入 409、五步事务行数断言）。
+- 删除 `PairView.vue` 死文件。
+
+### 修正
+
+- `ShoppingListsView.vue` 的 `fromLowStock` 函数曾被误插进 `fmt` 函数体内导致语法损坏，本次重写修复。
+
+### NAS 同步
+
+- 重新交叉构建 amd64 镜像并同步到 NAS（`--force-recreate`），新路由已生效。
+
+### 验证
+
+- pytest **232 passed**；NAS 三容器 healthy；一键入库路由 401（鉴权拦截，路由存在）。
+
+---
+
 ## [Unreleased]
 
 ### 新增

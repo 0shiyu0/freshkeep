@@ -9,7 +9,7 @@ AI 识别只写 `recognition_drafts`，人工确认后才建档或入库；备�
 pytest **230 项全绿**；成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)，
 恢复演练记录见 [docs/reports/restore-drill.md](docs/reports/restore-drill.md)。
 本地开发仍可 `docker compose up -d` 起在 8080；NAS 部署用 `scripts/deploy-nas.sh`。
-剩余运维项：M9 原生平台目录与 APK/IPA 出包（需联网）。
+M9 Android 工程已生成（`frontend/android/`，App ID com.shiyu.freshkeep）；剩余：跑 `gradlew assembleDebug` 出 APK。
 
 | 文档 | 内容 |
 | --- | --- |

@@ -1,21 +1,21 @@
 {
   "BRANCH": "main",
-  "HEAD": "e41e498",
-  "DIRTY": 26,
-  "UNTRACKED": 16,
+  "HEAD": "55a56c9",
+  "DIRTY": 15,
+  "UNTRACKED": 53,
   "AHEAD": 0,
   "RECENT": [
+    "55a56c9 2026-11-11 feat: 阶段 9 部署上线 —— PWA/移动端/离线/通知/HTTPS/NAS/备份/演练/验收（9/9）",
     "e41e498 2026-11-11 chore: 刷新本轮提交后的状态快照与留痕",
     "2ac1e31 2026-11-11 feat: 阶段 8 收尾 + M7 备份/调度 + M9 脚手架",
     "08d8767 2026-11-11 chore: 刷新阶段 8（下）提交后的状态快照与留痕",
-    "e592ad4 2026-11-11 feat(api): 阶段 8（下）菜谱管理 / 库存匹配 / 多菜谱合并采购清单",
-    "f0b18a0 2026-11-11 chore: 刷新阶段 8（上）提交后的状态快照与留痕"
+    "e592ad4 2026-11-11 feat(api): 阶段 8（下）菜谱管理 / 库存匹配 / 多菜谱合并采购清单"
   ],
   "MIG": "0004_recipe_steps",
   "TABLES": "27",
   "DB_OK": true,
-  "TESTS": "231 passed, 1 warning in 14.08s",
+  "TESTS": "232 passed, 1 warning in 11.75s",
   "BUILD": "已构建",
   "DOCS_OK": true,
-  "NOW": "2026-11-11 19:09"
+  "NOW": "2026-11-11 20:26"
 }

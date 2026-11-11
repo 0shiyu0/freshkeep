@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">鲜度</string>
+    <string name="title_activity_main">鲜度</string>
+    <string name="package_name">com.shiyu.freshkeep</string>
+    <string name="custom_url_scheme">com.shiyu.freshkeep</string>
+</resources>
