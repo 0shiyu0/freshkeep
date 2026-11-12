@@ -1,333 +1,208 @@
 # 鲜度 FreshKeep · 家庭食材库存与营养管理
 
-> NAS 私有部署 · 原生 App + Web · 批次级库存 · 成本核算 · 营养估算
+> 自托管 · 批次级库存 · 成本核算 · 营养估算 · 临期提醒 · 原生 App
 
-**当前状态：阶段 0~9 全部完成，已部署上线**。
-NAS 访问：HTTP `http://192.168.31.198:18080`、HTTPS `https://192.168.31.198:18443`（自签证书，首次需信任）。
-包含 PWA / 离线基础页 / 通知权限（默认关闭）/ HTTPS / 自动备份（保留 7 份）/ 恢复演练 / 安全与性能验收。
-AI 识别只写 `recognition_drafts`，人工确认后才建档或入库；备份与采购清单都不产生库存流水。
-pytest **230 项全绿**；成本核算报告见 [docs/reports/cost-accounting.md](docs/reports/cost-accounting.md)，
-恢复演练记录见 [docs/reports/restore-drill.md](docs/reports/restore-drill.md)。
-本地开发仍可 `docker compose up -d` 起在 8080；NAS 部署用 `scripts/deploy-nas.sh`。
-M9 Android 工程已生成（`frontend/android/`，App ID com.shiyu.freshkeep）；剩余：跑 `gradlew assembleDebug` 出 APK。
+一套跑在自己 NAS 上的家庭食材管理应用：记录买回来什么、先到期先消耗、每天取用自动扣减，
+顺便算出这一餐花了多少钱、摄入了多少营养。**数据不出家门。**
 
-| 文档 | 内容 |
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
+![Node](https://img.shields.io/badge/node-22-339933?logo=node.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+
+**当前状态**：功能开发完成（阶段 0~9 + M0~M10），正在做 V1.0.0 发布准备。
+后端测试 **232 passed**；数据库 **27 张表 + 2 个视图**；迁移版本 `0004_recipe_steps`。
+
+---
+
+## 技术栈
+
+| 层 | 选型 | 说明 |
+| --- | --- | --- |
+| 前端 | Vue 3 + TypeScript + Vite + Pinia + Naive UI | 单页应用，移动优先；PWA 可安装、离线可看已缓存页面 |
+| 后端 | FastAPI + SQLAlchemy 2 + Alembic + Pydantic v2 | 分层：`api/v1`（HTTP）→ `services`（业务）→ `models`（ORM） |
+| 数据库 | PostgreSQL 16 | 金额/重量用 `NUMERIC` 定点存储，**全程不出现浮点** |
+| 部署 | Docker Compose（db / api / web 三容器） | web 用 nginx 托管前端并反代 `/api` |
+| 原生 | Capacitor 8（Android + iOS，SPM 模式） | WebView 加载打包前端，直连 NAS 内网地址 |
+
+## 功能模块
+
+| 模块 | 能力 |
 | --- | --- |
-| [AGENTS.md](AGENTS.md) | 开发规则：技术栈、分层、Decimal 铁律、禁止事项 |
-| [PRD.md](docs/PRD.md) | 产品需求：范围、业务规则、9 条验收、已决策事项 |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构、数据模型、API 规范、核心算法、ADR |
-| [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 阶段 0 + M0~M10 的任务与完成判据 |
-| [PROJECT_STATUS.md](docs/PROJECT_STATUS.md) | 当前进度、已完成/未完成、已知问题、下一步 |
-| [CHANGELOG.md](docs/CHANGELOG.md) | 变更记录（含每次数据库变化） |
+| **食材档案** | 分类 / 单位（含数量↔重量换算）/ 存放位置 / 条码 / 图片 / 营养基准 |
+| **批次库存** | 一次采购一个批次，FEFO（先到期先出）自动分配；批次可部分消耗 |
+| **消耗与流水** | 每次取用生成流水与批次分配，可撤销；成本按实际分配重量计算 |
+| **盘点与报损** | 盘盈盘亏、丢弃都留痕，不允许静默改数 |
+| **临期提醒** | 已过期 / N 天内 / 本周到期三段；应用内通知中心（不做系统级推送） |
+| **营养管理** | 营养项目、档案版本、快照、四周期达标率、来源追溯 |
+| **统计看板** | 趋势、占比、排行、周转；成本与浪费口径分离 |
+| **采购建议** | 低于最低库存自动建议；可一键生成采购清单 |
+| **菜谱** | 步骤结构化（可带单步时长）、按份数缩放匹配库存、多菜谱合并缺口 |
+| **采购清单** | 缺口合并、勾选完成、按低库存生成、**一键入库**（逐项走五步事务） |
+| **扫码与识别** | 摄像头扫码 + 本地条码库 + 可配置外部商品源；AI 识别**只写草稿表**，人工确认后才建档 |
+| **备份与运维** | 逻辑备份（schema + CSV + manifest）、CSV 导出、定时对账/备份/扫描、恢复演练 |
 
-> 只读这 6 个文件即可恢复完整开发状态；字段级与接口级细节在 `docs/`，环境搭建见
-> [docs/environment.md](docs/environment.md)。
-
-**阶段 0 验证结果**：DDL 在 PostgreSQL 16 上实跑通过（25 表 / 2 视图 / 37 外键），
-PRD 的 9 条验收用例中成本与营养两条已用真库断言（消耗成本 `10.80`、剩余 `42.20`、营养 `495 kcal`），
-对账视图三个差异为 0，负库存/重复分配/符号错误/孤儿快照四类错误均被约束拦住。
-
----
-
-## 仓库里有什么
+## 架构
 
 ```
-docker-compose.yml   三容器：db(PostgreSQL) / api(FastAPI) / web(nginx)
-backend/             FastAPI 服务：app/ + migrations/ + tests/
-frontend/            Vue 3 + TS SPA：src/ + Dockerfile + nginx.conf
-database/            001_init.sql（DDL 唯一真相）+ 002 验收自检
-storage/             运行时上传/导出/日志（内容不入库，只留 .gitkeep）
-backups/             数据库与文件备份落盘位置
-deploy/              NAS 部署手册 + 备份/恢复脚本
-docs/                PRD、架构、开发计划、状态、变更、API、数据库、ER 图
-index.html js/ css/  早期纯前端演示版（可独立打开，仅作交互参考）
+        ┌──────────── 浏览器 / PWA / Android / iOS ────────────┐
+        │                                                      │
+        ▼                                                      ▼
+┌──────────────────┐                              ┌────────────────────┐
+│  web (nginx)     │   /api/* 反向代理             │  外部商品条码源     │
+│  静态前端 + 反代  │ ───────────────────────────► │  （可选，可关闭）    │
+└────────┬─────────┘                              └────────────────────┘
+         │
+         ▼
+┌──────────────────┐        ┌──────────────────────┐
+│  api (FastAPI)   │───────►│  db (PostgreSQL 16)  │
+│  业务 / 定时任务  │        │  27 表 + 2 视图       │
+└────────┬─────────┘        └──────────────────────┘
+         │
+         ▼
+  storage/（上传、导出、日志）  backups/（逻辑备份）
 ```
 
-**端口约定**：只对外暴露 `web` 的 **8080**；`api` 在容器内 8000、`db` 在 5432，均不可从宿主机直连。
-
-> 纯前端演示版的说明保留在本文后续章节（"为什么是这个形态"至"自检"），
-> 它现在是**设计参考**，不是交付形态。
-
-## 为什么是这个形态
-
-家里食材的真实使用场景只有两个动作：**买回来记一笔**、**用掉一笔**。
-大多数记账式应用把第二个动作做成了表单，于是没人坚持。
-
-所以这里把"用掉一笔"压缩成清单上的一个 `−1` 按钮：点完立刻扣库存、写流水，
-误点有一键撤销。只有在数量不是 1 的时候（比如用掉半斤肉）才需要打开弹层输入。
-
----
-
-## 主要功能模块
-
-| 模块 | 解决什么问题 | 关键交互 |
-| --- | --- | --- |
-| **库存台账** | 现在家里有什么、还剩多少 | 按分类分组；有保质期的按到期时间从近到远排；剩余天数徽标（红/黄/正常）；搜索 + 分类筛选；低于阈值显示"该补货了" |
-| **快速录入** | 买菜回来懒得一个个填 | 10 个常用食材芯片，点一下自动填好名称/分类/单位/建议保质期；日期有 `+3/+7/+15/+30 天` 快捷键 |
-| **消耗与流水** | 每次取用要自动扣减、还要能查 | 清单上 `−1` 一键扣减 → 写流水 → Toast 可撤销；详情里支持"任意数量消耗 / 补货入库 / 丢弃"并填写备注 |
-| **临期提醒** | 东西放坏了才发现 | 分三段：**已过期** / N 天内到期（默认 3）/ 本周到期（默认 7）；底部标签栏显示待处理数量红点；提醒天数可在设置里改 |
-| **消耗统计** | 想知道什么吃得最快、有没有浪费 | 近 7 / 30 天每日消耗柱状图（今天高亮）；消耗/补货/丢弃三项计数；吃的最快 Top 5 排行；丢弃次数提示 |
-| **数据管理** | 换设备、怕丢、想外部分析 | 导出/导入 JSON 备份；导出 CSV 流水（Excel 可直接打开）；存储用量与记录条数；清空需二次确认 |
-
-### 关于"消耗趋势"的口径
-
-不同单位的食材（个 / 斤 / 盒）数量不能直接相加，所以：
-
-- **柱状图统计的是"消耗笔数"**——跨单位可比，反映的是"今天用了多少次东西"；
-- **排行榜统计的是各食材自己的消耗量与次数**——单位独立，反映"什么吃得最快"。
-
-这是刻意分开的两个指标，混在一起会得到没有意义的数字。
-
----
-
-## 界面布局
-
-单页 + 底部标签栏，一屏之内完成所有操作，不用翻页也不用弹窗里再弹窗。
-
-```
-┌─────────────────────────────┐
-│ 库存                  ← 标题 │  顶部：当前标签标题 + 一句话副标题（含临期数量）
-│ 共 12 种食材 · 6 种临期       │        滚动时出现分隔线（毛玻璃吸顶）
-├─────────────────────────────┤
-│ 🔍 搜索食材 / 分类           │  搜索：即时过滤，只重绘列表，不打断输入
-│ ┌──────┬──────┬──────┐      │
-│ │品类12│临期 6│需处理5│      │  概要：三个数字一眼看完成状态
-│ └──────┴──────┴──────┘      │
-│ 全部 12 | 蔬菜 2 | 水果 1 …  │  分类：横向滑动的筛选条，带数量
-├─────────────────────────────┤
-│ ▎蔬菜              2 种      │  分组：按分类分块，组内按到期时间排序
-│ ┌─────────────────────────┐ │
-│ │🥬 小青菜 [剩2天]    1 把│ │  条目：表情 + 名称 + 徽标 + 数量/单位
-│ │   蔬菜 · 到期 11/10  [−1]│ │        右侧 −1 是最高频操作，做成独立大按钮
-│ └─────────────────────────┘ │
-│ …                           │
-├─────────────────────────────┤
-│   [＋]                       │  悬浮：随手加一件食材（统计/设置页自动隐藏）
-├─────────────────────────────┤
-│  库存   临期③   记录  统计  设置│  底部：5 个标签，临期带数量红点
-└─────────────────────────────┘
-```
-
-**几个刻意的取舍：**
-
-- **列表不放进"更多"菜单**——进应用第一眼就是库存，不需要一次点击才看到。
-- **`−1` 按钮和卡片点击分离**——点按钮记消耗，点卡片看详情（编辑 / 补货 / 丢弃 / 删除）。
-- **弹层从底部升起**，高度不超过 90vh，拇指单手可达；表单只留必填项，其余折叠成快捷芯片。
-- **所有列表都有空状态**，空状态里直接给出下一步动作（添加 / 载入示例 / 清除筛选）。
-- 桌面端自动居中成 560px 一列，不做多栏——这是一个手机场景的应用。
-
----
-
-## 数据保存方式
-
-### 存储位置
-
-数据存放在浏览器的 **`localStorage`**，键名 `freshkeep.v1`，值是单个 JSON 对象。
-不请求任何接口、不上传、不需要登录，断网也能用。
-
-### 数据结构：当前状态 + 变更流水
-
-```jsonc
-{
-  "version": 1,
-  "items": [                       // 食材表：只存"现在"
-    {
-      "id": "6f1c…",
-      "name": "牛奶",
-      "emoji": "🥛",
-      "category": "乳品",
-      "qty": 2,                    // 当前库存，唯一真值
-      "unit": "盒",
-      "expiry": "2026-11-11",      // "" 表示无保质期
-      "threshold": 1,              // 库存 ≤ 此值时提示补货
-      "note": "",
-      "createdAt": 1762500000000,
-      "updatedAt": 1762580000000
-    }
-  ],
-  "logs": [                        // 流水表：只追加，不修改
-    {
-      "id": "a93b…",
-      "itemId": "6f1c…",
-      "name": "牛奶",               // 冗余快照：食材被删掉后历史仍然完整
-      "emoji": "🥛",
-      "unit": "盒",
-      "type": "use",               // use 消耗 / restock 补货 / waste 丢弃
-      "amount": 1,                 // 绝对值，用于统计
-      "delta": -1,                 // 带符号，用于撤销时回滚
-      "at": 1762580400000,
-      "note": "做晚饭"
-    }
-  ],
-  "settings": { "expiryWarnDays": 7, "expiryUrgentDays": 3 },
-  "createdAt": 1762500000000,
-  "updatedAt": 1762580400000
-}
-```
-
-设计上有三条约束：
-
-1. **库存数量是唯一真值，流水是它的变更日志。** 统计、撤销都基于流水，但界面显示永远读 `items[].qty`，不会出现"流水总和 ≠ 库存"的展示问题。
-2. **流水的 `delta` 带符号，撤销就是反向回滚**：`qty = max(0, qty − delta)`，然后把这条流水删掉。所以"点错了"是一秒内可修的操作，不需要记忆。
-3. **流水冗余保存名称、emoji、单位**：删掉食材后，历史记录和统计仍然可读。
-
-### 读写与容错
-
-- 每次变更后**同步写入**（数据量小，不做节流）；写入失败（隐私模式 / 配额满）不崩溃，数据留在内存里，界面照常工作。
-- 启动时对读到的 JSON 做**归一化**：缺字段补默认值、`qty` 不为负、非法日期（如 `2026-02-31`）丢弃、流水按时间排序并截断到最新 3000 条。
-- 结构带 `version` 字段，后续加字段时可以在 `normalizeState` 里做迁移。
-
-### 备份与迁移
-
-| 方式 | 用途 | 说明 |
-| --- | --- | --- |
-| 导出 JSON | 换设备 / 换浏览器 / 防丢失 | 完整快照（食材 + 流水 + 设置），导入时覆盖当前数据 |
-| 导入 JSON | 恢复 | 校验失败会给出具体原因（非法 JSON / 缺 items / 空文件） |
-| 导出 CSV | 用 Excel 做外部分析 | 带 BOM 的 UTF-8，中文不乱码；字段含类型、食材、数量、单位、时间、备注 |
-
-### 容量与局限
-
-- `localStorage` 一般有 5 MB，一条流水约 250 字节，**日常使用可存上万条**（设置页能看到实时占用，示例数据约 14 KB）。
-- 数据是**单设备、单浏览器**的：清理浏览器数据、换手机、换域名都会读不到旧数据 → 所以界面上把"导出备份"放在设置的第一项。
-- 无多端同步，也无账号体系，这是刻意的：不想要服务器就不该有服务器。
-
----
+三个容器只有 `web` 对外暴露端口；`api` 与 `db` 仅在 compose 内网可达。
+应用层还有网段白名单（`ALLOW_CIDR`）与幂等中间件。
 
 ## 目录结构
 
 ```
 freshkeep/
-├── index.html              # 应用外壳（结构 + 图标 + 脚本挂载点）
-├── css/style.css           # 全部样式（CSS 变量 + 移动优先 + 底部弹层）
-├── js/store.js             # 数据层：localStorage 读写、归一化、流水、统计、导入导出
-├── js/app.js               # 界面层：五视图渲染、事件委托、弹层、Toast
-├── sw.js                   # Service Worker，离线缓存应用外壳
-├── manifest.webmanifest    # PWA 清单，可"添加到主屏幕"
-├── icons/                  # PWA 图标
-├── tests/selftest.html     # 数据层自检（48 条确定性用例）
-├── docs/architecture.md    # 部署与运维：容器、事务、IP 直连、iOS 签名
-├── docs/implementation-plan.md  # 功能实现与技术选型（认证已定配对码）
-├── docs/screenshots/       # README 用截图
-└── .nojekyll               # 让 GitHub Pages 原样发布静态文件
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/         # HTTP 层：只做参数校验 + 调 service + 包装响应
+│   │   ├── services/       # 业务层：库存引擎、消耗、菜谱、识别、备份…
+│   │   ├── models/         # SQLAlchemy ORM
+│   │   ├── schemas/        # Pydantic 请求/响应模型
+│   │   ├── core/           # 配置、日志、错误、中间件
+│   │   └── tasks/          # APScheduler：对账 / 备份 / 扫描
+│   ├── migrations/versions # Alembic 迁移 0001~0004（DDL 真相在 database/001_init.sql）
+│   ├── tests/              # pytest：acceptance / api / unit
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── views/          # 17 个视图
+│   │   ├── api/            # 类型化 API 客户端
+│   │   ├── stores/         # Pinia
+│   │   ├── utils/          # 通知、日志、格式化
+│   │   └── styles/
+│   ├── public/             # PWA：manifest、sw.js、offline.html、icons
+│   ├── android/            # Capacitor Android 工程（cleartext + CAMERA 已配）
+│   ├── ios/                # Capacitor iOS 工程（SPM，无 Podfile）
+│   ├── Dockerfile
+│   ├── nginx.conf          # HTTP（本地/内网）
+│   └── nginx.https.conf    # 80 + 443，HSTS/CSP 等安全头
+├── database/               # 001_init.sql（DDL 唯一真相）+ 002 验收自检
+├── deploy/                 # 宿主机备份/恢复脚本 + 部署说明
+├── scripts/                # session-start / status-snapshot / migrate-safe / deploy-nas
+│                           # / restore_drill / stage9_acceptance / gen-self-signed-cert
+├── docs/                   # PRD、架构、开发计划、状态、变更、API、数据库、ER 图、报告
+├── legacy/                 # 早期纯静态版归档（不参与构建，仅作交互参考）
+├── docker-compose.yml      # 三容器（HTTP-only）
+└── docker-compose.https.yml# 端口覆盖 + HTTPS 证书挂载
 ```
 
-数据层与界面层通过 `window.FreshKeep` 这一个对象通信，没有框架、没有构建步骤，
-改完存盘刷新即可，也方便你把 `store.js` 单独抠出来接到别的 UI 上。
+运行时数据 `pgdata/`、`storage/`、`backups/` 都在 `.gitignore` 内，**不会进仓库**。
 
----
-
-## 本地运行
-
-不需要安装任何东西，不需要 `npm install`：
+## 快速开始（本地）
 
 ```bash
 git clone https://github.com/0shiyu0/freshkeep.git
 cd freshkeep
-
-# 方式一：直接双击 index.html（可用，但 Service Worker 不生效）
-open index.html
-
-# 方式二：起一个静态服务器（推荐，能测离线和 PWA 安装）
-python3 -m http.server 8080
-# 打开 http://localhost:8080
+cp .env.example .env          # 必须填 POSTGRES_PASSWORD（openssl rand -base64 24）
+docker compose up -d --build  # 首次构建约 2~4 分钟
 ```
 
-想先看看有数据的样子：打开 `http://localhost:8080/?demo=1`，
-首次访问会载入 12 种食材 + 24 天示例流水（不影响已有数据）。
-
----
-
-## 部署到 GitHub Pages
-
-这个仓库本身就是可直接发布的静态站点：
-
-1. 打开仓库 **Settings → Pages**；
-2. *Source* 选 **Deploy from a branch**，Branch 选 `main` / `(root)`，保存；
-3. 一分钟后访问 `https://<你的用户名>.github.io/freshkeep/`。
-
-因为 `index.html` 与 `css/`、`js/` 都是相对路径，放在子目录也无需改动配置。
-换到 Cloudflare Pages / Vercel / 任意静态托管同理，直接上传整个目录即可。
-
-手机上打开后可以用 **Safari → 分享 → 添加到主屏幕**（Android Chrome 为"安装应用"），
-之后就是全屏、可离线的独立应用。
-
----
-
-## 两种部署形态
-
-| 形态 | 数据在哪 | 适合 | 状态 |
-| --- | --- | --- | --- |
-| **纯前端**（当前仓库默认） | 浏览器 localStorage | 一个人、一台设备、不想维护服务 | ✅ 可直接用 |
-| **自托管**：NAS 上 Docker 跑服务端 + PostgreSQL，网页与原生 App 都连它 | NAS 上的 PostgreSQL | 多设备共享、要成本与营养统计 | 📐 方案已定稿：[docs/final-plan.md](docs/final-plan.md) |
-
-> 自托管版的最终方案见 **[docs/final-plan.md](docs/final-plan.md)**（唯一依据）：FastAPI + PostgreSQL + Vue 3，
-> 一套前端同时供网页与原生 App（APK / 自签 IPA）使用；认证为「配对码 → 长期设备令牌」，不含密码。
-> `docs/architecture.md` 与 `docs/implementation-plan.md` 只作过程记录，技术选型与数据模型均已被前者取代。
-
-自托管方案覆盖：单容器部署（零 npm 依赖，构建不用联网装包）、SQLite 表结构与事务、
-**配对码认证**（一次性 6 位码 → 设备令牌，服务端只存令牌哈希）、只允许局域网/组网访问（无公网入口）、
-Capacitor 双端壳（WebView 同源加载，Cookie 自动生效）、GitHub Actions 出未签名 IPA + 自签要点、
-备份恢复与排障。
-
-两份文档分工：`docs/implementation-plan.md` 是**功能实现与技术选型**的唯一依据（每个功能的关键技术、
-模块划分、数据流，以及跨平台组件与取舍依据）；`docs/architecture.md` 是**部署与运维**参考
-（容器、事务模板、IP 直连适配、iOS 打包自签、备份恢复）。认证改走配对码之后，
-`architecture.md` 的 Passkey 章节仅作技术备查。
-
-方案还对照了 grocy 与 mealie 的建模方式，采纳了**存放位置**、**单位换算**、
-**盘点修正**三个维度，并说明了哪些做法不照搬（默认口令、食谱体系、离线同步）。
-
-
----
-
-## 日常怎么用（30 秒流程）
-
-1. **买菜回家**：右下角 `＋` → 点常用食材芯片（自动填分类/单位/保质期）→ 改数量 → 添加。
-2. **做饭取用**：清单上点 `−1`。数量不是 1 时点卡片 → "消耗其他数量"。
-3. **每周看一眼临期页**：先吃红色那几样，吃不完的直接在详情里记"丢弃"（统计会提示浪费次数）。
-4. **库存不够时**：详情里"补货入库"，填这次买了多少，不用改食材本身。
-5. **换手机前**：设置 → 导出备份（JSON）。
-
----
-
-## 技术说明
-
-- **零依赖**：没有框架、没有 UI 库、没有构建工具，两个 `<script>` 标签搞定；
-- **渲染策略**：状态变更 → 整页重绘（数据量在百级，逻辑最简单，也最不容易出现状态不同步）；
-- **事件全部委托到 `document`**，用 `data-act` 分发，重绘后无需重新绑定；
-- **图表是手写 SVG**（`viewBox` + `<rect>` + `<title>` 悬浮提示），不引图表库；
-- **日期按本地时区解析**（不用 `new Date('2026-11-11')` 的 UTC 语义），避免"差一天"；
-- **PWA**：`sw.js` 采用 stale-while-revalidate，可离线使用，并在后台更新缓存；
-- **无障碍**：语义标签 + `aria-label` + 键盘可达（Tab 到条目后回车打开详情），
-  遵循 `prefers-reduced-motion`。
-
-想扩展的话，改这几处就够：
-
-| 想加什么 | 改哪里 |
-| --- | --- |
-| 自定义分类 / 单位 | `js/store.js` 顶部 `CATEGORIES` / `UNIT_LIST` |
-| 常用食材芯片 | `js/app.js` 的 `PRESETS` |
-| 提醒规则（如按品类差异化） | `js/store.js` 的 `expiring()` |
-| 新的统计维度 | `js/store.js` 的 `stats()`，界面在 `viewStats()` |
-
----
-
-## 自检
-
-`tests/selftest.html` 是对数据层纯逻辑的确定性用例，覆盖 9 组共 48 条断言：
-日期解析（含 `2026-02-31`、闰年）、库存扣减夹到 0、超量消耗只记实际量、
-撤销回滚、删除食材后流水快照、临期与低库存判定、统计口径（丢弃不计入消耗）、
-CSV 逗号与引号转义、以及坏数据的归一化兜底。
+打开 <http://localhost:8080>，用配对码登录：
 
 ```bash
-python3 -m http.server 8080
-# 打开 http://localhost:8080/tests/selftest.html，顶部显示 "✓ 48 / 48 通过"
+docker compose exec api python -m app.cli pair   # 输出 6 位配对码，10 分钟内有效
 ```
 
-页面无依赖、无网络请求，失败项会直接列出「实际值 / 期望值」，便于定位。
+`api` 容器启动时会自动执行 `alembic upgrade head` 与字典种子，不需要手工初始化。
 
----
+想用 HTTPS（自签证书）：
 
-## License
+```bash
+./scripts/gen-self-signed-cert.sh <你的内网IP>
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d
+# HTTP :18080 / HTTPS :18443
+```
 
-[MIT](LICENSE)
+## 部署到 NAS
+
+`scripts/deploy-nas.sh` 覆盖完整链路：打包 → 上传 → 远端生成 `.env` 与自签证书 → compose 启动。
+脚本本身不含任何凭据；`.env` 与证书只存在 NAS 上。
+
+```bash
+NAS_HOST=192.168.31.198 NAS_USER=shiyu NAS_DIR=/vol1/docker/freshkeep \
+  FK_SUDO_FILE=/tmp/.sudo_pw ./scripts/deploy-nas.sh
+```
+
+跨架构（Apple Silicon → x86 NAS）时先用 `buildx --platform linux/amd64` 构建并 `docker save/load` 导入，
+详见 [deploy/README.md](deploy/README.md)。
+
+## 数据、备份与恢复
+
+| 内容 | 容器内 | 宿主机 |
+| --- | --- | --- |
+| 数据库 | `/var/lib/postgresql/data` | `./pgdata` |
+| 上传与导出 | `/data/storage` | `./storage` |
+| 应用日志 | `/data/logs` | `./storage/logs` |
+| 逻辑备份 | `/data/backups` | `./backups` |
+
+- **自动备份**：`ENABLE_SCHEDULER=true` 时每天 03:10 生成 `freshkeep-backup-<时间戳>.tar.gz`
+  （`schema.sql` + 27 张表 CSV + `manifest.json`），只保留最近 `BACKUP_KEEP`（默认 7）份。
+- **手工导出**：`GET /api/v1/export/transactions.csv`、`/consumptions.csv`（带 BOM，Excel 直接打开）。
+- **恢复演练**：`python3 scripts/restore_drill.py` —— 备份恢复到临时库、逐表核对行数、结束后删库，
+  不触碰生产库。记录见 [docs/reports/restore-drill.md](docs/reports/restore-drill.md)。
+- **物理备份**：`deploy/backup.sh` / `deploy/restore.sh` 用 `pg_dump -Fc`。
+
+## 开发
+
+```bash
+# 后端测试（232 项）
+cd backend && .venv/bin/python -m pytest
+
+# 前端构建
+cd frontend && npm install && npm run build
+
+# 迁移（结构变更只改 database/001_init.sql，迁移仅登记版本）
+cd backend && alembic upgrade head
+
+# 会话状态自检（Git / 迁移 / 测试 / 文档一致性）
+./scripts/session-start.sh
+```
+
+**约定**：DDL 的唯一真相是 `database/001_init.sql`；Alembic 迁移不另写 DDL。
+金额与重量一律 `Decimal` / `NUMERIC`，禁止浮点。分层铁律见 [AGENTS.md](AGENTS.md)。
+
+## 安全
+
+- `.env`、证书、数据库数据、上传文件、备份**全部**在 `.gitignore` 内；仓库不含任何真实凭据。
+- 网段白名单默认只允许局域网与组网网段；`api` / `db` 不对宿主机暴露端口。
+- HTTPS 版本带 HSTS、CSP、X-Frame-Options、nosniff、Referrer-Policy。
+- 自签证书仅用于内网；公网访问请换 CA 证书并配置域名。
+- 完整审计结论见 [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)。
+
+## 文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [AGENTS.md](AGENTS.md) | 开发规则：技术栈、分层、Decimal 铁律、禁止事项 |
+| [docs/PRD.md](docs/PRD.md) | 产品需求、业务规则、验收用例 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构、数据模型、API 规范、核心算法、ADR |
+| [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 阶段 0 + M0~M10 的任务与完成判据 |
+| [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) | 当前进度、证据、已知问题 |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | 变更记录（含每次数据库结构变化） |
+| [docs/api.md](docs/api.md) · [docs/database.md](docs/database.md) · [docs/er-diagram.md](docs/er-diagram.md) | 接口清单 / 表结构 / ER 图 |
+
+## 许可证
+
+[MIT](LICENSE)。第三方依赖以 MIT / BSD / Apache-2.0 为主，含一个 LGPL-3.0 运行时依赖（`psycopg`，
+以库形式动态使用、未修改）；详见 [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)。
+
+`legacy/` 是项目早期纯静态版（localStorage 方案）的归档，**不参与任何构建与部署**，仅供交互参考。

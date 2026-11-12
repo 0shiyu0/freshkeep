@@ -1,0 +1,39 @@
+# 统一换行与二进制识别，避免 Windows 检出后脚本跑不起来、图片被当成文本 diff
+* text=auto eol=lf
+
+# 源码与脚本：强制 LF（容器内 entrypoint.sh 必须有 LF）
+*.sh   text eol=lf
+*.py   text eol=lf
+*.ts   text eol=lf
+*.vue  text eol=lf
+*.css  text eol=lf
+*.sql  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+gradlew text eol=lf
+*.bat  text eol=crlf
+
+# 二进制：不做行尾转换、不显示 diff
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.pdf  binary
+*.apk  binary
+*.aab  binary
+*.jar  binary
+*.keystore binary
+*.ttf  binary
+*.woff binary
+*.woff2 binary
+
+# 备份与导出产物：标记为生成物，GitHub 上不显示为代码
+*.dump       linguist-generated=true
+*.tar.gz     linguist-generated=true
+frontend/dist/* linguist-generated=true
+
+# 文档语言标记
+docs/*.md linguist-documentation
+AGENTS.md linguist-documentation

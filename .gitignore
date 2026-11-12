@@ -1,41 +1,55 @@
+# ---- 系统与编辑器 ----
 .DS_Store
 Thumbs.db
-*.log
+*.swp
+.idea/
+.vscode/
 
-# 依赖与构建产物
+# ---- 依赖与构建产物 ----
 node_modules/
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+.ruff_cache/
 frontend/dist/
+frontend/.vite/
+coverage/
+htmlcov/
 
-# 运行时数据（数据库与文件，绝不入库）
+# ---- 运行时数据（绝不入库）----
 pgdata/
 data/
 *.db
 *.db-wal
 *.db-shm
+storage/uploads/*
+storage/exports/*
+storage/logs/*
+storage/certs/
+storage/certs/*
+backups/*
+!storage/**/.gitkeep
+!backups/.gitkeep
+.pytest-backups/
 
-# 密钥与证书（绝不入库）
+# ---- 密钥与证书（绝不入库）----
 .env
 .env.*
+!.env.example
 *.jks
 *.keystore
 *.p12
 *.mobileprovision
 *.pem
-storage/certs/
-storage/certs/*
+*.key
+*.pfx
+*.crt
 
-# 但状态留痕文件要入库（覆盖上面的 *.log）
+# ---- 备份与导出产物 ----
+*.dump
+*.sql.gz
+*.tar.gz
+
+# ---- 状态留痕文件要入库（覆盖上面的 *.log / *.tar.gz 之类）----
 !docs/state/commits.log
-
-# 运行时产物目录：只保留占位文件，内容不入库
-storage/uploads/*
-storage/exports/*
-storage/logs/*
-backups/*
-!storage/**/.gitkeep
-!backups/.gitkeep
-.pytest-backups/

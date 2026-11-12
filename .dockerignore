@@ -1,15 +1,50 @@
-# 构建上下文排除项（保持镜像构建快、体积小）
+# 构建上下文排除项（保持镜像构建快、体积小、且不把运行时数据带进构建缓存）
+# 注意：backend 的构建上下文是仓库根；database/ 必须保留（alembic 0001 要读 DDL）
+
+# 版本控制与元数据
 .git
 .gitignore
+.github
+.gitattributes
+.editorconfig
+
+# 依赖与缓存
 node_modules
 **/node_modules
 backend/.venv
+.venv
 **/__pycache__
 **/*.pyc
 .pytest_cache
+.ruff_cache
+frontend/.vite
+
+# 构建产物（由镜像内重建）
+frontend/dist
+
+# 运行时数据与密钥（绝不进构建上下文）
 pgdata
 data
-frontend/dist
+storage
+backups
+*.dump
+*.tar.gz
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# 原生工程（体积大，且不参与 Web 镜像）
+frontend/android
+frontend/ios
+
+# 文档与归档
 docs
+legacy
 *.md
 !README.md
+
+# 系统文件
+.DS_Store
+Thumbs.db

@@ -25,6 +25,7 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/freshkeep
+      DATABASE_URL_PSQL: postgresql://postgres:postgres@127.0.0.1:5432/freshkeep
       TZ: Asia/Shanghai
     steps:
       - uses: actions/checkout@v4
@@ -46,13 +47,24 @@ jobs:
           alembic upgrade head
           alembic current
 
-      - name: 表数断言（期望 25）
+      # 28 = 27 张业务表 + alembic_version（后者也是 BASE TABLE）
+      - name: 表数断言（期望 28）
         run: |
           N=$(psql "$DATABASE_URL_PSQL" -tAc "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE'")
           echo "tables=$N"
-          [ "$N" = "25" ]
-        env:
-          DATABASE_URL_PSQL: postgresql://postgres:postgres@127.0.0.1:5432/freshkeep
+          [ "$N" = "28" ]
+
+      - name: 视图数断言（期望 2）
+        run: |
+          V=$(psql "$DATABASE_URL_PSQL" -tAc "select count(*) from information_schema.views where table_schema='public'")
+          echo "views=$V"
+          [ "$V" = "2" ]
+
+      - name: 迁移版本断言（期望 0004_recipe_steps）
+        run: |
+          V=$(psql "$DATABASE_URL_PSQL" -tAc "select version_num from alembic_version")
+          echo "alembic=$V"
+          [ "$V" = "0004_recipe_steps" ]
 
       - name: 数据库验收用例
         run: psql postgresql://postgres:postgres@127.0.0.1:5432/freshkeep -v ON_ERROR_STOP=1 -f database/002_acceptance_check.sql 2>&1 | grep -E "NOTICE|ERROR"
@@ -70,7 +82,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: frontend/package.json
+          cache-dependency-path: frontend/package-lock.json
       - name: 安装依赖
         working-directory: frontend
         run: npm install --no-audit --no-fund
