@@ -35,3 +35,4 @@
 2026-11-11 17:03 | e41e498 | chore: 刷新本轮提交后的状态快照与留痕 |  4 文件 | docs | main
 2026-11-11 19:09 | 55a56c9 | feat: 阶段 9 部署上线 —— PWA/移动端/离线/通知/HTTPS/NAS/备份/演练/验收（9/9） | 32 文件 | api web docs | main
 2026-11-11 20:27 | 938a25d | feat: M9 Android 平台生成 + 清单一键入库 | 69 文件 | api web docs | main
+2026-11-12 13:59 | f19dfd2 | feat: M9 收尾 —— iOS 平台工程入库 + 真机签名配置 | 26 文件 | web docs | main

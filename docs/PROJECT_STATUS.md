@@ -235,6 +235,40 @@ pytest **232 项通过**（含清单一键入库），NAS 三容器 healthy，�
 | 恢复演练 | `scripts/restore_drill.py` | 临时库恢复 27 表、逐表行数一致、演练库自动删除；修复了 schema 路径与 COMMIT 两个缺陷 |
 | 安全与性能 | `scripts/stage9_acceptance.py` | 凭据 0 命中、HTTPS 安全头、API 401 鉴权、p95 延迟、容器健康 |
 
+### 2.17 V1.0.0 发布准备 · 阶段 1：现状审计与备份（2026-11-12）
+
+**审计结论（全部由命令实测，非文档推断）**
+
+| 维度 | 实测结果 |
+| --- | --- |
+| 代码规模 | 后端 69 文件 / 10142 行；测试 23 文件 / 4338 行；前端 45 文件 / 6410 行 TS+Vue + 300 行 CSS；DDL 539 行 |
+| 路由 | OpenAPI 85 条路径；22 个 APIRouter 文件；21 个服务文件；22 个 ORM 类 |
+| 前端 | 17 个视图；`public/` 5 个 PWA 资产；构建 2808 modules / 507ms 可复现 |
+| 数据库 | 27 张业务表 + 2 个视图（`v_inventory`、`v_batch_reconcile`）；迁移链 0001→0002→0003→0004 线性无分叉 |
+| 本机库 | `0004_recipe_steps`，**27 表全部 0 行**（本机为空库，仅开发用） |
+| NAS 库 | `0004_recipe_steps`；ingredients=2 / batches=2 / transactions=3 / consumptions=1 / users=1 / devices=2，其余 0 |
+| Git | 远程 `git@github.com:0shiyu0/freshkeep.git`；单分支 `main`；**46 提交**（2026-11-08 起）；**无 tag**；工作区仅 `commits.log` |
+| NAS 容器 | `freshkeep-web/api/db` 均 healthy，运行 14h；端口 18080/18443 |
+| NAS 镜像 | `freshkeep-api:latest` af78090822c9 234MB；`freshkeep-web:latest` a3f01b25f6b4 49.2MB（**本地构建、无版本标签**） |
+| 数据卷 | `pgdata` 65M、`storage` 648K、`backups` 52K；挂载 backups/storage/logs 三处 |
+| 附件存储 | `storage/uploads` **为空**，`file_assets`=0（无图片需迁移） |
+| 测试 | `pytest` **232 passed**（实跑）；前端构建通过 |
+| 定时任务 | **03:10 自动备份已产出** `freshkeep-backup-20261112-031000.tar.gz`（自动触发已得证据） |
+
+**阶段 1 备份产物**（`backups/v1.0.0-pre/`，已 gitignore）
+
+| 文件 | 大小 | 校验 |
+| --- | --- | --- |
+| `local-freshkeep-20261112-140930.dump` | 85K | `pg_restore -l` 28 个表数据段 |
+| `nas-freshkeep-20261112-140930.dump` | 90K | 28 个表数据段；恢复到临时库抽查 ingredients=2 / batches=2 一致 |
+
+**审计发现的待处理项（留待后续阶段，本次不改代码）**
+
+1. 根目录 9 个**遗留静态站文件**仍在版本库（`css/style.css`、`js/app.js`、`js/store.js`、`index.html`、`manifest.webmanifest`、`sw.js`、`icons/*`、`tests/selftest.html`），与 `frontend/` 重复，发布前需决策保留或删除。
+2. `PROJECT_STATUS §3/§7` 与末尾自动快照滞后（详见 §3 顶部说明）。
+3. NAS 镜像只有 `latest` 标签、无版本号与 digest 固定，V1.0.0 需改为 `ghcr.io/0shiyu0/freshkeep-api:1.0.0` 形式。
+4. 测试库 `alembic_version` 被 conftest 硬编码为 `0001_init`（结构实际是最新 27 表），影响 `/system/db` 在测试环境的版本展示。
+
 ### 2.15 测试规模
 
 ```
