@@ -820,6 +820,47 @@
 
 ---
 
+## 2026-11-12 · V1.0.0 阶段 2：GitHub 仓库整理与安全检查
+
+### 安全审计（新增 `docs/SECURITY_AUDIT.md`）
+
+- **当前文件**：私钥 / AWS Key / GitHub Token / OpenAI Key / Slack Token / 赋值型密码 / 带密码连接串 **全部 0 命中**。
+- **完整 Git 历史**（46 提交）：从未新增 `.env` / `*.key` / `*.pem` / `*.crt` / `*.dump` / `*.db` / `*.keystore`；
+  唯一 `.env*` 是 `.env.example`（占位值）。**无需更换密钥，也无需重写历史。**
+- **依赖许可**：Python 侧 MIT ×6 / BSD-3-Clause ×2 / Apache-2.0 ×1 / **LGPL-3.0 ×1（psycopg，库形式动态使用、未修改）**；
+  npm 侧 MIT ×16 / Apache-2.0 ×1（echarts）。无 GPL/AGPL/SSPL，与项目 MIT 兼容。
+
+### 忽略规则
+
+- `.gitignore`：新增 `*.dump`、`*.sql.gz`、`*.tar.gz`、`*.key`、`*.crt`、`*.pfx`、`.idea/`、`.vscode/`、
+  `frontend/.vite/`、`.ruff_cache/`、`coverage/`、`htmlcov/`，并保留 `!.env.example`。
+- `.dockerignore`：新增 `storage`（含**证书私钥**）、`backups`（含数据库 dump）、`frontend/android|ios`（25M）、
+  `.github`、`legacy`、`*.dump`、`*.tar.gz`、`*.pem|key|crt`、`.editorconfig`/`.gitattributes`。
+- 实测 9 条规则全部生效，`.env.example` 保留入库。
+
+### 仓库规范化
+
+- 9 个旧静态站死文件 `git mv` 到 `legacy/`（保留历史），新增 `legacy/README.md` 声明不参与构建。
+- 新增 `.editorconfig`（UTF-8 / LF / 缩进）与 `.gitattributes`（`eol=lf`、二进制识别、`linguist-generated` 标记）。
+- `.env.example` 补 `FK_HTTP_PORT` / `FK_HTTPS_PORT` / `ENABLE_SCHEDULER` / `BACKUP_KEEP` 与"已初始化后改密码"指引。
+- **README 整篇重写**：原正文仍是早期静态版（"双击 index.html""GitHub Pages""数据存 localStorage"），
+  与当前架构矛盾；新 README 含技术栈、功能表、架构图、真实目录结构、本地启动、NAS 部署、
+  备份与恢复、开发约定、安全说明、文档索引。
+- **CI 修正**：表数断言 `25 → 28`（27 业务表 + `alembic_version`），新增「视图数=2」「迁移版本=0004」断言；
+  前端缓存路径 `package.json → package-lock.json`；`DATABASE_URL_PSQL` 提到 job 级。
+- 文档修正 4 处（`PROJECT_STATUS` §1 两库表述、§3 未完成清单、§7 八阶段进度表、刷新自动快照）。
+
+### NAS 清理
+
+- 删除本次部署上传的 `fk_bundle.tar.gz`(11M)、`fk_images.tar.gz`(94M)、`fk_images3.tar.gz`(94M)、
+  `pgdata-before-rebuild.sql`(96K)，目录 **268M → 69M**；清理后三容器仍 healthy、HTTPS 200。
+
+### 验证
+
+- pytest **232 passed**；前端构建 465ms；`check-docs` 41 个内链通过。
+
+---
+
 ## [Unreleased]
 
 ### 新增
