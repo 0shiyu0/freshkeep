@@ -1,0 +1,144 @@
+# 打 tag 时自动：构建镜像 → 推 GHCR → 创建 GitHub Release 并附上镜像包
+#
+# 为什么放在 Actions 里而不是本地：
+#   1. 本地环境没有 GHCR / Release API 的凭据，Actions 自带 GITHUB_TOKEN；
+#   2. runner 本身就是 linux/amd64，不需要 buildx 交叉构建；
+#   3. 产物（镜像 tar.gz）与 Release 说明可复现，任何人下载即用。
+#
+# 触发：push tag v*（或手动 workflow_dispatch）
+# 前置：仓库 Settings → Actions → General → Workflow permissions 需为 "Read and write"
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write        # 创建 Release、上传资产
+  packages: write        # 推 GHCR
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  release:
+    name: 构建镜像并发布 Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 解析版本号
+        id: meta
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="v$(date +%Y%m%d)-manual"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 构建 api 镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          load: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 构建 web 镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: frontend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          load: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-web:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 打包镜像为可分发 tar.gz + 校验和
+        run: |
+          set -euo pipefail
+          V="${{ steps.meta.outputs.version }}"
+          docker tag "$REGISTRY/$IMAGE_PREFIX-api:$V" freshkeep-api:"${V#v}"
+          docker tag "$REGISTRY/$IMAGE_PREFIX-web:$V" freshkeep-web:"${V#v}"
+          docker save freshkeep-api:"${V#v}" freshkeep-web:"${V#v}" -o /tmp/images.tar
+          gzip -9 -c /tmp/images.tar > "freshkeep-${V}-amd64.tar.gz"
+          sha256sum "freshkeep-${V}-amd64.tar.gz" > "freshkeep-${V}-amd64.tar.gz.sha256"
+          ls -lh freshkeep-*.tar.gz
+          cat freshkeep-*.sha256
+
+      - name: 生成 Release 说明
+        run: |
+          V="${{ steps.meta.outputs.version }}"
+          cat > release-notes.md <<EOF
+          ## 鲜度 FreshKeep $V
+
+          自托管家庭食材库存与营养管理。三容器（web / api / db），数据全部留在自己 NAS 上。
+
+          ### 镜像（linux/amd64，可从 GHCR 直接拉取）
+
+          \`\`\`
+          docker pull $REGISTRY/$IMAGE_PREFIX-api:$V
+          docker pull $REGISTRY/$IMAGE_PREFIX-web:$V
+          \`\`\`
+
+          或下载本页附件 \`freshkeep-${V}-amd64.tar.gz\` 后：
+
+          \`\`\`bash
+          sha256sum -c freshkeep-${V}-amd64.tar.gz.sha256
+          docker load -i freshkeep-${V}-amd64.tar.gz
+          docker tag freshkeep-api:${V#v} freshkeep-api:latest
+          docker tag freshkeep-web:${V#v} freshkeep-web:latest
+          docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --force-recreate
+          \`\`\`
+
+          ### 部署与运维文档
+
+          - 环境变量：[docs/ENVIRONMENT.md](https://github.com/$IMAGE_PREFIX/blob/$V/docs/ENVIRONMENT.md)
+          - 部署（含升级）：[docs/DEPLOYMENT.md](https://github.com/$IMAGE_PREFIX/blob/$V/docs/DEPLOYMENT.md)
+          - 备份与恢复：[docs/BACKUP_RESTORE.md](https://github.com/$IMAGE_PREFIX/blob/$V/docs/BACKUP_RESTORE.md)
+          - 回滚：[docs/ROLLBACK.md](https://github.com/$IMAGE_PREFIX/blob/$V/docs/ROLLBACK.md)
+
+          ### 质量门禁
+
+          后端 pytest 232 项通过、覆盖率门槛 80%；ruff 与 prettier 全过；数据库 27 表 + 2 视图（迁移 0004）。
+
+          **注意**：\`Source code (zip/tar.gz)\` 由 GitHub 自动生成，含完整源码；
+          镜像包 \`freshkeep-${V}-amd64.tar.gz\` 是本页附加资产。
+          EOF
+          cat release-notes.md
+
+      - name: 创建 Release 并上传资产
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.version }}
+          name: 鲜度 FreshKeep ${{ steps.meta.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            freshkeep-*.tar.gz
+            freshkeep-*.tar.gz.sha256
+          fail_on_unmatched_files: true

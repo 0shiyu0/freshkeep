@@ -75,10 +75,25 @@ docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --force-r
 2. **镜像不含数据**：`pgdata` / `storage` / `backups` 都是 bind mount，镜像本身无任何用户数据。
 3. **`ENABLE_SCHEDULER` 由 compose 传入**（`true`）。单独 `docker run` 时不设该变量则定时任务不启动。
 
-## 6. 尚未完成：推送到 GHCR
+## 6. 自动发布：GitHub Actions（推荐）
 
-镜像已构建并打包，但**尚未推送到 GitHub Container Registry**。原因是当前环境缺少凭据：
-`gh` CLI 未安装、无 `GITHUB_TOKEN` 环境变量、`docker login ghcr.io` 未登录。
+推 tag 会触发 `.github/workflows/release.yml`：在 ubuntu runner 上重新构建 linux/amd64 镜像 →
+推送 GHCR → 创建 GitHub Release → 附上 `freshkeep-<tag>-amd64.tar.gz` 与 `.sha256`。
+Actions 自带 `GITHUB_TOKEN`，**不需要本地任何凭据**。
+
+```bash
+git tag -a v1.0.0 -m "v1.0.0"      # 已存在则跳过
+git push origin v1.0.0              # 触发 workflow
+# 进度：仓库 Actions 页面，或
+curl -s https://api.github.com/repos/0shiyu0/freshkeep/actions/runs?per_page=3 | grep -E '"name"|"status"|"conclusion"'
+```
+
+前置条件：仓库 **Settings → Actions → General → Workflow permissions** 需为
+**Read and write permissions**（否则创建 Release 与推 GHCR 会 403）。
+
+## 7. 手动推送 GHCR（备选，需要 PAT）
+
+若不用 Actions，可在本地执行（需要一个带 `write:packages` 权限的 PAT）：
 
 具备一个具有 `write:packages` 权限的 PAT 后，执行：
 

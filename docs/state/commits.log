@@ -41,3 +41,5 @@
 2026-11-12 14:41 | 8eaf2d5 | docs: 补阶段 2 的 CHANGELOG 条目（安全审计/忽略规则/规范化/NAS 清理） |  3 文件 | docs | main
 2026-11-12 15:58 | 54756da | docs+chore: V1.0.0 阶段 3 —— 文档体系、部署配置、代码质量与测试规范化 | 113 文件 | api web docs | main
 2026-11-12 16:29 | b34a719 | chore(release): v1.0.0 镜像构建、打包与发布记录 |  5 文件 | docs | main
+2026-11-12 16:36 | 3bdb129 | fix(docs): 恢复被覆盖的搭建手册，拆分 ENVIRONMENT / ENV_SETUP |  8 文件 | docs | main
+2026-11-12 16:39 | c176be8 | chore: 删除 .nojekyll（GitHub Pages 时代遗留） |  2 文件 | none | main
