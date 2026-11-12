@@ -9,7 +9,6 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-
 from app.core.errors import ApiError
 from app.models import Batch
 from app.services.inventory.state import refresh_batch_status, transition

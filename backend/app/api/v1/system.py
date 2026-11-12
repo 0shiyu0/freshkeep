@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Request, Response
@@ -16,7 +16,8 @@ from sqlalchemy import text
 from app import __version__
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.db.session import db_info, engine, ping as db_ping
+from app.db.session import db_info, engine
+from app.db.session import ping as db_ping
 
 log = get_logger(__name__)
 router = APIRouter(tags=["system"])
@@ -50,9 +51,9 @@ def ping(request: Request) -> dict:
         try:
             with engine.connect() as conn:
                 initialized = bool(conn.execute(text("SELECT 1 FROM devices LIMIT 1")).first())
-        except Exception:  # noqa: BLE001 - 表尚未建时视为未初始化
+        except Exception:
             initialized = False
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return envelope(
         request,
         {

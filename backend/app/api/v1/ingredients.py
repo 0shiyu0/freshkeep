@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -85,7 +85,7 @@ def _lookups(db: Session, rows: list[Ingredient]) -> dict:
     )
     units = {u.id: u for u in db.execute(select(Unit).where(Unit.id.in_(unit_ids))).scalars()} if unit_ids else {}
     locs = (
-        {l.id: l for l in db.execute(select(StorageLocation).where(StorageLocation.id.in_(loc_ids))).scalars()}
+        {line.id: line for line in db.execute(select(StorageLocation).where(StorageLocation.id.in_(loc_ids))).scalars()}
         if loc_ids
         else {}
     )
@@ -160,18 +160,20 @@ def _validate_conversion(
 
 def _resolve_refs(db: Session, data: dict) -> dict:
     """把引用 id 换成对象并校验存在性/维度，返回补齐后的上下文。"""
-    if data.get("category_id"):
-        if db.get(Category, data["category_id"]) is None:
-            raise not_found("分类不存在")
-    if data.get("default_storage_location_id"):
-        if db.get(StorageLocation, data["default_storage_location_id"]) is None:
-            raise not_found("储存位置不存在")
-    if data.get("image_asset_id"):
-        if db.get(FileAsset, data["image_asset_id"]) is None:
-            raise not_found("图片不存在")
-    if data.get("nutrition_basis_unit_id"):
-        if db.get(Unit, data["nutrition_basis_unit_id"]) is None:
-            raise not_found("营养基准单位不存在")
+    if data.get("category_id") and db.get(Category, data["category_id"]) is None:
+        raise not_found("分类不存在")
+    if (
+        data.get("default_storage_location_id")
+        and db.get(StorageLocation, data["default_storage_location_id"]) is None
+    ):
+        raise not_found("储存位置不存在")
+    if data.get("image_asset_id") and db.get(FileAsset, data["image_asset_id"]) is None:
+        raise not_found("图片不存在")
+    if (
+        data.get("nutrition_basis_unit_id")
+        and db.get(Unit, data["nutrition_basis_unit_id"]) is None
+    ):
+        raise not_found("营养基准单位不存在")
 
     q_unit = _get_unit(db, data.get("default_quantity_unit_id"), "quantity", "数量单位")
     w_unit = _get_unit(db, data.get("default_weight_unit_id"), "weight", "重量单位")
@@ -191,10 +193,10 @@ def list_ingredients(
     location_id: uuid.UUID | None = None,
     is_active: bool | None = None,
     include_inactive: bool = False,
-    page: int = 1,
-    page_size: int = 20,
-    sort_by: str = "updated_at",
-    sort_order: str = "desc",
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    sort_by: str = Query(default="updated_at", pattern="^(updated_at|name|created_at)$"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
     ctx: AuthContext = Depends(get_current),
     db: Session = Depends(get_db),
 ) -> dict:

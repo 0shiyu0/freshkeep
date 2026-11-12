@@ -13,13 +13,19 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
       - ./pgdata:/var/lib/postgresql/data
+    shm_size: 128mb                    # PG 共享内存，避免大查询时报 shm 不足
+    mem_limit: 512m
+    stop_grace_period: 30s             # 给 PG 留出 checkpoint 时间
+    expose:
+      - "5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-freshkeep} -d ${POSTGRES_DB:-freshkeep}"]
       interval: 10s
       timeout: 5s
       retries: 10
-    expose:
-      - "5432"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
 
   api:
     build:
@@ -51,8 +57,13 @@ services:
       - ./storage:/data/storage
       - ./storage/logs:/data/logs
       - ./backups:/data/backups
+    mem_limit: 768m
+    stop_grace_period: 20s
     expose:
       - "8000"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)"]
       interval: 30s
@@ -70,9 +81,14 @@ services:
         condition: service_healthy
     ports:
       - "${HOST_PORT:-8080}:80"
+    mem_limit: 128m
+    stop_grace_period: 10s
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
       interval: 30s
       timeout: 5s
       start_period: 10s
       retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

@@ -7,9 +7,8 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel
-
 from app.schemas.common import Dec2, Dec3, Dec4
+from pydantic import BaseModel
 
 
 class StockBlock(BaseModel):

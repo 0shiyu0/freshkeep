@@ -263,7 +263,73 @@ iOS 侧 `Info.plist` 需 `NSAllowsArbitraryLoads`，Android 需 `android:usesCle
 
 ---
 
-## 10. 架构决策记录（ADR 摘要）
+## 10. 部署拓扑与数据持久化
+
+### 10.1 容器拓扑
+
+```
+                    ┌──────────────── 宿主机（NAS / 本地）────────────────┐
+  浏览器 / PWA      │                                                    │
+  Android / iOS ────┼─► :18080 (HTTP)  :18443 (HTTPS)                    │
+                    │        │                                           │
+                    │   ┌────▼──────────────────────────┐                │
+                    │   │ freshkeep-web (nginx:1.27)    │                │
+                    │   │  静态产物 + /api 反代 + TLS    │                │
+                    │   └────┬──────────────────────────┘                │
+                    │        │ http://api:8000（compose 内网）            │
+                    │   ┌────▼──────────────────────────┐                │
+                    │   │ freshkeep-api (python:3.12)   │                │
+                    │   │  FastAPI + APScheduler        │                │
+                    │   └────┬──────────────────────────┘                │
+                    │        │ postgresql://db:5432（compose 内网）       │
+                    │   ┌────▼──────────────────────────┐                │
+                    │   │ freshkeep-db (postgres:16)    │                │
+                    │   └───────────────────────────────┘                │
+                    └────────────────────────────────────────────────────┘
+```
+
+只有 `web` 映射宿主机端口；`api`(8000) 与 `db`(5432) 只在 compose 默认网络内可达，
+宿主机与外部网络都直接连不上——这是第一道边界。第二道是应用层的 `ALLOW_CIDR` 网段白名单。
+
+### 10.2 数据持久化（bind mount，不是命名卷）
+
+| 数据 | 宿主路径 | 容器路径 | 丢数据的场景 |
+| --- | --- | --- | --- |
+| PostgreSQL 数据文件 | `./pgdata` | `/var/lib/postgresql/data` | 手动 `rm -rf pgdata`；磁盘损坏 |
+| 上传/导出文件 | `./storage` | `/data/storage` | 手动删除；磁盘损坏 |
+| 应用日志 | `./storage/logs` | `/data/logs` | 可丢（非业务数据） |
+| 逻辑备份 | `./backups` | `/data/backups` | 手动删除；保留策略按 7 份淘汰 |
+
+**关键结论**：
+
+1. `docker compose down`、`up -d --build`、`--force-recreate`、镜像升级**都不会**动这三处目录。
+2. 因此"容器重建不丢数据"成立，但**"删目录会丢数据"**——这也是为什么 `.dockerignore` 与
+   `.gitignore` 都排除了它们（避免被打进镜像或提交）。
+3. `pgdata` 的属主是容器内 postgres 用户（宿主显示 `70:root`，权限 700）。想改成非 root 运行容器，
+   必须先把宿主目录 `chown` 到同一 uid，否则 PG 启动失败。
+4. 备份与数据在**同一块盘**：这是当前最大的单点风险（见 [BACKUP_RESTORE.md](BACKUP_RESTORE.md) §8）。
+
+### 10.3 启动顺序与健康检查
+
+```
+db(healthy: pg_isready) → api(healthy: GET /health) → web(healthy: GET /)
+```
+
+- `api` 的 `entrypoint.sh` 在启动时：等库就绪 → `alembic upgrade head` → 写字典种子 → 起 uvicorn。
+  所以**迁移是自动执行的**，人工只需保证镜像版本正确。
+- 三个容器都是 `restart: unless-stopped`；`stop_grace_period` 分别给 db 30s、api 20s、web 10s，
+  确保 PG 有时间 checkpoint、uvicorn 有时间处理完在途请求。
+- 日志用 `json-file` 驱动并限制 `max-size: 10m` / `max-file: 3`，防止长期运行把磁盘写满。
+
+### 10.4 资源限制
+
+| 服务 | mem_limit | 说明 |
+| --- | --- | --- |
+| `db` | 512M + `shm_size: 128mb` | PG 共享内存单独给，避免大查询报 shm 不足 |
+| `api` | 768M | uvicorn 2 workers + APScheduler；识别大图时内存峰值较高 |
+| `web` | 128M | nginx 静态托管，余量充足 |
+
+## 11. 架构决策记录（ADR 摘要）
 
 | 决策 | 结论 | 主要理由 |
 | --- | --- | --- |

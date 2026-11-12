@@ -6,11 +6,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from decimal import Decimal
-
-from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.common import Dec2, Dec3, Dec4, ORMBase
+from pydantic import BaseModel, Field
 
 
 class ConsumptionIn(BaseModel):

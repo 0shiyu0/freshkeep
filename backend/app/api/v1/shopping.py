@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import AuthContext, get_current
 from app.db.session import get_db
 from app.schemas.common import ok
-from app.schemas.recipe import ShoppingListFromRecipesIn, ShoppingItemPatchIn
+from app.schemas.recipe import ShoppingItemPatchIn, ShoppingListFromRecipesIn
 from app.services import recipes as svc
 
 router = APIRouter(prefix="/shopping-lists", tags=["shopping"])

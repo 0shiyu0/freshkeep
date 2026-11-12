@@ -109,15 +109,27 @@ onMounted(async () => {
 
     <!-- 提醒 -->
     <section class="card alerts">
-      <button class="alert" :class="{ 'alert--warn': summary.expiring_count > 0 }" @click="router.push('/batches')">
+      <button
+        class="alert"
+        :class="{ 'alert--warn': summary.expiring_count > 0 }"
+        @click="router.push('/batches')"
+      >
         <strong>{{ summary.expiring_count }}</strong>
         <span>临期 7 天内</span>
       </button>
-      <button class="alert" :class="{ 'alert--danger': summary.expired_count > 0 }" @click="router.push('/batches')">
+      <button
+        class="alert"
+        :class="{ 'alert--danger': summary.expired_count > 0 }"
+        @click="router.push('/batches')"
+      >
         <strong>{{ summary.expired_count }}</strong>
         <span>已过期</span>
       </button>
-      <button class="alert" :class="{ 'alert--warn': summary.low_stock_count > 0 }" @click="router.push('/inventory')">
+      <button
+        class="alert"
+        :class="{ 'alert--warn': summary.low_stock_count > 0 }"
+        @click="router.push('/inventory')"
+      >
         <strong>{{ summary.low_stock_count }}</strong>
         <span>低库存</span>
       </button>
@@ -132,7 +144,12 @@ onMounted(async () => {
       <div v-if="summary.recent_batches.length === 0" class="muted-line">
         还没有入库记录，先点「+ 采购入库」。
       </div>
-      <div v-for="b in summary.recent_batches" :key="b.batch_id" class="recent" @click="router.push(`/batches/${b.batch_id}`)">
+      <div
+        v-for="b in summary.recent_batches"
+        :key="b.batch_id"
+        class="recent"
+        @click="router.push(`/batches/${b.batch_id}`)"
+      >
         <span class="mono">{{ b.batch_no }}</span>
         <span class="recent__name">{{ b.ingredient_name }}</span>
         <span>{{ Number(b.weight) }}g</span>
@@ -146,8 +163,13 @@ onMounted(async () => {
       <div class="card__head">
         <h2>营养摄入</h2>
         <div class="seg">
-          <button v-for="p in periods" :key="p.key" class="seg__btn"
-                  :class="{ 'seg__btn--on': period === p.key }" @click="period = p.key">
+          <button
+            v-for="p in periods"
+            :key="p.key"
+            class="seg__btn"
+            :class="{ 'seg__btn--on': period === p.key }"
+            @click="period = p.key"
+          >
             {{ p.label }}
           </button>
         </div>
@@ -158,16 +180,22 @@ onMounted(async () => {
       <!-- 无记录与 0 摄入必须区分 -->
       <div v-else-if="!nutrition.has_records" class="empty-nutrition">
         <p><strong>这段时间没有消耗记录</strong></p>
-        <p class="muted">{{ nutrition.start_date }} ~ {{ nutrition.end_date }} · 不是「摄入为 0」，只是还没记录</p>
+        <p class="muted">
+          {{ nutrition.start_date }} ~ {{ nutrition.end_date }} · 不是「摄入为 0」，只是还没记录
+        </p>
         <p class="disclaimer">{{ nutrition.disclaimer }}</p>
-        <button class="btn" style="margin-top: 8px" @click="router.push('/consume')">去记一笔消耗</button>
+        <button class="btn" style="margin-top: 8px" @click="router.push('/consume')">
+          去记一笔消耗
+        </button>
       </div>
 
       <template v-else>
         <div class="nutri-grid">
           <div v-for="n in nutrition.items" :key="n.code" class="nutri">
             <span class="nutri__name">{{ n.name }}</span>
-            <strong class="nutri__value">{{ Number(n.actual_value) }}<small>{{ n.unit }}</small></strong>
+            <strong class="nutri__value"
+              >{{ Number(n.actual_value) }}<small>{{ n.unit }}</small></strong
+            >
             <span v-if="n.target_value" class="nutri__target">
               日目标 {{ Number(n.target_value) }}
               <template v-if="nutrition && nutrition.days > 0">
@@ -178,7 +206,9 @@ onMounted(async () => {
             <span v-else class="nutri__target muted">未设目标</span>
           </div>
         </div>
-        <p class="disclaimer">{{ nutrition.disclaimer }} · 共 {{ nutrition.record_count }} 笔消耗</p>
+        <p class="disclaimer">
+          {{ nutrition.disclaimer }} · 共 {{ nutrition.record_count }} 笔消耗
+        </p>
       </template>
 
       <div class="nutri-actions">
@@ -206,58 +236,197 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.status-mini { font-size: 11.5px; color: var(--text-3); }
-.status-mini.ok { color: var(--green); }
-.status-mini.down { color: var(--red); }
-
-
-.alerts { display: flex; gap: 12px; flex-wrap: wrap; }
-.alert {
-  flex: 1; min-width: 110px; display: flex; flex-direction: column; gap: 3px;
-  padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
-  background: transparent; cursor: pointer; text-align: left;
+.status-mini {
+  font-size: 11.5px;
+  color: var(--text-3);
 }
-.alert strong { font-size: 20px; font-variant-numeric: tabular-nums; }
-.alert span { font-size: 11.5px; color: var(--text-3); }
-.alert--warn { border-color: #f0dfb8; background: #fdf9ef; }
-.alert--danger { border-color: #f2c9c6; background: #fdf2f1; }
+.status-mini.ok {
+  color: var(--green);
+}
+.status-mini.down {
+  color: var(--red);
+}
+
+.alerts {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.alert {
+  flex: 1;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.alert strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.alert span {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.alert--warn {
+  border-color: #f0dfb8;
+  background: #fdf9ef;
+}
+.alert--danger {
+  border-color: #f2c9c6;
+  background: #fdf2f1;
+}
 
 .recent {
-  display: flex; align-items: center; gap: 14px; padding: 9px 0;
-  font-size: 13px; border-top: 1px dashed var(--line); cursor: pointer;
-  font-variant-numeric: tabular-nums; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 0;
+  font-size: 13px;
+  border-top: 1px dashed var(--line);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
 }
-.recent:hover { color: var(--green); }
-.recent__name { font-weight: 600; min-width: 90px; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--text-3); }
-.muted { color: var(--text-3); font-size: 11.5px; }
-.muted-line { font-size: 13px; color: var(--text-3); padding: 6px 0; }
+.recent:hover {
+  color: var(--green);
+}
+.recent__name {
+  font-weight: 600;
+  min-width: 90px;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.muted {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.muted-line {
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 6px 0;
+}
 
-.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg__btn { padding: 5px 12px; font-size: 12px; background: transparent; border: 0; cursor: pointer; color: var(--text-2); }
-.seg__btn--on { background: var(--green); color: #fff; }
+.seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.seg__btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--text-2);
+}
+.seg__btn--on {
+  background: var(--green);
+  color: #fff;
+}
 
-.nutri-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 6px; }
-.nutri { display: flex; flex-direction: column; gap: 3px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
-.nutri__name { font-size: 11.5px; color: var(--text-3); }
-.nutri__value { font-size: 18px; font-variant-numeric: tabular-nums; }
-.nutri__value small { font-size: 11px; color: var(--text-3); margin-left: 3px; font-weight: 400; }
-.nutri__target { font-size: 11px; color: var(--text-2); }
-.empty-nutrition { padding: 14px 0; }
-.empty-nutrition p { font-size: 13px; }
-.disclaimer { font-size: 11.5px; color: var(--text-3); margin-top: 12px; }
-.nutri-actions { margin-top: 10px; }
+.nutri-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+.nutri {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.nutri__name {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.nutri__value {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.nutri__value small {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-left: 3px;
+  font-weight: 400;
+}
+.nutri__target {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.empty-nutrition {
+  padding: 14px 0;
+}
+.empty-nutrition p {
+  font-size: 13px;
+}
+.disclaimer {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 12px;
+}
+.nutri-actions {
+  margin-top: 10px;
+}
 
-.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.28); display: grid; place-items: center; z-index: 50; }
-.modal { background: #fff; border-radius: 14px; padding: 18px 20px; width: min(420px, 92vw); max-height: 80vh; overflow: auto; }
-.modal h3 { margin: 0 0 12px; font-size: 15px; }
-.target-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 13px; }
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  width: min(420px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+}
+.modal h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.target-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13px;
+}
 .target-row input {
-  width: 110px; height: 32px; padding: 0 10px; border: 1px solid var(--line);
-  border-radius: 8px; font-size: 13px; text-align: right;
+  width: 110px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: right;
 }
-.modal__foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
 @media (max-width: 720px) {
-  .grid--2 { grid-template-columns: 1fr; }
+  .grid--2 {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -14,11 +14,10 @@ from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
 from app.core.errors import validation_error
 from app.core.time import biz_today
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 BIZ_TZ = ZoneInfo("Asia/Shanghai")
 Q2, Q3, Q4 = Decimal("0.01"), Decimal("0.001"), Decimal("0.0001")

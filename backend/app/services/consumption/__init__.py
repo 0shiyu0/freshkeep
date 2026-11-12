@@ -16,11 +16,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
-
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from datetime import UTC, datetime
+from decimal import ROUND_HALF_UP, Decimal
 
 from app.core.errors import (
     ApiError,
@@ -45,6 +42,8 @@ from app.models import (
 from app.services.consumption.state import mark_reversed
 from app.services.inventory import fefo_order
 from app.services.inventory.state import refresh_batch_status
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 Q2, Q3, Q4 = Decimal("0.01"), Decimal("0.001"), Decimal("0.0001")
 
@@ -222,7 +221,7 @@ def consume(
         quantity_unit_id=ingredient.default_quantity_unit_id if total_q > 0 else None,
         weight_unit_id=ingredient.default_weight_unit_id if total_w > 0 else None,
         cost=total_c,
-        consumed_at=consumed_at or datetime.now(timezone.utc),
+        consumed_at=consumed_at or datetime.now(UTC),
         note=note,
         status="completed",
         device_id=device_id,

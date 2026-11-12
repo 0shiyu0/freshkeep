@@ -1,7 +1,6 @@
 """CSV 导出（M7）：流式输出，带 BOM 便于 Excel 直接打开。"""
 from __future__ import annotations
 
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 BOM = "\ufeff".encode()
@@ -32,7 +31,7 @@ def stream_csv(db: Session, kind: str):
 
     yield BOM
     conn = db.connection().connection
-    with conn.cursor() as cur:
-        with cur.copy(f"COPY ({sql}) TO STDOUT WITH (FORMAT csv, HEADER)") as cp:
-            for chunk in cp:
-                yield chunk
+    with conn.cursor() as cur, cur.copy(
+        f"COPY ({sql}) TO STDOUT WITH (FORMAT csv, HEADER)"
+    ) as cp:
+        yield from cp

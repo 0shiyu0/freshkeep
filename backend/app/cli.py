@@ -14,9 +14,9 @@ import getpass
 import hashlib
 import secrets
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -81,7 +81,7 @@ def _ensure_schema(db) -> bool:
     try:
         db.execute(text("SELECT 1 FROM pair_codes LIMIT 1"))
         return True
-    except Exception:  # noqa: BLE001 - 表不存在即未迁移
+    except Exception:
         print("数据库尚未初始化，请先执行：alembic upgrade head", file=sys.stderr)
         return False
 
@@ -116,7 +116,7 @@ def cmd_seed(args: argparse.Namespace) -> int:
             created["nutrition"] += 1
 
         # 储存位置
-        existing_locs = {l.name for l in db.execute(select(StorageLocation)).scalars()}
+        existing_locs = {line.name for line in db.execute(select(StorageLocation)).scalars()}
         for idx, (name, desc) in enumerate(LOCATIONS):
             if name in existing_locs:
                 continue
@@ -167,7 +167,7 @@ def cmd_pair(_: argparse.Namespace) -> int:
             text("INSERT INTO pair_codes (code_hash, expires_at) VALUES (:h, :e)"),
             {
                 "h": sha256(code),
-                "e": datetime.now(timezone.utc)
+                "e": datetime.now(UTC)
                 + timedelta(minutes=settings.pair_code_ttl_minutes),
             },
         )
@@ -214,7 +214,6 @@ def cmd_revoke(args: argparse.Namespace) -> int:
 
 def cmd_set_password(args: argparse.Namespace) -> int:
     """设置/重置登录密码（在服务器上执行，等价于"有物理访问权"）。"""
-    from app.models import User
     from app.services.auth import get_owner, hash_password
 
     pwd = args.password or getpass.getpass("新密码（不少于 8 位）：")

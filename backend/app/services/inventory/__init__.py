@@ -13,12 +13,8 @@ AGENTS.md §4.2 库存写入五步（任何改变库存的操作都必须遵守�
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
-
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
 
 from app.core.errors import not_found, validation_error
 from app.core.time import biz_today, days_until
@@ -30,6 +26,8 @@ from app.models import (
     TransactionAllocation,
     Unit,
 )
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 BIZ_TZ = ZoneInfo("Asia/Shanghai")
 

@@ -861,6 +861,63 @@
 
 ---
 
+## 2026-11-12 · V1.0.0 阶段 3：文档与部署配置、代码质量规范化
+
+### 文档（新增 4 份 + 重写 1 份 + 补 1 章）
+
+- **`docs/ENVIRONMENT.md`** 重写为**环境变量权威字典**：加载顺序、必填项、按域分组的 30+ 变量
+  （含默认值/作用/何时改）、本地与 NAS 环境矩阵、6 类常见配置错误与处置。
+  原"环境搭建手册"内容保留在 `docs/environment.md`（消除两文件完全重复的问题）。
+- **`docs/DEPLOYMENT.md`**：容器拓扑、前置检查（版本/端口/外网）、方式 A（git+build）、
+  方式 B（buildx 交叉构建 + save/load，含"必须 `--force-recreate`""端口写进 `.env`"两个实际踩过的坑）、
+  HTTPS、首次验收 8 项清单、升级（两种方式 + 升级后检查）、端口与防火墙、7 类故障、卸载。
+- **`docs/BACKUP_RESTORE.md`**：四种备份对比、升级前备份（含"备份后必须验证可读"）、自动备份与调度、
+  恢复演练脚本、整库灾难恢复、恢复到新机器、恢复后 4 项核对、保留策略与异地备份、5 类故障。
+- **`docs/ROLLBACK.md`**：三层回滚（镜像 30 秒 / 配置 / 数据库）、按症状判断回哪层、
+  `alembic downgrade` 为何不推荐、完整回滚演练、6 项不可回滚边界、回滚后收尾清单。
+- **`docs/ARCHITECTURE.md`** 新增 §10：容器拓扑图、bind mount 持久化表（含"什么会丢/不会丢"）、
+  启动顺序与健康检查、资源限制；原 §10 ADR 顺延为 §11。
+- **`README.md`**：文档索引补 4 份新文档与 2 份审计报告；快速开始指向环境变量文档。
+
+### 部署配置
+
+- `backend/Dockerfile`：依赖层与代码层分离、`PYTHONFAULTHANDLER=1`、`STOPSIGNAL SIGTERM`、
+  注释说明"以 root 运行"的取舍与加固方法（chown + `user:`）。
+- `frontend/Dockerfile`：`EXPOSE 80 443`、`STOPSIGNAL SIGQUIT`；注释明确 `npm run build` 含类型检查。
+- `docker-compose.yml`：db 加 `shm_size: 128mb`、`mem_limit 512m`；api `768m`；web `128m`；
+  三服务 `logging`（json-file, `max-size 10m`, `max-file 3`）；`stop_grace_period` 30/20/10s。
+- 核查确认：`pgdata`/`storage`/`backups` 均为 bind mount，**容器重建与镜像升级不丢数据**。
+
+### 代码质量与测试
+
+- 新增 `backend/pyproject.toml`：ruff 配置（select E/F/I/UP/B/SIM/RUF；ignore E501/RUF001-003/B008/SIM108；
+  中文全角标点不误报）；per-file-ignores 区分测试与迁移。
+- **ruff 从 299 处降到 0**：自动修复 140 处，手工整改 23 处（嵌套 if 合并、`with` 合并、
+  未使用导入、`l` 变量名、测试中的多语句行），另 6 处因修 F401 时误删 `datetime` 导入被追回。
+- 新增 `frontend/.prettierrc` + `.prettierignore` + `lint`/`format`/`format:check` 脚本；
+  31 个文件统一格式。**格式化暴露一处真实缺陷**：`InventoryView` 的内联多语句 `@click` 被拆行后
+  丢失分号导致 Vue 编译失败，已改为 `toggleBatchMode()` 方法（模板只传函数名，更稳）。
+- 新增 `backend/pytest.ini`：`--cov=app --cov-fail-under=80` + `coverage.xml`；
+  **实测覆盖率 87.15%**。注意：`pyproject.toml` 的 `[tool.pytest.ini_options]` 中多行 `addopts`
+  在此环境未被解析（`--cov` 静默失效），改用经典 `pytest.ini` 后生效。
+- `tests/conftest.py`：移除硬编码 `0001_init`，改为读 `ScriptDirectory.get_current_head()`；
+  `test_system` 的 `migration` 断言同步改为动态。测试库版本现自动跟随迁移 head（`0004_recipe_steps`）。
+
+### 路由入参校验审计
+
+- 新增 `docs/API_VALIDATION_AUDIT.md`：22 文件 / 85 路径逐项结果、统一规范、问题清单、整改记录。
+- 整改 2 处真实缺陷：`ingredients` 分页参数无上下界 + `sort_by`/`sort_order` 无白名单（可遍历全表）；
+  `backup.run_task` 的 `job_id` 为裸 `str`（改为 `Literal` 三值）。
+- 确认 3 类"有意不分页"（字典表 / 设备 / 备份列表）合理，不强行分页。
+
+### 验证
+
+- `pytest` **232 passed**，覆盖率 **87.08%**（≥ 门槛 80%）
+- `ruff check app tests` 全过；`prettier --check` 全过；`vue-tsc + vite build` 通过
+- `docker compose -f docker-compose.yml -f docker-compose.https.yml config -q` 通过
+
+---
+
 ## [Unreleased]
 
 ### 新增

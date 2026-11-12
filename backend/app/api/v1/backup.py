@@ -1,6 +1,8 @@
 """备份、导出与定时任务（M7）。"""
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
@@ -81,7 +83,7 @@ def tasks_status(
 @router.post("/tasks/{job_id}/run", summary="手动触发一次定时任务")
 def run_task(
     request: Request,
-    job_id: str,
+    job_id: Literal["daily_reconcile", "daily_backup", "expiring_scan"],
     auth: AuthContext = Depends(get_current),
 ):
     from app.core.errors import validation_error

@@ -33,7 +33,17 @@ const spoilForm = reactive({ weight: '', reason: '变质' })
 // 营养档案编辑（阶段 7）：整体替换当前版本，历史快照不变
 const nutritionModal = ref(false)
 const nutritionBusy = ref(false)
-const nutritionDraft = ref<Array<{ code: string; name: string; unit: string; value: string; basis_amount: string; basis_unit_id: string; source: string }>>([])
+const nutritionDraft = ref<
+  Array<{
+    code: string
+    name: string
+    unit: string
+    value: string
+    basis_amount: string
+    basis_unit_id: string
+    source: string
+  }>
+>([])
 const SOURCE_LABEL: Record<string, string> = {
   manual: '手动录入',
   packaging_label: '包装标识',
@@ -43,9 +53,13 @@ const SOURCE_LABEL: Record<string, string> = {
 function openNutrition() {
   const list = data.value?.nutrition ?? []
   nutritionDraft.value = list.map((n) => ({
-    code: n.code, name: n.name, unit: n.unit,
-    value: n.value, basis_amount: n.basis_amount,
-    basis_unit_id: n.basis_unit_id, source: n.source || 'manual',
+    code: n.code,
+    name: n.name,
+    unit: n.unit,
+    value: n.value,
+    basis_amount: n.basis_amount,
+    basis_unit_id: n.basis_unit_id,
+    source: n.source || 'manual',
   }))
   nutritionModal.value = true
 }
@@ -55,8 +69,11 @@ async function saveNutrition() {
   const items = nutritionDraft.value
     .filter((n) => n.value.trim() !== '' && Number(n.value) >= 0)
     .map((n) => ({
-      code: n.code, value: n.value.trim(), basis_amount: n.basis_amount,
-      basis_unit_id: n.basis_unit_id, source: n.source,
+      code: n.code,
+      value: n.value.trim(),
+      basis_amount: n.basis_amount,
+      basis_unit_id: n.basis_unit_id,
+      source: n.source,
     }))
   if (items.length === 0) {
     notifyError('至少保留一项营养数据')
@@ -113,7 +130,8 @@ async function load() {
 // 批次剩余量展示：优先重量，纯数量管理只显示数量
 function remainingText(b: BatchItem): string {
   if (b.remaining_weight !== '0.000') return `${Number(b.remaining_weight)}g`
-  if (b.remaining_quantity !== '0.000') return `${Number(b.remaining_quantity)}${data.value?.quantity_unit?.name ?? ''}`
+  if (b.remaining_quantity !== '0.000')
+    return `${Number(b.remaining_quantity)}${data.value?.quantity_unit?.name ?? ''}`
   return '0'
 }
 
@@ -168,7 +186,9 @@ async function submitSpoil() {
   spoiling.value = true
   try {
     const res = await inventoryApi.spoilage({
-      ingredient_id: id.value, weight: w, reason: spoilForm.reason.trim(),
+      ingredient_id: id.value,
+      weight: w,
+      reason: spoilForm.reason.trim(),
     })
     notifySuccess(`已报损 ${trimNum(res.weight)}g，成本 ${res.cost} 元`)
     spoilModal.value = false
@@ -338,7 +358,13 @@ onMounted(load)
         <img v-if="data.image_url" :src="data.image_url" :alt="data.name" />
         <span v-else>{{ uploading ? '…' : '＋' }}</span>
       </div>
-      <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="onFileChange" />
+      <input
+        ref="fileInput"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        hidden
+        @change="onFileChange"
+      />
 
       <div class="hero__text">
         <div class="hero__title">
@@ -372,12 +398,16 @@ onMounted(load)
       <div class="card__head">
         <h2>批次（{{ batches.length }}）</h2>
         <div class="head-actions">
-          <button class="btn" @click="router.push(`/consume?ingredient=${id}`)">− 记一笔消耗</button>
+          <button class="btn" @click="router.push(`/consume?ingredient=${id}`)">
+            − 记一笔消耗
+          </button>
           <button class="btn" @click="openSpoil">报损</button>
           <button class="btn" @click="router.push(`/purchase?ingredient=${id}`)">＋ 入库</button>
         </div>
       </div>
-      <div v-if="batches.length === 0" class="muted-line">还没有批次，点「入库」记录第一次采购。</div>
+      <div v-if="batches.length === 0" class="muted-line">
+        还没有批次，点「入库」记录第一次采购。
+      </div>
       <div v-for="b in batches" :key="b.id" class="batch-row">
         <div class="batch-row__main">
           <span class="batch-row__no mono">{{ b.batch_no }}</span>
@@ -385,7 +415,9 @@ onMounted(load)
           <span class="expiry" :class="`expiry--${expiryClass(b)}`">{{ expiryText(b) }}</span>
         </div>
         <div class="batch-row__nums">
-          <span>剩余 <b>{{ remainingText(b) }}</b></span>
+          <span
+            >剩余 <b>{{ remainingText(b) }}</b></span
+          >
           <span v-if="b.remaining_cost !== '0.00'">成本 ¥{{ b.remaining_cost }}</span>
           <span v-if="b.unit_cost" class="batch-unit">单位 {{ b.unit_cost }}</span>
           <span v-if="b.status === 'depleted'" class="tag tag--muted">已耗尽</span>
@@ -403,7 +435,9 @@ onMounted(load)
       </div>
       <div v-if="flows.length === 0" class="muted-line">还没有库存变动记录</div>
       <div v-for="f in flows" :key="f.id" class="flow">
-        <span class="tx-tag" :class="`tx-tag--${f.type}`">{{ TX_TYPE_LABEL[f.type] || f.type }}</span>
+        <span class="tx-tag" :class="`tx-tag--${f.type}`">{{
+          TX_TYPE_LABEL[f.type] || f.type
+        }}</span>
         <span class="mono">{{ f.transaction_no }}</span>
         <span class="flow__delta">
           <template v-if="Number(f.weight_delta)">{{ trimNum(f.weight_delta) }}g</template>
@@ -449,13 +483,19 @@ onMounted(load)
         <span class="attr__value">{{ n.value }} {{ n.unit }} / {{ n.basis_amount }}g</span>
       </div>
       <p class="form-tip">
-        修改档案只影响之后的新消耗；已记录的消耗保留当时的营养快照（v{{ data.nutrition[0]?.version || 1 }}）。
+        修改档案只影响之后的新消耗；已记录的消耗保留当时的营养快照（v{{
+          data.nutrition[0]?.version || 1
+        }}）。
       </p>
     </section>
 
     <!-- 营养编辑弹层 -->
-    <NModal v-model:show="nutritionModal" preset="card" title="编辑营养档案（每 100g 或每 100ml）"
-            style="max-width: 520px">
+    <NModal
+      v-model:show="nutritionModal"
+      preset="card"
+      title="编辑营养档案（每 100g 或每 100ml）"
+      style="max-width: 520px"
+    >
       <div v-for="n in nutritionDraft" :key="n.code" class="nutri-edit">
         <span class="nutri-edit__name">{{ n.name }}（{{ n.unit }}）</span>
         <input v-model="n.value" inputmode="decimal" placeholder="含量" />
@@ -486,7 +526,11 @@ onMounted(load)
     </section>
 
     <NModal v-model:show="barcodeModal" preset="card" title="绑定条码" style="max-width: 360px">
-      <NInput v-model:value="newBarcode" placeholder="扫描或输入条码数字" @keyup.enter="addBarcode" />
+      <NInput
+        v-model:value="newBarcode"
+        placeholder="扫描或输入条码数字"
+        @keyup.enter="addBarcode"
+      />
       <template #footer>
         <div style="display: flex; justify-content: flex-end; gap: 8px">
           <NButton @click="barcodeModal = false">取消</NButton>
@@ -501,10 +545,13 @@ onMounted(load)
         批次 {{ adjustTarget.batch_no }} · 账面 {{ trimNum(adjustTarget.remaining_weight) }}g
       </p>
       <div class="form-grid">
-        <label class="form-grid--full">实际重量（g）
-          <input v-model="adjustForm.actual_weight" inputmode="decimal" placeholder="当前实际称重" /></label>
-        <label class="form-grid--full">原因
-          <input v-model="adjustForm.reason" placeholder="如 盘点 / 化冻失水" /></label>
+        <label class="form-grid--full"
+          >实际重量（g）
+          <input v-model="adjustForm.actual_weight" inputmode="decimal" placeholder="当前实际称重"
+        /></label>
+        <label class="form-grid--full"
+          >原因 <input v-model="adjustForm.reason" placeholder="如 盘点 / 化冻失水"
+        /></label>
       </div>
       <p class="form-tip">差异会写成盘点流水；盘盈会同步上调批次初始量。</p>
       <template #footer>
@@ -518,10 +565,12 @@ onMounted(load)
     <!-- 报损（M5）：按 FEFO 扣批次 -->
     <NModal v-model:show="spoilModal" preset="card" title="报损" style="max-width: 380px">
       <div class="form-grid">
-        <label class="form-grid--full">报损重量（g）
-          <input v-model="spoilForm.weight" inputmode="decimal" placeholder="如 200" /></label>
-        <label class="form-grid--full">原因
-          <input v-model="spoilForm.reason" placeholder="如 变质 / 过期" /></label>
+        <label class="form-grid--full"
+          >报损重量（g） <input v-model="spoilForm.weight" inputmode="decimal" placeholder="如 200"
+        /></label>
+        <label class="form-grid--full"
+          >原因 <input v-model="spoilForm.reason" placeholder="如 变质 / 过期"
+        /></label>
       </div>
       <p class="form-tip">按先到期先出扣减批次，成本按批次单位成本核算。</p>
       <template #footer>
@@ -537,20 +586,31 @@ onMounted(load)
       <div class="form-grid">
         <label>购买日期<input v-model="purchaseForm.purchase_date" type="date" /></label>
         <label>到期日期<input v-model="purchaseForm.expiry_date" type="date" /></label>
-        <label>数量（{{ data?.quantity_unit?.name ?? '数量' }}，如 2）
-          <input v-model="purchaseForm.quantity" inputmode="decimal" placeholder="可留空" /></label>
-        <label>重量（{{ data?.weight_unit?.symbol ?? 'g' }}，如 500）
-          <input v-model="purchaseForm.weight" inputmode="decimal" placeholder="可留空" /></label>
-        <label>总价（元）<input v-model="purchaseForm.purchase_cost" inputmode="decimal" placeholder="0" /></label>
-        <label class="form-grid--full">储存位置
+        <label
+          >数量（{{ data?.quantity_unit?.name ?? '数量' }}，如 2）
+          <input v-model="purchaseForm.quantity" inputmode="decimal" placeholder="可留空"
+        /></label>
+        <label
+          >重量（{{ data?.weight_unit?.symbol ?? 'g' }}，如 500）
+          <input v-model="purchaseForm.weight" inputmode="decimal" placeholder="可留空"
+        /></label>
+        <label
+          >总价（元）<input
+            v-model="purchaseForm.purchase_cost"
+            inputmode="decimal"
+            placeholder="0"
+        /></label>
+        <label class="form-grid--full"
+          >储存位置
           <NSelect
             v-model:value="purchaseForm.storage_location_id"
-            :options="locations.map(l => ({ label: l.name, value: l.id }))"
+            :options="locations.map((l) => ({ label: l.name, value: l.id }))"
             placeholder="默认用食材的储存位置"
             clearable
-          /></label>
-        <label class="form-grid--full">备注
-          <NInput v-model:value="purchaseForm.note" placeholder="可留空" /></label>
+        /></label>
+        <label class="form-grid--full"
+          >备注 <NInput v-model:value="purchaseForm.note" placeholder="可留空"
+        /></label>
       </div>
       <p class="form-tip">至少填一项数量或重量；两者都填则同时记录（双计量）。</p>
       <template #footer>
@@ -566,7 +626,9 @@ onMounted(load)
     <span class="empty__icon">🔍</span>
     <h3>找不到这个食材</h3>
     <p>可能已被删除。</p>
-    <button class="btn" style="margin-top: 12px" @click="router.push('/inventory')">返回列表</button>
+    <button class="btn" style="margin-top: 12px" @click="router.push('/inventory')">
+      返回列表
+    </button>
   </div>
 </template>
 
@@ -578,29 +640,69 @@ onMounted(load)
   gap: 12px;
   margin-bottom: 12px;
 }
-.detail-head__actions { display: flex; gap: 8px; }
-.btn--ghost { background: transparent; border-color: transparent; padding: 0 6px; }
-.btn--danger { color: var(--red); border-color: #f2c9c6; }
+.detail-head__actions {
+  display: flex;
+  gap: 8px;
+}
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  padding: 0 6px;
+}
+.btn--danger {
+  color: var(--red);
+  border-color: #f2c9c6;
+}
 
-.hero { display: flex; align-items: center; gap: 16px; }
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 .hero__thumb {
-  width: 76px; height: 76px;
+  width: 76px;
+  height: 76px;
   border-radius: 14px;
   background: var(--green-weak);
   color: var(--green);
-  display: grid; place-items: center;
-  font-size: 26px; font-weight: 300;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  font-weight: 300;
   overflow: hidden;
   cursor: pointer;
   flex: none;
   border: 1px dashed #cfe3d6;
 }
-.hero__thumb img { width: 100%; height: 100%; object-fit: cover; }
-.hero__text { min-width: 0; }
-.hero__title { display: flex; align-items: center; gap: 10px; }
-.hero__title h1 { font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
-.hero__tags { display: flex; align-items: center; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
-.hero__brand { font-size: 12px; color: var(--text-3); }
+.hero__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hero__text {
+  min-width: 0;
+}
+.hero__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hero__title h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.hero__tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+  flex-wrap: wrap;
+}
+.hero__brand {
+  font-size: 12px;
+  color: var(--text-3);
+}
 
 .attr {
   display: flex;
@@ -609,74 +711,242 @@ onMounted(load)
   gap: 16px;
   padding: 9px 0;
 }
-.attr + .attr { border-top: 1px dashed var(--line); }
-.attr__label { font-size: 13px; color: var(--text-2); flex: none; }
-.attr__value { font-size: 13.5px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
-.attr__hint { display: block; font-size: 11px; color: var(--text-3); font-weight: 400; margin-top: 2px; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.card__head h2 { margin: 0; }
-.muted-line { font-size: 13px; color: var(--text-3); padding: 6px 0; }
-.src { font-size: 10.5px; color: var(--text-3); margin-left: 4px; }
-.nutri-edit { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px dashed var(--line); }
-.nutri-edit__name { flex: 1; font-size: 13px; }
+.attr + .attr {
+  border-top: 1px dashed var(--line);
+}
+.attr__label {
+  font-size: 13px;
+  color: var(--text-2);
+  flex: none;
+}
+.attr__value {
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.attr__hint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 400;
+  margin-top: 2px;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.card__head h2 {
+  margin: 0;
+}
+.muted-line {
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 6px 0;
+}
+.src {
+  font-size: 10.5px;
+  color: var(--text-3);
+  margin-left: 4px;
+}
+.nutri-edit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px dashed var(--line);
+}
+.nutri-edit__name {
+  flex: 1;
+  font-size: 13px;
+}
 .nutri-edit input {
-  width: 90px; height: 32px; padding: 0 8px; border: 1px solid var(--line);
-  border-radius: 7px; font-size: 13px; text-align: right;
+  width: 90px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 13px;
+  text-align: right;
 }
 .nutri-edit select {
-  height: 32px; padding: 0 6px; border: 1px solid var(--line);
-  border-radius: 7px; font-size: 12.5px; background: #fff;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 12.5px;
+  background: #fff;
 }
 
-.img-box { display: flex; align-items: center; gap: 14px; }
-.img-box img { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
-.img-box__ops { display: flex; flex-direction: column; gap: 8px; }
-.img-empty { display: flex; }
+.img-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.img-box img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+.img-box__ops {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.img-empty {
+  display: flex;
+}
 
 /* 批次 */
 .batch-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 10px 0; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  flex-wrap: wrap;
 }
-.batch-row + .batch-row { border-top: 1px dashed var(--line); }
-.batch-row__main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.batch-row__no { font-size: 12px; color: var(--text-3); }
+.batch-row + .batch-row {
+  border-top: 1px dashed var(--line);
+}
+.batch-row__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.batch-row__no {
+  font-size: 12px;
+  color: var(--text-3);
+}
 .batch-row__nums {
-  display: flex; align-items: center; gap: 12px;
-  font-size: 12.5px; color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
-.batch-row__nums b { font-size: 13.5px; color: var(--text-1); }
-.batch-unit { font-size: 11.5px; color: var(--text-3); }
-.btn--tiny { padding: 2px 8px; font-size: 11.5px; border-radius: 6px; }
-.flow { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px dashed var(--line); flex-wrap: wrap; }
-.flow__delta { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.tx-tag { font-size: 11.5px; padding: 2px 9px; border-radius: 999px; font-weight: 500; }
-.tx-tag--purchase { background: var(--green-weak); color: var(--green); }
-.tx-tag--consume { background: #eef2fb; color: #3d5a9a; }
-.tx-tag--spoilage { background: #fbeae8; color: var(--red); }
-.tx-tag--adjustment { background: #fdf3e2; color: #b8860b; }
-.tx-tag--reverse { background: #f0efe9; color: var(--text-2); }
+.batch-row__nums b {
+  font-size: 13.5px;
+  color: var(--text-1);
+}
+.batch-unit {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.btn--tiny {
+  padding: 2px 8px;
+  font-size: 11.5px;
+  border-radius: 6px;
+}
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+.flow__delta {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tx-tag {
+  font-size: 11.5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.tx-tag--purchase {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.tx-tag--consume {
+  background: #eef2fb;
+  color: #3d5a9a;
+}
+.tx-tag--spoilage {
+  background: #fbeae8;
+  color: var(--red);
+}
+.tx-tag--adjustment {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.tx-tag--reverse {
+  background: #f0efe9;
+  color: var(--text-2);
+}
 
-.expiry { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
-.expiry--ok { background: var(--green-weak); color: var(--green); }
-.expiry--warn { background: #fdf3e2; color: #b8860b; }
-.expiry--danger { background: #fbeae8; color: var(--red); }
-.expiry--expired { background: var(--red); color: #fff; }
-.expiry--muted { background: var(--bg-weak, #f0efe9); color: var(--text-3); }
+.expiry {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.expiry--ok {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.expiry--warn {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.expiry--danger {
+  background: #fbeae8;
+  color: var(--red);
+}
+.expiry--expired {
+  background: var(--red);
+  color: #fff;
+}
+.expiry--muted {
+  background: var(--bg-weak, #f0efe9);
+  color: var(--text-3);
+}
 
 /* 入库表单 */
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
-.form-grid--full { grid-column: 1 / -1; }
-.form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-2); }
-.form-grid input {
-  height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--bg-card, #fff); font-size: 14px;
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
 }
-.form-tip { font-size: 11.5px; color: var(--text-3); margin: 10px 0 0; }
+.form-grid--full {
+  grid-column: 1 / -1;
+}
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.form-grid input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-card, #fff);
+  font-size: 14px;
+}
+.form-tip {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin: 10px 0 0;
+}
 
 @media (max-width: 720px) {
-  .form-grid { grid-template-columns: 1fr; }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

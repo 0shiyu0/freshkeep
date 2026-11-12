@@ -36,12 +36,15 @@ export interface PurchaseSuggestion {
 }
 
 export const alertsApi = {
-  scan: (days = 7) => apiPost<{ created: number; by_type: Record<string, number> }>(`/alerts/scan?days=${days}`, {}),
+  scan: (days = 7) =>
+    apiPost<{ created: number; by_type: Record<string, number> }>(`/alerts/scan?days=${days}`, {}),
   summary: () => apiGet<AlertSummary>('/alerts/summary'),
-  list: (params: Record<string, unknown> = {}) => apiGet<PageResult<NotificationRow>>('/alerts/notifications', params),
+  list: (params: Record<string, unknown> = {}) =>
+    apiGet<PageResult<NotificationRow>>('/alerts/notifications', params),
   read: (id: string) => apiPost<{ updated: number }>(`/alerts/notifications/${id}/read`),
   readAll: () => apiPost<{ updated: number }>('/alerts/notifications/read-all'),
-  suggestions: () => apiGet<{ items: PurchaseSuggestion[]; total: number; estimated_total: string | null }>(
-    '/purchase/suggestions'
-  ),
+  suggestions: () =>
+    apiGet<{ items: PurchaseSuggestion[]; total: number; estimated_total: string | null }>(
+      '/purchase/suggestions',
+    ),
 }

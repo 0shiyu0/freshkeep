@@ -221,7 +221,11 @@ function toggleNotify(v: boolean) {
 }
 
 function testNotify() {
-  const ok = browserNotifications.show('鲜度 · 测试通知', '临期提醒已就绪，这条通知不会改动库存。', 'freshkeep-test')
+  const ok = browserNotifications.show(
+    '鲜度 · 测试通知',
+    '临期提醒已就绪，这条通知不会改动库存。',
+    'freshkeep-test',
+  )
   if (ok) notifySuccess('测试通知已发送')
   else notifyError('尚未开启通知权限')
 }
@@ -242,7 +246,9 @@ onMounted(refreshNotify)
     <n-tab-pane name="device" tab="设备与密码">
       <section class="card">
         <h2>账号</h2>
-        <div class="kv"><span>用户名</span><em>{{ auth.me?.username }}</em></div>
+        <div class="kv">
+          <span>用户名</span><em>{{ auth.me?.username }}</em>
+        </div>
         <div class="kv">
           <span>密码</span>
           <em>{{ auth.hasPassword ? '已设置' : '未设置（仅配对码可用）' }}</em>
@@ -252,13 +258,28 @@ onMounted(refreshNotify)
       <section class="card">
         <h2>{{ auth.hasPassword ? '修改密码' : '设置密码' }}</h2>
         <div v-if="auth.hasPassword" class="field">
-          <NInput v-model:value="pwd.old" type="password" show-password-on="click" placeholder="当前密码" />
+          <NInput
+            v-model:value="pwd.old"
+            type="password"
+            show-password-on="click"
+            placeholder="当前密码"
+          />
         </div>
         <div class="field">
-          <NInput v-model:value="pwd.next" type="password" show-password-on="click" placeholder="新密码（≥8 位）" />
+          <NInput
+            v-model:value="pwd.next"
+            type="password"
+            show-password-on="click"
+            placeholder="新密码（≥8 位）"
+          />
         </div>
         <div class="field">
-          <NInput v-model:value="pwd.confirm" type="password" show-password-on="click" placeholder="确认新密码" />
+          <NInput
+            v-model:value="pwd.confirm"
+            type="password"
+            show-password-on="click"
+            placeholder="确认新密码"
+          />
         </div>
         <button class="btn btn--primary" :disabled="busy" @click="changePassword">
           {{ auth.hasPassword ? '保存新密码' : '设置密码' }}
@@ -293,7 +314,9 @@ onMounted(refreshNotify)
           <NInput v-model:value="newCat.name" placeholder="分类名" maxlength="50" />
           <NSelect
             v-model:value="newCat.parent_id"
-            :options="categories.filter((c) => !c.parent_id).map((c) => ({ label: c.name, value: c.id }))"
+            :options="
+              categories.filter((c) => !c.parent_id).map((c) => ({ label: c.name, value: c.id }))
+            "
             placeholder="父级（可选）"
             clearable
             style="width: 160px"
@@ -307,7 +330,9 @@ onMounted(refreshNotify)
         <h2>现有分类（{{ categories.length }}）</h2>
         <div v-for="c in categories.filter((x) => !x.parent_id)" :key="c.id">
           <div class="kv">
-            <span><strong>{{ c.name }}</strong></span>
+            <span
+              ><strong>{{ c.name }}</strong></span
+            >
             <em>{{ c.ingredient_count }} 个食材</em>
           </div>
           <div
@@ -330,7 +355,12 @@ onMounted(refreshNotify)
         <h2>新增单位</h2>
         <div class="inline-form">
           <NInput v-model:value="newUnit.name" placeholder="名称，如 千克" maxlength="20" />
-          <NInput v-model:value="newUnit.symbol" placeholder="符号，如 kg" maxlength="10" style="width: 110px" />
+          <NInput
+            v-model:value="newUnit.symbol"
+            placeholder="符号，如 kg"
+            maxlength="10"
+            style="width: 110px"
+          />
           <NSelect
             v-model:value="newUnit.dimension"
             :options="[
@@ -402,7 +432,9 @@ onMounted(refreshNotify)
     <div v-for="b in backups" :key="b.name" class="backup">
       <div class="backup__main">
         <span class="mono">{{ b.name }}</span>
-        <span class="muted">{{ fmtSize(b.size_bytes) }} · {{ b.created_at?.slice(0, 19).replace('T', ' ') }}</span>
+        <span class="muted"
+          >{{ fmtSize(b.size_bytes) }} · {{ b.created_at?.slice(0, 19).replace('T', ' ') }}</span
+        >
       </div>
       <div class="head-actions">
         <button class="btn btn--tiny" @click="verifyBackup(b.name)">校验</button>
@@ -411,9 +443,12 @@ onMounted(refreshNotify)
     </div>
 
     <div v-if="tasks" class="tasks">
-      <h3>定时任务 <span class="tag" :class="tasks.running ? '' : 'tag--muted'">
-        {{ tasks.running ? '运行中' : tasks.enabled ? '已启用（未运行）' : '未启用' }}
-      </span></h3>
+      <h3>
+        定时任务
+        <span class="tag" :class="tasks.running ? '' : 'tag--muted'">
+          {{ tasks.running ? '运行中' : tasks.enabled ? '已启用（未运行）' : '未启用' }}
+        </span>
+      </h3>
       <div v-for="j in tasks.jobs" :key="j.id" class="task">
         <span class="task__name">{{ j.desc }}</span>
         <span class="muted">{{ j.cron }}</span>
@@ -438,7 +473,11 @@ onMounted(refreshNotify)
     <div class="notify-actions">
       <button class="btn" @click="askNotify">申请通知权限</button>
       <label class="notify-toggle">
-        <input type="checkbox" :checked="notifyOn" @change="toggleNotify(($event.target as HTMLInputElement).checked)" />
+        <input
+          type="checkbox"
+          :checked="notifyOn"
+          @change="toggleNotify(($event.target as HTMLInputElement).checked)"
+        />
         扫描到临期提醒时发送浏览器通知
       </label>
       <button class="btn btn--ghost" :disabled="!notifyOn" @click="testNotify">发送测试通知</button>
@@ -447,25 +486,110 @@ onMounted(refreshNotify)
 </template>
 
 <style scoped>
-.field { margin-bottom: 10px; }
-.inline-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.hint { font-size: 12px; color: var(--text-3); margin-top: 10px; line-height: 1.6; }
-.kv--child { padding-left: 18px; }
-.kv--child span { color: var(--text-2); }
-.btn--mini { height: 24px; padding: 0 8px; font-size: 11.5px; margin-left: 8px; }
+.field {
+  margin-bottom: 10px;
+}
+.inline-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.hint {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 10px;
+  line-height: 1.6;
+}
+.kv--child {
+  padding-left: 18px;
+}
+.kv--child span {
+  color: var(--text-2);
+}
+.btn--mini {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  margin-left: 8px;
+}
 
-.card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.card__head h2 { margin: 0; }
-.head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.backup { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px dashed var(--line); flex-wrap: wrap; }
-.backup__main { display: flex; flex-direction: column; gap: 2px; min-width: 220px; }
-.mono { font-family: ui-monospace, monospace; font-size: 12.5px; }
-.muted { color: var(--text-3); font-size: 11.5px; }
-.btn--tiny { padding: 3px 9px; font-size: 11.5px; border-radius: 6px; }
-.tasks { margin-top: 16px; }
-.tasks h3 { font-size: 13px; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
-.task { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px dashed var(--line); font-size: 12.5px; }
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.card__head h2 {
+  margin: 0;
+}
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.backup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+.backup__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+}
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+}
+.muted {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.btn--tiny {
+  padding: 3px 9px;
+  font-size: 11.5px;
+  border-radius: 6px;
+}
+.tasks {
+  margin-top: 16px;
+}
+.tasks h3 {
+  font-size: 13px;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px dashed var(--line);
+  font-size: 12.5px;
+}
 
-.notify-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
-.notify-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-2); }
+.notify-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.notify-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
 </style>

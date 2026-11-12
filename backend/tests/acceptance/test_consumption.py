@@ -75,18 +75,16 @@ def _add_batch(client, ing_id: str, weight: str, cost: str, expiry: str | None =
 
 
 def _one(sql: str):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(sql)).first()
 
 
 def _rows(sql: str):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(sql)).all()
@@ -239,7 +237,6 @@ def test_5_idempotency(seeded, ingredient_with_nutrition):
 
 def test_6_concurrent_no_oversell(seeded, ingredient_with_nutrition):
     """两个线程同时消耗同一批次 400g（总量 500g）→ 一个成功一个 422，余额不为负。"""
-    import httpx
 
     from app.main import app
     from fastapi.testclient import TestClient
@@ -258,7 +255,10 @@ def test_6_concurrent_no_oversell(seeded, ingredient_with_nutrition):
 
     t1 = threading.Thread(target=worker)
     t2 = threading.Thread(target=worker)
-    t1.start(); t2.start(); t1.join(timeout=30); t2.join(timeout=30)
+    t1.start()
+    t2.start()
+    t1.join(timeout=30)
+    t2.join(timeout=30)
 
     assert sorted(results) == [201, 422], f"并发结果异常：{results}"
     left = _one(f"select remaining_weight from batches where ingredient_id='{iid}'")
@@ -303,7 +303,9 @@ def test_8_unit_mismatch(seeded, ingredient_with_nutrition):
     # 造一个没有换算关系的食材
     with SessionLocal() as db:
         ing = Ingredient(name="无换算食材")
-        db.add(ing); db.commit(); db.refresh(ing)
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
         plain_id = str(ing.id)
     _add_batch(seeded, plain_id, "0", "10.00", quantity="2")
 

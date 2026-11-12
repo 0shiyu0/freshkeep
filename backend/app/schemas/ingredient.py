@@ -10,9 +10,8 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-
 from app.schemas.common import Dec3, Dec4, ORMBase
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class BarcodeIn(BaseModel):

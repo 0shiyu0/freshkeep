@@ -4,21 +4,46 @@ import { useAuthStore } from '@/stores/auth'
 
 // 路由与 docs/ARCHITECTURE.md §6 的页面结构对应
 const routes: RouteRecordRaw[] = [
-  { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { public: true },
+  },
   { path: '/', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
   { path: '/inventory', name: 'inventory', component: () => import('@/views/InventoryView.vue') },
   { path: '/consume', name: 'consume', component: () => import('@/views/ConsumeView.vue') },
   { path: '/purchase', name: 'purchase', component: () => import('@/views/PurchaseView.vue') },
   { path: '/scan', name: 'scan', component: () => import('@/views/ScanView.vue') },
   { path: '/recipes', name: 'recipes', component: () => import('@/views/RecipesView.vue') },
-  { path: '/recipes/:id', name: 'recipe-detail', component: () => import('@/views/RecipeDetailView.vue') },
-  { path: '/shopping-lists', name: 'shopping-lists', component: () => import('@/views/ShoppingListsView.vue') },
+  {
+    path: '/recipes/:id',
+    name: 'recipe-detail',
+    component: () => import('@/views/RecipeDetailView.vue'),
+  },
+  {
+    path: '/shopping-lists',
+    name: 'shopping-lists',
+    component: () => import('@/views/ShoppingListsView.vue'),
+  },
   { path: '/alerts', name: 'alerts', component: () => import('@/views/AlertsView.vue') },
   { path: '/stocktake', name: 'stocktake', component: () => import('@/views/StocktakeView.vue') },
   { path: '/batches', name: 'batches', component: () => import('@/views/BatchesView.vue') },
-  { path: '/batches/:id', name: 'batch-detail', component: () => import('@/views/BatchDetailView.vue') },
-  { path: '/ingredients/new', name: 'ingredient-new', component: () => import('@/views/IngredientFormView.vue') },
-  { path: '/ingredients/:id', name: 'ingredient-detail', component: () => import('@/views/IngredientDetailView.vue') },
+  {
+    path: '/batches/:id',
+    name: 'batch-detail',
+    component: () => import('@/views/BatchDetailView.vue'),
+  },
+  {
+    path: '/ingredients/new',
+    name: 'ingredient-new',
+    component: () => import('@/views/IngredientFormView.vue'),
+  },
+  {
+    path: '/ingredients/:id',
+    name: 'ingredient-detail',
+    component: () => import('@/views/IngredientDetailView.vue'),
+  },
   {
     path: '/ingredients/:id/edit',
     name: 'ingredient-edit',

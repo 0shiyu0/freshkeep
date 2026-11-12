@@ -42,7 +42,8 @@ export const catalogApi = {
     apiPost<Category>('/categories', data),
   updateCategory: (id: string, data: Record<string, unknown>) =>
     request<Category>({ url: `/categories/${id}`, method: 'PUT', data }),
-  deleteCategory: (id: string) => request<{ deleted: boolean }>({ url: `/categories/${id}`, method: 'DELETE' }),
+  deleteCategory: (id: string) =>
+    request<{ deleted: boolean }>({ url: `/categories/${id}`, method: 'DELETE' }),
   sortCategories: (items: Array<{ id: string; sort_order: number }>) =>
     request<{ updated: number }>({ url: '/categories/sort', method: 'PUT', data: { items } }),
 
@@ -52,7 +53,8 @@ export const catalogApi = {
     apiPost<Unit>('/units', data),
   updateUnit: (id: string, data: Record<string, unknown>) =>
     request<Unit>({ url: `/units/${id}`, method: 'PUT', data }),
-  deleteUnit: (id: string) => request<{ deleted: boolean }>({ url: `/units/${id}`, method: 'DELETE' }),
+  deleteUnit: (id: string) =>
+    request<{ deleted: boolean }>({ url: `/units/${id}`, method: 'DELETE' }),
 
   locations: () => apiGet<{ items: StorageLocation[]; total: number }>('/storage-locations'),
   createLocation: (data: { name: string; description?: string; sort_order?: number }) =>

@@ -1,0 +1,19 @@
+# 依赖与构建产物
+node_modules
+dist
+.vite
+coverage
+
+# 原生工程（由 Capacitor 生成，不参与格式化）
+android
+ios
+
+# 静态资源与锁文件
+package-lock.json
+*.png
+*.jpg
+*.ico
+*.svg
+
+# 生成的类型声明
+*.d.ts

@@ -3,7 +3,13 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NInputNumber, NSelect, NSwitch, NInput as NNInput } from 'naive-ui'
 
-import { catalogApi, type Category, type NutritionDefinition, type StorageLocation, type Unit } from '@/api/catalog'
+import {
+  catalogApi,
+  type Category,
+  type NutritionDefinition,
+  type StorageLocation,
+  type Unit,
+} from '@/api/catalog'
 import { ingredientApi } from '@/api/ingredients'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
@@ -38,7 +44,9 @@ const form = reactive({
 
 const quantityUnits = computed(() => units.value.filter((u) => u.dimension === 'quantity'))
 const weightUnits = computed(() => units.value.filter((u) => u.dimension === 'weight'))
-const hasConversion = computed(() => form.default_unit_weight !== null && form.default_unit_weight > 0)
+const hasConversion = computed(
+  () => form.default_unit_weight !== null && form.default_unit_weight > 0,
+)
 
 const catOptions = computed(() => {
   const parents = categories.value.filter((c) => !c.parent_id)
@@ -51,7 +59,11 @@ const catOptions = computed(() => {
   }
   return opts
 })
-const unitOpt = (list: Unit[]) => list.map((u) => ({ label: `${u.name}${u.symbol && u.symbol !== u.name ? ` (${u.symbol})` : ''}`, value: u.id }))
+const unitOpt = (list: Unit[]) =>
+  list.map((u) => ({
+    label: `${u.name}${u.symbol && u.symbol !== u.name ? ` (${u.symbol})` : ''}`,
+    value: u.id,
+  }))
 const locOptions = computed(() => locations.value.map((l) => ({ label: l.name, value: l.id })))
 
 /** 换算提示：明确告诉用户"能算"还是"不能算"，避免误以为系统会猜 */
@@ -97,7 +109,8 @@ async function load() {
       })
       for (const n of d.nutrition) form.nutrition[n.code] = Number(n.value)
       const detail = await ingredientApi.detail(id.value)
-      form.default_storage_location_id = locations.value.find((l) => l.name === detail.location_name)?.id ?? null
+      form.default_storage_location_id =
+        locations.value.find((l) => l.name === detail.location_name)?.id ?? null
     }
   } finally {
     loading.value = false
@@ -109,7 +122,7 @@ watch(
   () => form.default_quantity_unit_id,
   (v) => {
     if (!v) form.default_unit_weight = null
-  }
+  },
 )
 
 async function submit() {
@@ -130,10 +143,12 @@ async function submit() {
       specification: form.specification,
       default_quantity_unit_id: form.default_quantity_unit_id,
       default_weight_unit_id: form.default_weight_unit_id,
-      default_unit_weight: form.default_unit_weight === null ? null : String(form.default_unit_weight),
+      default_unit_weight:
+        form.default_unit_weight === null ? null : String(form.default_unit_weight),
       minimum_quantity: String(form.minimum_quantity ?? 0),
       minimum_weight: String(form.minimum_weight ?? 0),
-      nutrition_basis_amount: form.nutrition_basis_amount === null ? null : String(form.nutrition_basis_amount),
+      nutrition_basis_amount:
+        form.nutrition_basis_amount === null ? null : String(form.nutrition_basis_amount),
       nutrition_basis_unit_id: form.nutrition_basis_unit_id,
       default_storage_location_id: form.default_storage_location_id,
       note: form.note,
@@ -191,7 +206,12 @@ onMounted(load)
       </div>
       <div class="field">
         <label>分类</label>
-        <NSelect v-model:value="form.category_id" :options="catOptions" placeholder="选择分类" clearable />
+        <NSelect
+          v-model:value="form.category_id"
+          :options="catOptions"
+          placeholder="选择分类"
+          clearable
+        />
       </div>
       <div class="field-row">
         <div class="field">
@@ -210,11 +230,21 @@ onMounted(load)
       <div class="field-row">
         <div class="field">
           <label>默认数量单位</label>
-          <NSelect v-model:value="form.default_quantity_unit_id" :options="unitOpt(quantityUnits)" placeholder="如：包" clearable />
+          <NSelect
+            v-model:value="form.default_quantity_unit_id"
+            :options="unitOpt(quantityUnits)"
+            placeholder="如：包"
+            clearable
+          />
         </div>
         <div class="field">
           <label>默认重量单位</label>
-          <NSelect v-model:value="form.default_weight_unit_id" :options="unitOpt(weightUnits)" placeholder="如：克" clearable />
+          <NSelect
+            v-model:value="form.default_weight_unit_id"
+            :options="unitOpt(weightUnits)"
+            placeholder="如：克"
+            clearable
+          />
         </div>
       </div>
 
@@ -231,7 +261,9 @@ onMounted(load)
           style="width: 100%"
           :disabled="!form.default_quantity_unit_id || !form.default_weight_unit_id"
         />
-        <p class="field__note" :class="{ 'field__note--warn': !hasConversion }">{{ conversionHint }}</p>
+        <p class="field__note" :class="{ 'field__note--warn': !hasConversion }">
+          {{ conversionHint }}
+        </p>
       </div>
     </section>
 
@@ -240,16 +272,31 @@ onMounted(load)
       <div class="field-row">
         <div class="field">
           <label>最低库存（数量）</label>
-          <NInputNumber v-model:value="form.minimum_quantity" :min="0" :precision="3" style="width: 100%" />
+          <NInputNumber
+            v-model:value="form.minimum_quantity"
+            :min="0"
+            :precision="3"
+            style="width: 100%"
+          />
         </div>
         <div class="field">
           <label>最低库存（重量）</label>
-          <NInputNumber v-model:value="form.minimum_weight" :min="0" :precision="3" style="width: 100%" />
+          <NInputNumber
+            v-model:value="form.minimum_weight"
+            :min="0"
+            :precision="3"
+            style="width: 100%"
+          />
         </div>
       </div>
       <div class="field">
         <label>储存位置</label>
-        <NSelect v-model:value="form.default_storage_location_id" :options="locOptions" placeholder="如：冷冻室" clearable />
+        <NSelect
+          v-model:value="form.default_storage_location_id"
+          :options="locOptions"
+          placeholder="如：冷冻室"
+          clearable
+        />
       </div>
     </section>
 
@@ -258,11 +305,22 @@ onMounted(load)
       <div class="field-row">
         <div class="field">
           <label>基准量</label>
-          <NInputNumber v-model:value="form.nutrition_basis_amount" :min="0" :precision="3" placeholder="如：100" style="width: 100%" />
+          <NInputNumber
+            v-model:value="form.nutrition_basis_amount"
+            :min="0"
+            :precision="3"
+            placeholder="如：100"
+            style="width: 100%"
+          />
         </div>
         <div class="field">
           <label>基准单位</label>
-          <NSelect v-model:value="form.nutrition_basis_unit_id" :options="unitOpt(units)" placeholder="如：克" clearable />
+          <NSelect
+            v-model:value="form.nutrition_basis_unit_id"
+            :options="unitOpt(units)"
+            placeholder="如：克"
+            clearable
+          />
         </div>
       </div>
 
@@ -280,7 +338,14 @@ onMounted(load)
 
     <section class="card">
       <h2>备注</h2>
-      <NNInput v-model:value="form.note" type="textarea" :rows="2" maxlength="500" show-count placeholder="可选" />
+      <NNInput
+        v-model:value="form.note"
+        type="textarea"
+        :rows="2"
+        maxlength="500"
+        show-count
+        placeholder="可选"
+      />
     </section>
 
     <div class="save-bar">
@@ -292,22 +357,53 @@ onMounted(load)
 </template>
 
 <style scoped>
-.field { margin-bottom: 12px; }
-.field:last-child { margin-bottom: 0; }
+.field {
+  margin-bottom: 12px;
+}
+.field:last-child {
+  margin-bottom: 0;
+}
 .field > label {
   display: block;
   font-size: 12.5px;
   color: var(--text-2);
   margin-bottom: 6px;
 }
-.field__hint { color: var(--text-3); font-size: 11.5px; margin-left: 4px; }
-.field__note { font-size: 11.5px; margin-top: 6px; color: var(--text-3); }
-.field__note--warn { color: var(--amber); }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.field--inline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.field--inline > label { margin-bottom: 0; }
-.save-bar { display: flex; justify-content: flex-end; margin-top: 14px; }
+.field__hint {
+  color: var(--text-3);
+  font-size: 11.5px;
+  margin-left: 4px;
+}
+.field__note {
+  font-size: 11.5px;
+  margin-top: 6px;
+  color: var(--text-3);
+}
+.field__note--warn {
+  color: var(--amber);
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.field--inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.field--inline > label {
+  margin-bottom: 0;
+}
+.save-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
 @media (max-width: 640px) {
-  .field-row { grid-template-columns: 1fr; }
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

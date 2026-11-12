@@ -121,21 +121,34 @@ onMounted(load)
 
   <section class="card">
     <div class="form-row">
-      <label class="grow">食材
-        <NSelect v-model:value="picked" :options="options" filterable placeholder="搜索食材名称 / 拼音"
-                 :loading="loading" />
+      <label class="grow"
+        >食材
+        <NSelect
+          v-model:value="picked"
+          :options="options"
+          filterable
+          placeholder="搜索食材名称 / 拼音"
+          :loading="loading"
+        />
       </label>
     </div>
 
     <div class="form-row">
-      <label>数量（{{ selected?.quantity_unit?.name || '数量' }}）
-        <input v-model="form.quantity" inputmode="decimal" placeholder="如 2，可留空" /></label>
-      <label>重量（{{ selected?.weight_unit?.symbol || 'g' }}）
-        <input v-model="form.weight" inputmode="decimal" placeholder="如 500" /></label>
-      <label>采购总价（元）
-        <input v-model="form.purchase_cost" inputmode="decimal" placeholder="如 18.00" /></label>
-      <label>单位成本（元/克，自动算）
-        <input :value="unitCostPreview" readonly class="readonly" /></label>
+      <label
+        >数量（{{ selected?.quantity_unit?.name || '数量' }}）
+        <input v-model="form.quantity" inputmode="decimal" placeholder="如 2，可留空"
+      /></label>
+      <label
+        >重量（{{ selected?.weight_unit?.symbol || 'g' }}）
+        <input v-model="form.weight" inputmode="decimal" placeholder="如 500"
+      /></label>
+      <label
+        >采购总价（元）
+        <input v-model="form.purchase_cost" inputmode="decimal" placeholder="如 18.00"
+      /></label>
+      <label
+        >单位成本（元/克，自动算） <input :value="unitCostPreview" readonly class="readonly"
+      /></label>
     </div>
 
     <div class="form-row">
@@ -146,11 +159,17 @@ onMounted(load)
     </div>
 
     <div class="form-row">
-      <label class="grow">储存位置
-        <NSelect v-model:value="form.storage_location_id" :options="locationOptions"
-                 placeholder="如 冷冻室 / 冷藏室 / 常温" clearable /></label>
-      <label class="grow">备注
-        <input v-model="form.note" placeholder="可留空，如「超市促销」" /></label>
+      <label class="grow"
+        >储存位置
+        <NSelect
+          v-model:value="form.storage_location_id"
+          :options="locationOptions"
+          placeholder="如 冷冻室 / 冷藏室 / 常温"
+          clearable
+      /></label>
+      <label class="grow"
+        >备注 <input v-model="form.note" placeholder="可留空，如「超市促销」"
+      /></label>
     </div>
 
     <p class="hint">
@@ -160,19 +179,32 @@ onMounted(load)
     <div class="submit-line">
       <span v-if="selected" class="muted">
         {{ selected.name }} · {{ selected.category_path }}
-        <template v-if="selected.unit_weight_display"> · {{ selected.unit_weight_display }}</template>
+        <template v-if="selected.unit_weight_display">
+          · {{ selected.unit_weight_display }}</template
+        >
       </span>
-      <NButton type="primary" :disabled="!canSubmit" :loading="submitting" @click="submit">确认入库</NButton>
+      <NButton type="primary" :disabled="!canSubmit" :loading="submitting" @click="submit"
+        >确认入库</NButton
+      >
     </div>
   </section>
 
   <section v-if="result" class="card">
     <h2>入库成功 · {{ result.batch.batch_no }}</h2>
     <div class="result-grid">
-      <div><span>初始 / 剩余重量</span><b>{{ result.batch.initial_weight }} / {{ result.batch.remaining_weight }} g</b></div>
-      <div><span>采购成本</span><b>¥{{ result.batch.purchase_cost }}</b></div>
-      <div><span>单位成本</span><b>{{ result.batch.unit_cost ?? '—' }} 元/g</b></div>
-      <div><span>流水号</span><b class="mono">{{ result.transaction.transaction_no }}</b></div>
+      <div>
+        <span>初始 / 剩余重量</span
+        ><b>{{ result.batch.initial_weight }} / {{ result.batch.remaining_weight }} g</b>
+      </div>
+      <div>
+        <span>采购成本</span><b>¥{{ result.batch.purchase_cost }}</b>
+      </div>
+      <div>
+        <span>单位成本</span><b>{{ result.batch.unit_cost ?? '—' }} 元/g</b>
+      </div>
+      <div>
+        <span>流水号</span><b class="mono">{{ result.transaction.transaction_no }}</b>
+      </div>
     </div>
     <div class="head-actions">
       <button class="btn" @click="router.push(`/batches/${result.batch.id}`)">查看批次详情</button>
@@ -183,29 +215,96 @@ onMounted(load)
   <section v-else-if="!loading && ingredients.length === 0" class="card empty">
     <h3>还没有食材档案</h3>
     <p>先建一个食材，再录入采购。</p>
-    <button class="btn btn--primary" style="margin-top: 10px" @click="router.push('/ingredients/new')">
+    <button
+      class="btn btn--primary"
+      style="margin-top: 10px"
+      @click="router.push('/ingredients/new')"
+    >
       + 新增食材
     </button>
   </section>
 </template>
 
 <style scoped>
-.form-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
-.form-row label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-2); min-width: 160px; }
-.form-row label.grow { flex: 1; min-width: 220px; }
-.form-row input {
-  height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--bg-card, #fff); font-size: 14px;
+.form-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
-.form-row input.readonly { background: #f6f5f1; color: var(--text-2); }
-.hint { font-size: 11.5px; color: var(--text-3); margin: 4px 0 14px; }
-.submit-line { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-.muted { color: var(--text-3); font-size: 12.5px; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-.result-grid { display: flex; gap: 26px; margin: 12px 0 16px; flex-wrap: wrap; }
-.result-grid div { display: flex; flex-direction: column; gap: 4px; }
-.result-grid span { font-size: 12px; color: var(--text-3); }
-.result-grid b { font-size: 16px; font-variant-numeric: tabular-nums; }
-.empty { text-align: center; padding: 26px 0; }
-@media (max-width: 720px) { .form-row label { min-width: 100%; } .submit-line { justify-content: flex-start; } }
+.form-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  min-width: 160px;
+}
+.form-row label.grow {
+  flex: 1;
+  min-width: 220px;
+}
+.form-row input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-card, #fff);
+  font-size: 14px;
+}
+.form-row input.readonly {
+  background: #f6f5f1;
+  color: var(--text-2);
+}
+.hint {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin: 4px 0 14px;
+}
+.submit-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.muted {
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.result-grid {
+  display: flex;
+  gap: 26px;
+  margin: 12px 0 16px;
+  flex-wrap: wrap;
+}
+.result-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.result-grid span {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.result-grid b {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.empty {
+  text-align: center;
+  padding: 26px 0;
+}
+@media (max-width: 720px) {
+  .form-row label {
+    min-width: 100%;
+  }
+  .submit-line {
+    justify-content: flex-start;
+  }
+}
 </style>

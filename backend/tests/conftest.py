@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import os
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -18,6 +17,19 @@ import pytest
 TEST_DB = os.environ.get("TEST_DB_NAME", "freshkeep_test")
 # conftest 位于 backend/tests/，仓库根是 parents[2]
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _alembic_head() -> str:
+    """读迁移目录的真实 head，避免测试库版本号与生产漂移（曾硬编码 0001_init）。"""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    cfg = Config(str(ROOT / "backend" / "alembic.ini"))
+    cfg.set_main_option("script_location", str(ROOT / "backend" / "migrations"))
+    head = ScriptDirectory.from_config(cfg).get_current_head()
+    if not head:
+        raise RuntimeError("无法解析 alembic head")
+    return head
 
 
 def _base_url() -> str:
@@ -36,7 +48,7 @@ def _can_connect() -> bool:
         with eng.connect() as c:
             c.execute(text("SELECT 1"))
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -71,13 +83,15 @@ def _prepare_db():
     # 001 自带 BEGIN/COMMIT，整份执行即可
     with eng.connect() as c:
         c.exec_driver_sql(ddl)
-    # alembic 基线：让 /system/db 能读到迁移版本
+    # alembic 基线：让 /system/db 读到**与生产一致**的迁移版本（不再硬编码 0001）
     with eng.begin() as c:
         c.execute(
             text("CREATE TABLE IF NOT EXISTS alembic_version (version_num varchar(32) NOT NULL PRIMARY KEY)")
         )
         c.execute(text("DELETE FROM alembic_version"))
-        c.execute(text("INSERT INTO alembic_version VALUES ('0001_init')"))
+        c.execute(
+            text("INSERT INTO alembic_version VALUES (:rev)"), {"rev": _alembic_head()}
+        )
     eng.dispose()
 
     yield True
@@ -111,9 +125,8 @@ def client(app_module):
 @pytest.fixture()
 def clean_db(db_ready):
     """每个用例前清空业务数据；字典（单位/分类/位置/营养）与 owner 保留。"""
-    from sqlalchemy import text
-
     from app.db.session import engine
+    from sqlalchemy import text
 
     with engine.begin() as c:
         c.execute(
@@ -133,9 +146,8 @@ def clean_db(db_ready):
 @pytest.fixture()
 def auth_client(client, clean_db):
     """已登录的客户端：用配对码换 Cookie（Web 通道）。"""
-    from app.services.auth import get_owner, issue_pair_code
-
     from app.db.session import SessionLocal
+    from app.services.auth import get_owner, issue_pair_code
 
     with SessionLocal() as db:
         get_owner(db)

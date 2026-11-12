@@ -84,9 +84,8 @@ def test_nutrition_definitions_cover_six_fields(seeded):
 
 def test_nutrition_profile_is_versioned(seeded, chicken):
     """改档案不覆盖旧行：旧行 is_current=false，新行 version+1。"""
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     r = seeded.put(f"/api/v1/ingredients/{chicken['id']}/nutrition", json={
         "items": [{"code": "protein", "value": "30", "basis_amount": "100",
@@ -108,9 +107,8 @@ def test_nutrition_profile_is_versioned(seeded, chicken):
 
 def test_nutrition_profile_keeps_source(seeded, chicken):
     """7.9：来源可标记 manual / packaging_label / database，并落到档案行与快照。"""
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     d = seeded.get(f"/api/v1/ingredients/{chicken['id']}").json()["data"]
     fat = next(n for n in d["nutrition"] if n["code"] == "fat")
@@ -169,9 +167,8 @@ def test_acceptance_history_survives_profile_change(seeded, chicken):
     })
 
     # 历史快照行不变
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         old = db.execute(text(

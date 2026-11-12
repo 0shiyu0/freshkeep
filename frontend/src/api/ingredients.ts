@@ -67,9 +67,13 @@ export interface PageResult<T> {
 }
 
 export const ingredientApi = {
-  list: (params: ListQuery = {}) => apiGet<PageResult<IngredientListItem>>('/ingredients', params as Record<string, unknown>),
+  list: (params: ListQuery = {}) =>
+    apiGet<PageResult<IngredientListItem>>('/ingredients', params as Record<string, unknown>),
   suggest: (q: string, limit = 8) =>
-    apiGet<{ items: Array<{ id: string; name: string; pinyin: string }> }>('/ingredients/search', { q, limit }),
+    apiGet<{ items: Array<{ id: string; name: string; pinyin: string }> }>('/ingredients/search', {
+      q,
+      limit,
+    }),
   detail: (id: string) => apiGet<IngredientDetail>(`/ingredients/${id}`),
   create: (data: Record<string, unknown>) => apiPost<{ id: string }>('/ingredients', data),
   update: (id: string, data: Record<string, unknown>) =>
@@ -79,11 +83,11 @@ export const ingredientApi = {
   convert: (id: string, quantity: string) =>
     apiGet<{ quantity: string; weight: string; unit_weight: string; basis: string }>(
       `/ingredients/${id}/conversion`,
-      { quantity }
+      { quantity },
     ),
   barcodeLookup: (code: string) =>
     apiGet<{ barcode: string; ingredient: { id: string; name: string; is_active: boolean } }>(
-      `/barcodes/${encodeURIComponent(code)}`
+      `/barcodes/${encodeURIComponent(code)}`,
     ),
   bindBarcode: (ingredientId: string, barcode: string, barcodeType = 'ean13') =>
     apiPost<{ id: string; barcode: string }>('/barcodes', {
@@ -94,8 +98,19 @@ export const ingredientApi = {
   /** 整体替换营养档案（版本化，历史快照不受影响） */
   updateNutrition: (
     id: string,
-    items: Array<{ code: string; value: string; basis_amount: string; basis_unit_id: string; source: string }>
-  ) => request<{ updated: number }>({ url: `/ingredients/${id}/nutrition`, method: 'PUT', data: { items } }),
+    items: Array<{
+      code: string
+      value: string
+      basis_amount: string
+      basis_unit_id: string
+      source: string
+    }>,
+  ) =>
+    request<{ updated: number }>({
+      url: `/ingredients/${id}/nutrition`,
+      method: 'PUT',
+      data: { items },
+    }),
   unbindBarcode: (barcodeId: string) =>
     request<{ deleted: boolean }>({ url: `/barcodes/${barcodeId}`, method: 'DELETE' }),
 }

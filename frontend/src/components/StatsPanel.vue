@@ -42,7 +42,7 @@ const chart = computed(() => {
   const max = Math.max(
     1,
     ...s.map((p) => Number(p.purchase_amount)),
-    ...s.map((p) => Number(p.consumption_amount))
+    ...s.map((p) => Number(p.consumption_amount)),
   )
   const stepX = s.length > 1 ? 100 / (s.length - 1) : 0
   const y = (v: number) => 40 - (v / max) * 36
@@ -71,19 +71,23 @@ function barWidth(value: string, max: string): string {
   return `${Math.max(2, Math.round((v / m) * 100))}%`
 }
 const maxCategory = computed(() =>
-  data.value?.category_breakdown.length
-    ? data.value.category_breakdown[0].amount
-    : '0'
+  data.value?.category_breakdown.length ? data.value.category_breakdown[0].amount : '0',
 )
 const maxTop = computed(() =>
-  data.value?.top_consumed.length ? data.value.top_consumed[0].weight : '0'
+  data.value?.top_consumed.length ? data.value.top_consumed[0].weight : '0',
 )
 
 function fmtTime(s: string) {
   const d = new Date(s)
   return Number.isNaN(d.getTime())
     ? s
-    : d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+    : d.toLocaleString('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
 }
 
 watch([granularity, fromDate, toDate], load)
@@ -95,8 +99,13 @@ onMounted(load)
     <div class="card__head stats-head">
       <h2>统计</h2>
       <div class="seg">
-        <button v-for="g in grains" :key="g.key" class="seg__btn"
-                :class="{ 'seg__btn--on': granularity === g.key }" @click="granularity = g.key">
+        <button
+          v-for="g in grains"
+          :key="g.key"
+          class="seg__btn"
+          :class="{ 'seg__btn--on': granularity === g.key }"
+          @click="granularity = g.key"
+        >
           {{ g.label }}
         </button>
       </div>
@@ -134,9 +143,15 @@ onMounted(load)
         </div>
         <div class="stat">
           <span>消耗 / 采购</span>
-          <strong>{{ Number(data.purchase.total_amount) > 0
-            ? ratioText(String(Number(data.consumption.total_amount) / Number(data.purchase.total_amount)))
-            : '—' }}</strong>
+          <strong>{{
+            Number(data.purchase.total_amount) > 0
+              ? ratioText(
+                  String(
+                    Number(data.consumption.total_amount) / Number(data.purchase.total_amount),
+                  ),
+                )
+              : '—'
+          }}</strong>
           <small>期间无采购时不计算</small>
         </div>
       </div>
@@ -148,7 +163,12 @@ onMounted(load)
           <path :d="chart.purchaseArea" fill="rgba(61,122,90,.12)" />
           <path :d="chart.consumptionArea" fill="rgba(61,90,154,.10)" />
           <polyline :points="chart.purchaseLine" fill="none" stroke="#3d7a5a" stroke-width="1.2" />
-          <polyline :points="chart.consumptionLine" fill="none" stroke="#3d5a9a" stroke-width="1.2" />
+          <polyline
+            :points="chart.consumptionLine"
+            fill="none"
+            stroke="#3d5a9a"
+            stroke-width="1.2"
+          />
         </svg>
         <div class="chart__axis">
           <span>{{ chart.first }}</span>
@@ -206,7 +226,9 @@ onMounted(load)
       </div>
       <div v-if="data.recent_operations.length === 0" class="muted-line">还没有操作记录</div>
       <div v-for="op in data.recent_operations" :key="op.id" class="op">
-        <span class="tx-tag" :class="`tx-tag--${op.type}`">{{ TX_TYPE_LABEL[op.type] || op.type }}</span>
+        <span class="tx-tag" :class="`tx-tag--${op.type}`">{{
+          TX_TYPE_LABEL[op.type] || op.type
+        }}</span>
         <span class="op__name">{{ op.ingredient_name }}</span>
         <span class="op__delta">
           <template v-if="Number(op.weight_delta)">{{ trimNum(op.weight_delta) }}g</template>
@@ -219,68 +241,256 @@ onMounted(load)
 </template>
 
 <style scoped>
-.stats-head { flex-wrap: wrap; gap: 10px; }
-.stats-head h2 { margin: 0; }
-.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg__btn { padding: 4px 11px; font-size: 12px; background: transparent; border: 0; cursor: pointer; color: var(--text-2); }
-.seg__btn--on { background: var(--green); color: #fff; }
-.range { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-3); }
+.stats-head {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.stats-head h2 {
+  margin: 0;
+}
+.seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.seg__btn {
+  padding: 4px 11px;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--text-2);
+}
+.seg__btn--on {
+  background: var(--green);
+  color: #fff;
+}
+.range {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-3);
+}
 .range input {
-  height: 30px; padding: 0 8px; border: 1px solid var(--line);
-  border-radius: 7px; font-size: 12.5px; background: var(--surface); color: var(--text);
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 12.5px;
+  background: var(--surface);
+  color: var(--text);
 }
-.muted { color: var(--text-3); font-size: 11.5px; }
-.muted-line { font-size: 13px; color: var(--text-3); padding: 6px 0; }
-h3 { font-size: 13px; margin: 16px 0 8px; }
-
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 8px; }
-.stat { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; }
-.stat span { font-size: 11.5px; color: var(--text-3); }
-.stat strong { font-size: 19px; font-variant-numeric: tabular-nums; }
-.stat small { font-size: 11px; color: var(--text-3); }
-
-.chart { margin-top: 6px; }
-.chart__svg { width: 100%; height: 120px; display: block; }
-.chart__axis { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-3); }
-.legend { display: flex; gap: 14px; align-items: center; margin-top: 6px; font-size: 11.5px; color: var(--text-2); }
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
-.dot--purchase { background: #3d7a5a; }
-.dot--consume { background: #3d5a9a; }
-
-.grid--2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.bar-row { display: grid; grid-template-columns: 74px 1fr auto; align-items: center; gap: 8px; padding: 4px 0; }
-.bar-row__name { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar { height: 8px; background: #f0efe9; border-radius: 999px; overflow: hidden; }
-.bar i { display: block; height: 100%; background: #8fb8a1; border-radius: 999px; }
-.bar--blue i { background: #8fa3c8; }
-.bar-row__val { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-.turnover { font-size: 12.5px; }
-.turnover__head, .turnover__row {
-  display: grid; grid-template-columns: 1.6fr .8fr .8fr .8fr; gap: 8px;
-  padding: 6px 0; border-bottom: 1px dashed var(--line);
+.muted {
+  color: var(--text-3);
+  font-size: 11.5px;
 }
-.turnover__head { color: var(--text-3); font-size: 11.5px; }
-.turnover__row span:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.muted-line {
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 6px 0;
+}
+h3 {
+  font-size: 13px;
+  margin: 16px 0 8px;
+}
 
-.ops-head { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 6px; }
-.ops-head h3 { margin: 0; }
-.link { font-size: 12px; color: var(--green); cursor: pointer; }
-.op { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px dashed var(--line); flex-wrap: wrap; font-size: 12.5px; }
-.op__name { font-weight: 500; }
-.op__delta { font-variant-numeric: tabular-nums; }
-.tx-tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
-.tx-tag--purchase { background: var(--green-weak); color: var(--green); }
-.tx-tag--consume { background: #eef2fb; color: #3d5a9a; }
-.tx-tag--spoilage { background: #fbeae8; color: var(--red); }
-.tx-tag--adjustment { background: #fdf3e2; color: #b8860b; }
-.tx-tag--reverse { background: #f0efe9; color: var(--text-2); }
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.stat span {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.stat strong {
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.stat small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.chart {
+  margin-top: 6px;
+}
+.chart__svg {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+.chart__axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+.legend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.dot--purchase {
+  background: #3d7a5a;
+}
+.dot--consume {
+  background: #3d5a9a;
+}
+
+.grid--2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.bar-row {
+  display: grid;
+  grid-template-columns: 74px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.bar-row__name {
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bar {
+  height: 8px;
+  background: #f0efe9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  background: #8fb8a1;
+  border-radius: 999px;
+}
+.bar--blue i {
+  background: #8fa3c8;
+}
+.bar-row__val {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.turnover {
+  font-size: 12.5px;
+}
+.turnover__head,
+.turnover__row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 0.8fr 0.8fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.turnover__head {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.turnover__row span:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ops-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0 6px;
+}
+.ops-head h3 {
+  margin: 0;
+}
+.link {
+  font-size: 12px;
+  color: var(--green);
+  cursor: pointer;
+}
+.op {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+.op__name {
+  font-weight: 500;
+}
+.op__delta {
+  font-variant-numeric: tabular-nums;
+}
+.tx-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.tx-tag--purchase {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.tx-tag--consume {
+  background: #eef2fb;
+  color: #3d5a9a;
+}
+.tx-tag--spoilage {
+  background: #fbeae8;
+  color: var(--red);
+}
+.tx-tag--adjustment {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.tx-tag--reverse {
+  background: #f0efe9;
+  color: var(--text-2);
+}
 
 @media (max-width: 860px) {
-  .grid--2 { grid-template-columns: 1fr; }
-  .cards { grid-template-columns: repeat(2, 1fr); }
-  .stat strong { font-size: 17px; }
-  .turnover__head, .turnover__row { grid-template-columns: 1.4fr .7fr .7fr .8fr; }
-  .bar-row { grid-template-columns: 66px 1fr auto; }
+  .grid--2 {
+    grid-template-columns: 1fr;
+  }
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stat strong {
+    font-size: 17px;
+  }
+  .turnover__head,
+  .turnover__row {
+    grid-template-columns: 1.4fr 0.7fr 0.7fr 0.8fr;
+  }
+  .bar-row {
+    grid-template-columns: 66px 1fr auto;
+  }
 }
 </style>

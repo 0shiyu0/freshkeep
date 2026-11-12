@@ -6,7 +6,6 @@
 """
 from __future__ import annotations
 
-import uuid
 from datetime import timedelta
 from decimal import Decimal
 
@@ -35,9 +34,8 @@ def _days(n: int) -> str:
 
 
 def _counts():
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return {
@@ -128,9 +126,8 @@ def test_confirm_creates_ingredient(seeded):
     got = seeded.get(f"/api/v1/ai/recognitions/{did}").json()["data"]
     assert got["status"] == "confirmed"
     assert got["confirmed_entity_type"] == "ingredient"
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         n = db.execute(text("select count(*) from audit_logs where action='recognition_confirm'")).scalar()
@@ -159,9 +156,8 @@ def test_confirm_batch_goes_through_five_step(seeded, ing):
     assert row["purchase_cost"] == "18.00"
     assert row["expiry_date"] == _days(10)
     # 对账仍为 0
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         diffs = db.execute(text(

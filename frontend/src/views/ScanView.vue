@@ -27,10 +27,13 @@ let detector: any = null
 
 const warnings = computed(() => draft.value?.warnings ?? [])
 const hasDateWarning = computed(() =>
-  warnings.value.some((w) => w.code.startsWith('DATE_') || w.code === 'EXPIRY_IN_PAST')
+  warnings.value.some((w) => w.code.startsWith('DATE_') || w.code === 'EXPIRY_IN_PAST'),
 )
 const scanSupported = computed(
-  () => typeof navigator !== 'undefined' && 'mediaDevices' in navigator && !!(window as any).BarcodeDetector
+  () =>
+    typeof navigator !== 'undefined' &&
+    'mediaDevices' in navigator &&
+    !!(window as any).BarcodeDetector,
 )
 
 async function loadIngredients() {
@@ -111,8 +114,11 @@ function useProduct() {
     hint: p?.name || lookup.value?.ingredient_name || '',
     manual: p
       ? {
-          name: p.name, brand: p.brand, specification: p.specification,
-          barcode: p.barcode, nutrition: p.nutrition,
+          name: p.name,
+          brand: p.brand,
+          specification: p.specification,
+          barcode: p.barcode,
+          nutrition: p.nutrition,
         }
       : { name: lookup.value?.ingredient_name || '', barcode: barcode.value },
   })
@@ -227,10 +233,17 @@ onBeforeUnmount(stopScan)
   <section class="card">
     <div class="card__head">
       <h2>条码</h2>
-      <span class="muted">{{ scanSupported ? '摄像头可用' : '当前浏览器不支持扫码，请手动输入' }}</span>
+      <span class="muted">{{
+        scanSupported ? '摄像头可用' : '当前浏览器不支持扫码，请手动输入'
+      }}</span>
     </div>
     <div class="scan-row">
-      <input v-model="barcode" class="scan-input" placeholder="条码数字，或直接扫码" inputmode="numeric" />
+      <input
+        v-model="barcode"
+        class="scan-input"
+        placeholder="条码数字，或直接扫码"
+        inputmode="numeric"
+      />
       <NButton type="primary" :loading="busy" @click="doLookup">查询</NButton>
       <NButton v-if="!scanning" :disabled="!scanSupported" @click="startScan">开始扫码</NButton>
       <NButton v-else @click="stopScan">停止</NButton>
@@ -250,7 +263,9 @@ onBeforeUnmount(stopScan)
     <h2>查询结果</h2>
     <p v-if="lookup.found && lookup.source === 'local'" class="hit">
       本地已收录：<strong>{{ lookup.ingredient_name }}</strong>
-      <button class="btn btn--tiny" @click="router.push(`/ingredients/${lookup.ingredient_id}`)">查看档案</button>
+      <button class="btn btn--tiny" @click="router.push(`/ingredients/${lookup.ingredient_id}`)">
+        查看档案
+      </button>
     </p>
     <p v-else-if="lookup.found && lookup.product" class="hit">
       {{ lookup.product.source_label || '外部数据源' }}：<strong>{{ lookup.product.name }}</strong>
@@ -281,22 +296,28 @@ onBeforeUnmount(stopScan)
     </div>
 
     <div class="grid2">
-      <label class="field">名称
+      <label class="field"
+        >名称
         <input v-model="form.name" placeholder="商品名称" />
       </label>
-      <label class="field">品牌
+      <label class="field"
+        >品牌
         <input v-model="form.brand" placeholder="可留空" />
       </label>
-      <label class="field">规格
+      <label class="field"
+        >规格
         <input v-model="form.specification" placeholder="如 500g" />
       </label>
-      <label class="field">条码
+      <label class="field"
+        >条码
         <input v-model="form.barcode" placeholder="可留空" />
       </label>
-      <label class="field">生产日期
+      <label class="field"
+        >生产日期
         <input v-model="form.production_date" type="date" />
       </label>
-      <label class="field">到期日期
+      <label class="field"
+        >到期日期
         <input v-model="form.expiry_date" type="date" />
       </label>
     </div>
@@ -311,10 +332,12 @@ onBeforeUnmount(stopScan)
 
     <h3>入库信息（确认入库时使用）</h3>
     <div class="grid2">
-      <label class="field">重量（g）
+      <label class="field"
+        >重量（g）
         <input v-model="form.weight" inputmode="decimal" placeholder="如 500" />
       </label>
-      <label class="field">采购总价（元）
+      <label class="field"
+        >采购总价（元）
         <input v-model="form.purchase_cost" inputmode="decimal" placeholder="如 18.00" />
       </label>
     </div>
@@ -322,7 +345,9 @@ onBeforeUnmount(stopScan)
     <div class="foot">
       <NButton @click="saveDraft" :loading="busy">保存修正</NButton>
       <NButton @click="reject">忽略</NButton>
-      <NButton type="primary" :loading="busy" @click="confirm('ingredient')">确认创建食材档案</NButton>
+      <NButton type="primary" :loading="busy" @click="confirm('ingredient')"
+        >确认创建食材档案</NButton
+      >
     </div>
 
     <div class="foot foot--batch">
@@ -330,7 +355,12 @@ onBeforeUnmount(stopScan)
         <option :value="null">选择已有食材后入库…</option>
         <option v-for="i in ingredients" :key="i.id" :value="i.id">{{ i.name }}</option>
       </select>
-      <NButton type="primary" :disabled="!targetIngredientId" :loading="busy" @click="confirm('batch')">
+      <NButton
+        type="primary"
+        :disabled="!targetIngredientId"
+        :loading="busy"
+        @click="confirm('batch')"
+      >
         确认入库
       </NButton>
     </div>
@@ -339,44 +369,160 @@ onBeforeUnmount(stopScan)
 </template>
 
 <style scoped>
-.card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.card__head h2 { margin: 0; }
-h3 { font-size: 13px; margin: 16px 0 8px; }
-.scan-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.card__head h2 {
+  margin: 0;
+}
+h3 {
+  font-size: 13px;
+  margin: 16px 0 8px;
+}
+.scan-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .scan-input {
-  flex: 1; min-width: 180px; height: 36px; padding: 0 12px;
-  border: 1px solid var(--line); border-radius: 9px; font-size: 14px;
+  flex: 1;
+  min-width: 180px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 14px;
 }
-.scan-video { width: 100%; max-height: 260px; margin-top: 10px; border-radius: 10px; background: #000; object-fit: cover; }
-.photo-row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-.photo-row .btn { cursor: pointer; }
-.hit, .miss { font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.miss { color: var(--text-2); }
-.btn--tiny { padding: 3px 9px; font-size: 11.5px; border-radius: 6px; }
+.scan-video {
+  width: 100%;
+  max-height: 260px;
+  margin-top: 10px;
+  border-radius: 10px;
+  background: #000;
+  object-fit: cover;
+}
+.photo-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.photo-row .btn {
+  cursor: pointer;
+}
+.hit,
+.miss {
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.miss {
+  color: var(--text-2);
+}
+.btn--tiny {
+  padding: 3px 9px;
+  font-size: 11.5px;
+  border-radius: 6px;
+}
 
-.warn-box { background: #fdf9ef; border: 1px solid #f0dfb8; border-radius: 10px; padding: 10px 12px; margin: 6px 0 12px; }
-.warn-box__title { font-size: 12.5px; margin-bottom: 6px; }
-.warn { display: flex; gap: 8px; font-size: 12px; color: #8a6d1f; padding: 3px 0; }
-.warn__code { font-family: ui-monospace, monospace; font-size: 11px; opacity: .8; }
+.warn-box {
+  background: #fdf9ef;
+  border: 1px solid #f0dfb8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 6px 0 12px;
+}
+.warn-box__title {
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+.warn {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: #8a6d1f;
+  padding: 3px 0;
+}
+.warn__code {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  opacity: 0.8;
+}
 
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-2); }
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
 .field input {
-  height: 34px; padding: 0 10px; border: 1px solid var(--line);
-  border-radius: 8px; font-size: 14px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
 }
-.nutri-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
-.nutri-row__name { width: 80px; font-size: 12.5px; color: var(--text-2); }
-.nutri-row input { width: 90px; height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; text-align: right; }
-.muted { color: var(--text-3); font-size: 11.5px; }
-.note { margin-top: 8px; }
-.foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
-.foot--batch { margin-top: 10px; align-items: center; }
+.nutri-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.nutri-row__name {
+  width: 80px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.nutri-row input {
+  width: 90px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  text-align: right;
+}
+.muted {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.note {
+  margin-top: 8px;
+}
+.foot {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.foot--batch {
+  margin-top: 10px;
+  align-items: center;
+}
 .select {
-  flex: 1; min-width: 180px; height: 34px; padding: 0 10px;
-  border: 1px solid var(--line); border-radius: 8px; font-size: 13px; background: #fff;
+  flex: 1;
+  min-width: 180px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fff;
 }
 @media (max-width: 720px) {
-  .grid2 { grid-template-columns: 1fr; }
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

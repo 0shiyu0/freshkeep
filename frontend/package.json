@@ -12,7 +12,10 @@
     "cap:sync": "cap sync",
     "cap:android": "cap sync android && cd android && ./gradlew assembleRelease",
     "cap:ios": "cap sync ios",
-    "type-check": "vue-tsc --noEmit"
+    "type-check": "vue-tsc --noEmit",
+    "lint": "vue-tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,vue,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,vue,css}\""
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
@@ -36,6 +39,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.6.0",
     "@vitejs/plugin-vue": "^6.0.10",
+    "prettier": "^3.10.1",
     "typescript": "~5.9.3",
     "vite": "^8.3.6",
     "vue-tsc": "^3.3.14"

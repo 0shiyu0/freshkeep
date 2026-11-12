@@ -4,10 +4,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-
 from app.schemas.common import ORMBase
-
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------- 分类
 

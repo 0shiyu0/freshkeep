@@ -37,6 +37,12 @@ const batchModal = ref(false)
 const batchDraft = reactive<Record<string, string>>({})
 const batchBusy = ref(false)
 
+/** 进出批量模式时清空已选，避免把上一次的选择带到新会话（模板只传函数名，便于格式化） */
+function toggleBatchMode() {
+  batchMode.value = !batchMode.value
+  if (!batchMode.value) selected.value = new Set()
+}
+
 const statusOptions = [
   { label: '全部状态', value: '' },
   { label: '正常', value: 'normal' },
@@ -170,7 +176,7 @@ async function submitBatch() {
   try {
     const res = await consumptionApi.createBatch(
       payload.map((p) => ({ ingredient_id: p.id, weight: p.v })),
-      '批量消耗'
+      '批量消耗',
     )
     notifySuccess(`已批量扣减 ${res.total} 个食材`)
     batchModal.value = false
@@ -215,25 +221,58 @@ onMounted(async () => {
   </div>
 
   <div v-if="summary" class="card summary-bar">
-    <div><span>库存总价值</span><b>¥{{ summary.total_cost }}</b></div>
-    <div><span>总重量</span><b>{{ trimNum(summary.total_weight) }} g</b></div>
-    <div><span>食材 / 批次</span><b>{{ summary.ingredient_count }} / {{ summary.batch_count }}</b></div>
-    <div><span>临期 7 天内</span><b :class="{ 'summary-bar__alert': summary.expiring_count > 0 }">{{ summary.expiring_count }}</b></div>
-    <div><span>低库存</span><b :class="{ 'summary-bar__alert': summary.low_stock_count > 0 }">{{ summary.low_stock_count }}</b></div>
+    <div>
+      <span>库存总价值</span><b>¥{{ summary.total_cost }}</b>
+    </div>
+    <div>
+      <span>总重量</span><b>{{ trimNum(summary.total_weight) }} g</b>
+    </div>
+    <div>
+      <span>食材 / 批次</span><b>{{ summary.ingredient_count }} / {{ summary.batch_count }}</b>
+    </div>
+    <div>
+      <span>临期 7 天内</span
+      ><b :class="{ 'summary-bar__alert': summary.expiring_count > 0 }">{{
+        summary.expiring_count
+      }}</b>
+    </div>
+    <div>
+      <span>低库存</span
+      ><b :class="{ 'summary-bar__alert': summary.low_stock_count > 0 }">{{
+        summary.low_stock_count
+      }}</b>
+    </div>
   </div>
 
   <div class="filters card">
     <input v-model="keyword" class="filters__input" placeholder="搜索：鸡胸肉 / jixiongrou / jxr" />
-    <NSelect v-model:value="categoryId" :options="categoryOptions" placeholder="全部分类"
-             clearable size="small" style="width: 150px" />
-    <NSelect v-model:value="status" :options="statusOptions" placeholder="全部状态"
-             size="small" style="width: 130px" />
-    <NSelect v-model:value="locationId" :options="locationOptions" placeholder="全部位置"
-             clearable size="small" style="width: 130px" />
+    <NSelect
+      v-model:value="categoryId"
+      :options="categoryOptions"
+      placeholder="全部分类"
+      clearable
+      size="small"
+      style="width: 150px"
+    />
+    <NSelect
+      v-model:value="status"
+      :options="statusOptions"
+      placeholder="全部状态"
+      size="small"
+      style="width: 130px"
+    />
+    <NSelect
+      v-model:value="locationId"
+      :options="locationOptions"
+      placeholder="全部位置"
+      clearable
+      size="small"
+      style="width: 130px"
+    />
     <label class="filters__check">
       <input v-model="lowStockOnly" type="checkbox" /> 只看低库存
     </label>
-    <button class="btn" :class="{ 'btn--primary': batchMode }" @click="batchMode = !batchMode; selected = new Set()">
+    <button class="btn" :class="{ 'btn--primary': batchMode }" @click="toggleBatchMode">
       {{ batchMode ? '退出批量' : '批量消耗' }}
     </button>
   </div>
@@ -247,10 +286,18 @@ onMounted(async () => {
   </div>
 
   <div v-else class="list">
-    <article v-for="item in items" :key="item.ingredient_id" class="row card"
-             @click="batchMode ? toggleSelect(item) : router.push(`/ingredients/${item.ingredient_id}`)">
+    <article
+      v-for="item in items"
+      :key="item.ingredient_id"
+      class="row card"
+      @click="batchMode ? toggleSelect(item) : router.push(`/ingredients/${item.ingredient_id}`)"
+    >
       <label v-if="batchMode" class="row__check" @click.stop>
-        <input type="checkbox" :checked="selected.has(item.ingredient_id)" @change="toggleSelect(item)" />
+        <input
+          type="checkbox"
+          :checked="selected.has(item.ingredient_id)"
+          @change="toggleSelect(item)"
+        />
       </label>
       <div class="row__main">
         <div class="row__title">
@@ -267,7 +314,9 @@ onMounted(async () => {
         <div class="row__qty">{{ remainingText(item) }}</div>
         <div class="row__cost">¥{{ item.total_cost }}</div>
       </div>
-      <button v-if="!batchMode" class="btn btn--tiny row__quick" @click.stop="openQuick(item)">− 消耗</button>
+      <button v-if="!batchMode" class="btn btn--tiny row__quick" @click.stop="openQuick(item)">
+        − 消耗
+      </button>
     </article>
   </div>
 
@@ -275,7 +324,9 @@ onMounted(async () => {
   <div v-if="batchMode" class="batch-bar">
     <span>已选 {{ selectedCount }} 项</span>
     <button class="btn" @click="selected = new Set(items.map((i) => i.ingredient_id))">全选</button>
-    <button class="btn btn--primary" :disabled="selectedCount === 0" @click="openBatch">批量消耗</button>
+    <button class="btn btn--primary" :disabled="selectedCount === 0" @click="openBatch">
+      批量消耗
+    </button>
   </div>
 
   <!-- 快速消耗弹层 -->
@@ -283,10 +334,12 @@ onMounted(async () => {
     <div class="modal">
       <h3>消耗 · {{ quickTarget.name }}</h3>
       <p class="muted">当前可用 {{ remainingText(quickTarget) }}，按先到期先出扣减</p>
-      <label class="field">重量（{{ quickTarget.weight_unit_symbol || 'g' }}）
+      <label class="field"
+        >重量（{{ quickTarget.weight_unit_symbol || 'g' }}）
         <input v-model="quickForm.weight" inputmode="decimal" placeholder="如 100" />
       </label>
-      <label class="field">数量（{{ quickTarget.quantity_unit_name || '数量' }}）
+      <label class="field"
+        >数量（{{ quickTarget.quantity_unit_name || '数量' }}）
         <input v-model="quickForm.quantity" inputmode="decimal" placeholder="可留空" />
       </label>
       <div class="modal__foot">
@@ -301,7 +354,11 @@ onMounted(async () => {
     <div class="modal">
       <h3>批量消耗（{{ selectedCount }} 项）</h3>
       <p class="muted">只填需要消耗的重量；留空的项不提交。整批失败会全部回滚。</p>
-      <div v-for="item in items.filter((i) => selected.has(i.ingredient_id))" :key="item.ingredient_id" class="batch-row">
+      <div
+        v-for="item in items.filter((i) => selected.has(i.ingredient_id))"
+        :key="item.ingredient_id"
+        class="batch-row"
+      >
         <span class="batch-row__name">{{ item.name }}</span>
         <span class="muted">{{ remainingText(item) }}</span>
         <input v-model="batchDraft[item.ingredient_id]" inputmode="decimal" placeholder="重量 g" />
@@ -315,71 +372,261 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px; margin-bottom: 14px; }
-.filters__input {
-  flex: 1; min-width: 180px; height: 32px; padding: 0 12px;
-  border: 1px solid var(--line); border-radius: 9px; font-size: 13px;
-  background: var(--surface); color: var(--text); outline: none;
+.filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px;
+  margin-bottom: 14px;
 }
-.filters__input:focus { border-color: var(--green); }
-.filters__check { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-2); cursor: pointer; }
+.filters__input {
+  flex: 1;
+  min-width: 180px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+.filters__input:focus {
+  border-color: var(--green);
+}
+.filters__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
 
-.list { display: flex; flex-direction: column; gap: 10px; }
-.row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; transition: border-color .15s, transform .15s; }
-.row:hover { border-color: #d6d0c2; transform: translateY(-1px); }
-.row__check { display: flex; align-items: center; }
-.row__main { flex: 1; min-width: 0; }
-.row__title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.row__title strong { font-size: 15px; }
-.row__meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
-.row__sub { font-size: 12px; color: var(--text-3); }
-.row__side { text-align: right; flex: none; }
-.row__qty { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.row__cost { font-size: 11.5px; color: var(--text-3); margin-top: 3px; }
-.row__quick { flex: none; }
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.row:hover {
+  border-color: #d6d0c2;
+  transform: translateY(-1px);
+}
+.row__check {
+  display: flex;
+  align-items: center;
+}
+.row__main {
+  flex: 1;
+  min-width: 0;
+}
+.row__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.row__title strong {
+  font-size: 15px;
+}
+.row__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+.row__sub {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.row__side {
+  text-align: right;
+  flex: none;
+}
+.row__qty {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.row__cost {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+.row__quick {
+  flex: none;
+}
 
-.st { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
-.st-ok { background: var(--green-weak); color: var(--green); }
-.st-warn { background: #fdf3e2; color: #b8860b; }
-.st-danger { background: #fbeae8; color: var(--red); }
-.st-expired { background: var(--red); color: #fff; }
-.st-none { background: #f0efe9; color: var(--text-3); }
-.btn--tiny { padding: 3px 9px; font-size: 11.5px; border-radius: 6px; }
+.st {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.st-ok {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.st-warn {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.st-danger {
+  background: #fbeae8;
+  color: var(--red);
+}
+.st-expired {
+  background: var(--red);
+  color: #fff;
+}
+.st-none {
+  background: #f0efe9;
+  color: var(--text-3);
+}
+.btn--tiny {
+  padding: 3px 9px;
+  font-size: 11.5px;
+  border-radius: 6px;
+}
 
-.summary-bar { display: flex; gap: 30px; flex-wrap: wrap; }
-.summary-bar div { display: flex; flex-direction: column; gap: 3px; }
-.summary-bar span { font-size: 11.5px; color: var(--text-3); }
-.summary-bar b { font-size: 17px; font-variant-numeric: tabular-nums; }
-.summary-bar__alert { color: var(--red); }
+.summary-bar {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+.summary-bar div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.summary-bar span {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.summary-bar b {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.summary-bar__alert {
+  color: var(--red);
+}
 
 .batch-bar {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: 76px;
-  display: flex; align-items: center; gap: 10px;
-  background: #fff; border: 1px solid var(--line); border-radius: 12px;
-  padding: 10px 14px; box-shadow: 0 6px 24px rgba(0,0,0,.08); z-index: 40;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 76px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  z-index: 40;
 }
-.batch-bar span { font-size: 13px; color: var(--text-2); }
+.batch-bar span {
+  font-size: 13px;
+  color: var(--text-2);
+}
 
-.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.28); display: grid; place-items: center; z-index: 50; }
-.modal { background: #fff; border-radius: 14px; padding: 18px 20px; width: min(440px, 92vw); max-height: 82vh; overflow: auto; }
-.modal h3 { margin: 0 0 6px; font-size: 15px; }
-.muted { color: var(--text-3); font-size: 12px; }
-.field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-2); margin-top: 10px; }
-.field input, .batch-row input {
-  height: 34px; padding: 0 10px; border: 1px solid var(--line);
-  border-radius: 8px; font-size: 14px;
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  display: grid;
+  place-items: center;
+  z-index: 50;
 }
-.batch-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px dashed var(--line); }
-.batch-row__name { flex: 1; font-size: 13.5px; font-weight: 500; }
-.batch-row input { width: 100px; text-align: right; }
-.modal__foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  width: min(440px, 92vw);
+  max-height: 82vh;
+  overflow: auto;
+}
+.modal h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.muted {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-top: 10px;
+}
+.field input,
+.batch-row input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+}
+.batch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px dashed var(--line);
+}
+.batch-row__name {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.batch-row input {
+  width: 100px;
+  text-align: right;
+}
+.modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
 
 @media (max-width: 720px) {
-  .summary-bar { gap: 18px; }
-  .summary-bar b { font-size: 15px; }
-  .row { flex-wrap: wrap; }
-  .row__side { text-align: left; display: flex; gap: 12px; align-items: baseline; }
-  .row__quick { margin-left: auto; }
-  .filters__input { min-width: 100%; }
+  .summary-bar {
+    gap: 18px;
+  }
+  .summary-bar b {
+    font-size: 15px;
+  }
+  .row {
+    flex-wrap: wrap;
+  }
+  .row__side {
+    text-align: left;
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .row__quick {
+    margin-left: auto;
+  }
+  .filters__input {
+    min-width: 100%;
+  }
 }
 </style>

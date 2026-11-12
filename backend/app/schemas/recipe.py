@@ -4,9 +4,8 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
-
 from app.schemas.common import Dec3
+from pydantic import BaseModel, Field
 
 
 class RecipeItemIn(BaseModel):

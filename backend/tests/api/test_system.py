@@ -5,6 +5,18 @@
 """
 from __future__ import annotations
 
+from pathlib import Path
+
+
+def _alembic_head() -> str:
+    """与生产一致的迁移版本：动态读 head，避免测试与迁移漂移。"""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    root = Path(__file__).resolve().parents[3]
+    cfg = Config(str(root / "backend" / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "backend" / "migrations"))
+    return ScriptDirectory.from_config(cfg).get_current_head() or ""
 
 def test_api_health_uses_envelope(client, clean_db):
     res = client.get("/api/v1/health")
@@ -30,7 +42,7 @@ def test_system_db_reports_structure(client, clean_db):
     data = body["data"]
     assert data["connected"] is True
     assert data["tables"] == 27          # 业务表数（不含 alembic_version）；0003 recognition_drafts + 0004 recipe_steps
-    assert data["migration"] == "0001_init"
+    assert data["migration"] == _alembic_head()
     assert data["pool"]["max_overflow"] >= 0
 
 

@@ -114,7 +114,7 @@ def list_notifications(
         params["status"] = status
 
     total = db.execute(
-        text(f"SELECT COUNT(*) FROM notifications n {where}"), params  # noqa: S608 - 静态串
+        text(f"SELECT COUNT(*) FROM notifications n {where}"), params
     ).scalar() or 0
     rows = db.execute(
         text(
@@ -129,7 +129,7 @@ def list_notifications(
               {where}
              ORDER BY n.created_at DESC
              LIMIT :limit OFFSET :offset
-            """  # noqa: S608 - where 由固定分支拼成，值全部参数化
+            """
         ),
         {**params, "limit": page_size, "offset": (page - 1) * page_size},
     ).all()

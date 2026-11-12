@@ -9,11 +9,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
-from decimal import Decimal
-
-from pydantic import BaseModel, Field
 
 from app.schemas.common import Dec2, Dec3, Dec4
+from pydantic import BaseModel, Field
 
 
 class RecentBatch(BaseModel):

@@ -81,7 +81,7 @@ http.interceptors.response.use(
               : '无法连接服务端，请确认服务是否启动',
         },
         0,
-        rid
+        rid,
       )
       logError('http', netErr, { url })
       notifyError(netErr.message)
@@ -103,7 +103,7 @@ http.interceptors.response.use(
 
     notifyError(apiErr.message)
     return Promise.reject(apiErr)
-  }
+  },
 )
 
 /** 统一取 data 的便捷方法 */
@@ -115,8 +115,7 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
 export const apiGet = <T>(url: string, params?: Record<string, unknown>) =>
   request<T>({ url, method: 'GET', params })
 
-export const apiPut = <T>(url: string, data?: unknown) =>
-  request<T>({ url, method: 'PUT', data })
+export const apiPut = <T>(url: string, data?: unknown) => request<T>({ url, method: 'PUT', data })
 export const apiDelete = <T>(url: string) => request<T>({ url, method: 'DELETE' })
 export const apiPost = <T>(url: string, data?: unknown, idempotencyKey?: string) =>
   request<T>({

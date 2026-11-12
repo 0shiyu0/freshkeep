@@ -235,6 +235,22 @@ pytest **232 项通过**（含清单一键入库），NAS 三容器 healthy，�
 | 恢复演练 | `scripts/restore_drill.py` | 临时库恢复 27 表、逐表行数一致、演练库自动删除；修复了 schema 路径与 COMMIT 两个缺陷 |
 | 安全与性能 | `scripts/stage9_acceptance.py` | 凭据 0 命中、HTTPS 安全头、API 401 鉴权、p95 延迟、容器健康 |
 
+### 2.18 阶段 3：文档与部署配置、代码质量规范化（2026-11-12）
+
+| 项 | 交付 | 证据 |
+| --- | --- | --- |
+| 文档 | 新增 `ENVIRONMENT.md`（变量字典）、`DEPLOYMENT.md`（NAS 部署+升级）、`BACKUP_RESTORE.md`、`ROLLBACK.md`；`ARCHITECTURE.md` 补 §10 部署拓扑与持久化；`README.md` 重写（技术栈/功能/架构/目录/环境变量/部署） | `check-docs` 内链全通过 |
+| Dockerfile | 后端：依赖层与代码层分离、`PYTHONFAULTHANDLER`、`STOPSIGNAL`、说明非 root 取舍；前端：`EXPOSE 80 443`、`STOPSIGNAL SIGQUIT`、类型检查纳入构建 | `docker compose config -q` 通过 |
+| Compose | db 加 `shm_size: 128mb` + `mem_limit 512m`、api `768m`、web `128m`；三服务日志轮转 `10m×3`；`stop_grace_period` 30/20/10s | `docker compose config` 可见全部字段 |
+| 持久化核查 | `pgdata`/`storage`/`backups` 三处 bind mount，容器重建与镜像升级均不影响 | 见 `ARCHITECTURE.md` §10.2 |
+| lint/format | `backend/pyproject.toml`（ruff：E/F/I/UP/B/SIM/RUF，line-length 100）+ `frontend/.prettierrc` + `.prettierignore` + `lint`/`format`/`format:check` 脚本 | `ruff check app tests` **全过**（原 299 → 0）；prettier 31 文件统一 |
+| 覆盖率基线 | `backend/pytest.ini`：`--cov=app --cov-fail-under=80` | 实测 **87.15%**，门槛 80%，生成 `coverage.xml` |
+| 测试库版本 | `conftest.py` 改为动态读 `ScriptDirectory.get_current_head()`，不再硬编码 `0001_init`；`test_system` 断言同步改为动态 | 测试库 `alembic_version` 现为 `0004_recipe_steps` |
+| 路由校验 | 22 文件 / 85 路径逐项审计：整改 `ingredients` 分页无界 + `sort_by` 白名单、`backup.job_id` 改 `Literal`；3 类"有意不分页"确认合理 | `docs/API_VALIDATION_AUDIT.md` |
+
+验证：`pytest 232 passed`（覆盖率 87.08%）、`ruff` 0 问题、前端 `vue-tsc + vite build` 通过、
+`docker compose config` 合法。
+
 ### 2.17 V1.0.0 发布准备 · 阶段 1：现状审计与备份（2026-11-12）
 
 **审计结论（全部由命令实测，非文档推断）**
@@ -375,7 +391,8 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 | 阶段 | 内容 | 状态 |
 | --- | --- | --- |
 | 1 | 项目现状审计与备份 | ✅ 完成（§2.17） |
-| 2 | GitHub 仓库整理与安全检查 | 🔄 进行中 |
+| 2 | GitHub 仓库整理与安全检查 | ✅ 完成 |
+| 3 | 文档与部署配置、代码质量规范化 | 🔄 进行中 |
 | 3 | 代码质量与测试规范化 | ⬜ |
 | 4 | Docker 镜像与 GHCR 发布 | ⬜ |
 | 5 | GitHub Actions CI/CD | ⬜ |
@@ -395,25 +412,25 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 ## 自动状态快照
 
 <!-- AUTO:STATUS:BEGIN -->
-> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-12 14:38 自动生成，**不要手改**。
+> 本区块由 `scripts/status-snapshot.sh` 于 2026-11-12 15:58 自动生成，**不要手改**。
 
 | 项 | 值 |
 | --- | --- |
-| 分支 / HEAD | `main` / `d27dece` |
-| 工作区 | 19 个未提交改动，未跟踪 3 个 |
+| 分支 / HEAD | `main` / `8eaf2d5` |
+| 工作区 | 111 个未提交改动，未跟踪 7 个 |
 | 未推送提交 | 0 |
 | 数据库 | 可连，迁移版本 `0004_recipe_steps`，27 张表 |
-| 后端测试 | 232 passed, 1 warning in 11.65s |
+| 后端测试 | 232 passed, 3 warnings in 19.09s |
 | 前端产物 | 已构建 |
-| 文档检查 | 有失效链接 |
+| 文档检查 | 通过 |
 
 最近 5 次提交：
 
 ```
+8eaf2d5 2026-11-12 docs: 补阶段 2 的 CHANGELOG 条目（安全审计/忽略规则/规范化/NAS 清理）
+efce1bd 2026-11-12 chore(repo): V1.0.0 阶段 2 —— 仓库规范化与安全审计
 d27dece 2026-11-12 docs: V1.0.0 发布准备 · 阶段 1 现状审计与备份结论
 f19dfd2 2026-11-12 feat: M9 收尾 —— iOS 平台工程入库 + 真机签名配置
 938a25d 2026-11-11 feat: M9 Android 平台生成 + 清单一键入库
-55a56c9 2026-11-11 feat: 阶段 9 部署上线 —— PWA/移动端/离线/通知/HTTPS/NAS/备份/演练/验收（9/9）
-e41e498 2026-11-11 chore: 刷新本轮提交后的状态快照与留痕
 ```
 <!-- AUTO:STATUS:END -->

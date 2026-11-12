@@ -6,8 +6,6 @@ from __future__ import annotations
 
 import base64
 
-import pytest
-
 PNG_1PX = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
 )
@@ -93,9 +91,8 @@ def test_bearer_token_works(auth_client):
         json={"username": "owner", "password": "Freshkeep#2026", "platform": "ios", "device_name": "app"},
     )
     token = res.json()["data"]["token"]
-    from fastapi.testclient import TestClient
-
     from app.main import app
+    from fastapi.testclient import TestClient
 
     bare = TestClient(app)
     assert bare.get("/api/v1/ingredients").status_code == 401
@@ -166,7 +163,7 @@ def _cats(seeded):
 
 def _create_chicken(seeded, **over):
     u, c = _units(seeded), _cats(seeded)
-    locs = {l["name"]: l for l in seeded.get("/api/v1/storage-locations").json()["data"]["items"]}
+    locs = {line["name"]: line for line in seeded.get("/api/v1/storage-locations").json()["data"]["items"]}
     payload = {
         "name": "鸡胸肉",
         "category_id": c["常见食材"]["id"],

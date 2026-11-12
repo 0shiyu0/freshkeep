@@ -57,9 +57,8 @@ def _batch(client, ing_id: str, weight: str, cost: str, expiry_days: int | None 
 
 
 def _one(sql: str):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(sql)).first()

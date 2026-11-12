@@ -38,3 +38,4 @@
 2026-11-12 13:59 | f19dfd2 | feat: M9 收尾 —— iOS 平台工程入库 + 真机签名配置 | 26 文件 | web docs | main
 2026-11-12 14:13 | d27dece | docs: V1.0.0 发布准备 · 阶段 1 现状审计与备份结论 |  4 文件 | docs | main
 2026-11-12 14:40 | efce1bd | chore(repo): V1.0.0 阶段 2 —— 仓库规范化与安全审计 | 22 文件 | docs | main
+2026-11-12 14:41 | 8eaf2d5 | docs: 补阶段 2 的 CHANGELOG 条目（安全审计/忽略规则/规范化/NAS 清理） |  3 文件 | docs | main

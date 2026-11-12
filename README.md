@@ -113,6 +113,7 @@ freshkeep/
 git clone https://github.com/0shiyu0/freshkeep.git
 cd freshkeep
 cp .env.example .env          # 必须填 POSTGRES_PASSWORD（openssl rand -base64 24）
+# 变量含义见 docs/ENVIRONMENT.md
 docker compose up -d --build  # 首次构建约 2~4 分钟
 ```
 
@@ -198,7 +199,12 @@ cd backend && alembic upgrade head
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 阶段 0 + M0~M10 的任务与完成判据 |
 | [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) | 当前进度、证据、已知问题 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 变更记录（含每次数据库结构变化） |
+| **[docs/ENVIRONMENT.md](docs/ENVIRONMENT.md)** | **环境变量权威字典**（必填项、默认值、环境矩阵、常见配置错误） |
+| **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** | **NAS 部署教程**（两种构建方式、首次验收清单、升级流程、端口与常见故障） |
+| **[docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md)** | **备份与恢复**（四种备份、升级前备份、灾难恢复、恢复后核对） |
+| **[docs/ROLLBACK.md](docs/ROLLBACK.md)** | **回滚**（镜像 / 配置 / 数据库三层、不可回滚边界） |
 | [docs/api.md](docs/api.md) · [docs/database.md](docs/database.md) · [docs/er-diagram.md](docs/er-diagram.md) | 接口清单 / 表结构 / ER 图 |
+| [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) · [docs/API_VALIDATION_AUDIT.md](docs/API_VALIDATION_AUDIT.md) | 安全审计 / 路由入参校验审计 |
 
 ## 许可证
 

@@ -15,12 +15,18 @@ export interface TaskStatus {
 
 export const backupApi = {
   create: () =>
-    apiPost<{ name: string; size_bytes: number; sha256: string; tables: number; total_rows: number }>('/backup', {}),
+    apiPost<{
+      name: string
+      size_bytes: number
+      sha256: string
+      tables: number
+      total_rows: number
+    }>('/backup', {}),
   list: () => apiGet<{ items: BackupItem[]; total: number }>('/backups'),
   verify: (name: string) =>
     apiPost<{ ok: boolean; tables: number; total_rows: number; missing: string[]; error?: string }>(
       `/backups/${encodeURIComponent(name)}/verify`,
-      {}
+      {},
     ),
   tasks: () => apiGet<TaskStatus>('/tasks'),
   runJob: (id: string) => apiPost<Record<string, unknown>>(`/tasks/${id}/run`, {}),

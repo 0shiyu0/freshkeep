@@ -9,16 +9,15 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
-
-from argon2 import PasswordHasher
-from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from datetime import UTC, datetime, timedelta
 
 from app.core.config import settings
 from app.core.errors import ApiError
 from app.models import Device, PairCode, User
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 COOKIE_NAME = "fk_sid"
 CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"   # 去掉 0/O/1/I/L
@@ -71,7 +70,7 @@ def create_device(
         token_hash=hash_token(token),
         ip=ip,
         user_agent=(ua or "")[:300],
-        last_seen_at=datetime.now(timezone.utc),
+        last_seen_at=datetime.now(UTC),
     )
     db.add(device)
     db.flush()
@@ -94,14 +93,14 @@ def resolve_token(db: Session, token: str | None) -> tuple[Device, User] | None:
 
 def touch_device(db: Session, device: Device) -> None:
     """更新最后活跃时间；按分钟节流，避免每个请求都写库。"""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     last = device.last_seen_at
     if last is None or (now - last).total_seconds() > 60:
         device.last_seen_at = now
 
 
 def revoke_device(db: Session, device: Device) -> None:
-    device.revoked_at = datetime.now(timezone.utc)
+    device.revoked_at = datetime.now(UTC)
 
 
 # ---------------------------------------------------------------- 配对码
@@ -112,7 +111,7 @@ def issue_pair_code(db: Session) -> str:
     db.add(
         PairCode(
             code_hash=hash_token(code),
-            expires_at=datetime.now(timezone.utc)
+            expires_at=datetime.now(UTC)
             + timedelta(minutes=settings.pair_code_ttl_minutes),
         )
     )
@@ -126,9 +125,9 @@ def consume_pair_code(db: Session, code: str) -> None:
     ).scalar_one_or_none()
     if row is None:
         raise ApiError("INVALID_PAIR_CODE", "配对码无效或已使用", 401)
-    if row.expires_at < datetime.now(timezone.utc):
+    if row.expires_at < datetime.now(UTC):
         raise ApiError("PAIR_CODE_EXPIRED", "配对码已过期，请在服务器上重新生成", 401)
-    row.used_at = datetime.now(timezone.utc)
+    row.used_at = datetime.now(UTC)
 
 
 # ---------------------------------------------------------------- 用户

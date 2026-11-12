@@ -79,7 +79,7 @@ async def request_context(request: Request, call_next):
 
     try:
         response = await call_next(request)
-    except Exception as exc:  # noqa: BLE001 - 兜底，仍需返回统一错误结构
+    except Exception as exc:
         cost = (time.perf_counter() - started) * 1000
         log_exception(
             log,

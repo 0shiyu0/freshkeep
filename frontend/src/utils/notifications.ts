@@ -26,7 +26,10 @@ export const browserNotifications = {
   show(title: string, body: string, tag = 'freshkeep-alert'): boolean {
     if (!this.enabled()) return false
     const options: NotificationOptions = {
-      body, tag, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png',
+      body,
+      tag,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
     }
     try {
       const n = new Notification(title, options)

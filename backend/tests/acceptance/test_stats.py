@@ -19,7 +19,7 @@ import pytest
 def env(seeded):
     """两个分类（肉类/蔬菜）+ 三个食材。"""
     from app.db.session import SessionLocal
-    from app.models import Category, Ingredient, Unit
+    from app.models import Category, Unit
 
     with SessionLocal() as db:
         g = db.query(Unit).filter_by(symbol="g").first()
@@ -72,9 +72,8 @@ def _consume(client, ing_id: str, weight: str) -> dict:
 
 
 def _one(sql: str):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(sql)).first()

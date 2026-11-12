@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select
@@ -205,7 +205,7 @@ def change_password(
         raise ApiError("INVALID_OLD_PASSWORD", "旧密码不正确", 400)
 
     ctx.user.password_hash = auth_svc.hash_password(payload.new_password)
-    ctx.user.updated_at = datetime.now(timezone.utc)
+    ctx.user.updated_at = datetime.now(UTC)
     db.commit()
     return ok(request, {"updated": True}, "密码已修改")
 
@@ -220,7 +220,7 @@ def set_password(
     if ctx.user.password_hash:
         raise conflict("密码已设置，请使用修改密码接口")
     ctx.user.password_hash = auth_svc.hash_password(payload.new_password)
-    ctx.user.updated_at = datetime.now(timezone.utc)
+    ctx.user.updated_at = datetime.now(UTC)
     db.commit()
     return ok(request, {"has_password": True}, "密码已设置")
 

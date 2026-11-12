@@ -12,12 +12,11 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import json
-from datetime import datetime, timedelta, timezone
-
-from sqlalchemy import delete
+from datetime import UTC, datetime, timedelta
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from sqlalchemy import delete
 
 log = get_logger(__name__)
 
@@ -176,7 +175,7 @@ class IdempotencyMiddleware:
                         return
                     cached = (row.status_code, row.response_json)
                 _purge_expired(db)
-        except Exception as exc:  # noqa: BLE001 - 幂等表不可用不应阻断业务
+        except Exception as exc:
             log.warning("幂等表不可用，本次跳过：%s", exc)
 
         if cached is not None:
@@ -196,12 +195,11 @@ class IdempotencyMiddleware:
             nonlocal too_large
             if message["type"] == "http.response.start":
                 started.update(message)
-            elif message["type"] == "http.response.body":
-                if not too_large:
-                    chunks.append(message.get("body", b""))
-                    if sum(len(c) for c in chunks) > MAX_CACHE_BYTES:
-                        too_large = True
-                        chunks.clear()
+            elif message["type"] == "http.response.body" and not too_large:
+                chunks.append(message.get("body", b""))
+                if sum(len(c) for c in chunks) > MAX_CACHE_BYTES:
+                    too_large = True
+                    chunks.clear()
             await send(message)      # 始终转发，不改变响应行为
 
         await self.app(scope, replay_receive, send_capture)
@@ -233,7 +231,7 @@ class IdempotencyMiddleware:
                         )
                     )
                     db.commit()
-        except Exception as exc:  # noqa: BLE001 - 写缓存失败不影响本次响应
+        except Exception as exc:
             log.warning("幂等结果落库失败 key=%s：%s", key, exc)
 
 
@@ -241,6 +239,6 @@ def _purge_expired(db) -> None:
     """顺手清理过期记录，避免幂等表无限增长。"""
     from app.models import IdempotencyKey
 
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=IDEMPOTENCY_TTL_SECONDS)
+    cutoff = datetime.now(UTC) - timedelta(seconds=IDEMPOTENCY_TTL_SECONDS)
     db.execute(delete(IdempotencyKey).where(IdempotencyKey.created_at < cutoff))
     db.commit()

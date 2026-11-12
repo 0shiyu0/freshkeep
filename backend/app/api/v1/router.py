@@ -2,13 +2,11 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
-    auth,
-    barcodes,
     ai,
     alerts,
-    products,
-    purchase,
+    auth,
     backup,
+    barcodes,
     batches,
     categories,
     consumptions,
@@ -17,6 +15,8 @@ from app.api.v1 import (
     ingredients,
     inventory,
     nutrition,
+    products,
+    purchase,
     recipes,
     shopping,
     stats,

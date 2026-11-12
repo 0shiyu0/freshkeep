@@ -31,7 +31,10 @@ const attrs = computed(() => {
   const b = batch.value
   return [
     { label: '批次号', value: b.batch_no, mono: true },
-    { label: '状态', value: b.status === 'active' ? '有库存' : b.status === 'depleted' ? '已耗尽' : '已作废' },
+    {
+      label: '状态',
+      value: b.status === 'active' ? '有库存' : b.status === 'depleted' ? '已耗尽' : '已作废',
+    },
     { label: '购买日期', value: b.purchase_date },
     { label: '生产日期', value: b.production_date || '未填' },
     { label: '到期日期', value: b.expiry_date || '未填' },
@@ -66,12 +69,18 @@ onMounted(load)
         <p>
           购买 {{ batch.purchase_date }}
           <template v-if="batch.expiry_date"> · 到期 {{ batch.expiry_date }}</template>
-          <span class="expiry" :class="`expiry--${expiryClass(batch)}`">{{ expiryText(batch) }}</span>
+          <span class="expiry" :class="`expiry--${expiryClass(batch)}`">{{
+            expiryText(batch)
+          }}</span>
         </p>
       </div>
       <div class="head-actions">
-        <button class="btn" @click="router.push(`/ingredients/${batch.ingredient_id}`)">食材档案</button>
-        <button class="btn" @click="router.push(`/consume?ingredient=${batch.ingredient_id}`)">记一笔消耗</button>
+        <button class="btn" @click="router.push(`/ingredients/${batch.ingredient_id}`)">
+          食材档案
+        </button>
+        <button class="btn" @click="router.push(`/consume?ingredient=${batch.ingredient_id}`)">
+          记一笔消耗
+        </button>
         <button class="btn" @click="router.push('/batches')">批次列表</button>
       </div>
     </div>
@@ -88,7 +97,9 @@ onMounted(load)
       <h2>该批次流水（{{ flows.length }}）</h2>
       <div v-if="flows.length === 0" class="muted-line">暂无流水</div>
       <div v-for="f in flows" :key="f.id" class="flow">
-        <span class="tx-tag" :class="`tx-tag--${f.type}`">{{ TX_TYPE_LABEL[f.type] || f.type }}</span>
+        <span class="tx-tag" :class="`tx-tag--${f.type}`">{{
+          TX_TYPE_LABEL[f.type] || f.type
+        }}</span>
         <span class="mono">{{ f.transaction_no }}</span>
         <span class="flow__delta">
           <template v-if="Number(f.weight_delta)">{{ trimNum(f.weight_delta) }}g</template>
@@ -104,36 +115,120 @@ onMounted(load)
   <div v-else class="card empty">
     <h3>找不到这个批次</h3>
     <p>可能已被删除。</p>
-    <button class="btn" style="margin-top: 12px" @click="router.push('/batches')">返回批次列表</button>
+    <button class="btn" style="margin-top: 12px" @click="router.push('/batches')">
+      返回批次列表
+    </button>
   </div>
 </template>
 
 <style scoped>
-.empty { text-align: center; padding: 26px 0; }
-.attr { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 9px 0; }
-.attr + .attr { border-top: 1px dashed var(--line); }
-.attr__label { font-size: 13px; color: var(--text-2); flex: none; }
-.attr__value { font-size: 13.5px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.muted-line { font-size: 13px; color: var(--text-3); padding: 6px 0; }
-.hint { font-size: 11.5px; color: var(--text-3); margin: 10px 0 0; }
-.expiry { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 500; margin-left: 6px; }
-.expiry--ok { background: var(--green-weak); color: var(--green); }
-.expiry--warn { background: #fdf3e2; color: #b8860b; }
-.expiry--danger { background: #fbeae8; color: var(--red); }
-.expiry--expired { background: var(--red); color: #fff; }
-.expiry--muted { background: #f0efe9; color: var(--text-3); }
-.flow {
-  display: flex; align-items: center; gap: 12px; padding: 9px 0;
-  font-size: 13px; flex-wrap: wrap; border-top: 1px dashed var(--line);
+.empty {
+  text-align: center;
+  padding: 26px 0;
+}
+.attr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+}
+.attr + .attr {
+  border-top: 1px dashed var(--line);
+}
+.attr__label {
+  font-size: 13px;
+  color: var(--text-2);
+  flex: none;
+}
+.attr__value {
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.tx-tag { font-size: 11.5px; padding: 2px 9px; border-radius: 999px; font-weight: 500; }
-.tx-tag--purchase { background: var(--green-weak); color: var(--green); }
-.tx-tag--consume { background: #eef2fb; color: #3d5a9a; }
-.tx-tag--spoilage { background: #fbeae8; color: var(--red); }
-.tx-tag--adjustment { background: #fdf3e2; color: #b8860b; }
-.tx-tag--reverse { background: #f0efe9; color: var(--text-2); }
-.flow__delta { font-weight: 600; }
-.flow__time, .flow__reason { font-size: 11.5px; color: var(--text-3); }
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.muted-line {
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 6px 0;
+}
+.hint {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin: 10px 0 0;
+}
+.expiry {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  margin-left: 6px;
+}
+.expiry--ok {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.expiry--warn {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.expiry--danger {
+  background: #fbeae8;
+  color: var(--red);
+}
+.expiry--expired {
+  background: var(--red);
+  color: #fff;
+}
+.expiry--muted {
+  background: #f0efe9;
+  color: var(--text-3);
+}
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 13px;
+  flex-wrap: wrap;
+  border-top: 1px dashed var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.tx-tag {
+  font-size: 11.5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.tx-tag--purchase {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.tx-tag--consume {
+  background: #eef2fb;
+  color: #3d5a9a;
+}
+.tx-tag--spoilage {
+  background: #fbeae8;
+  color: var(--red);
+}
+.tx-tag--adjustment {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.tx-tag--reverse {
+  background: #f0efe9;
+  color: var(--text-2);
+}
+.flow__delta {
+  font-weight: 600;
+}
+.flow__time,
+.flow__reason {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
 </style>

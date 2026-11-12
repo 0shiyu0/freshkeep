@@ -5,7 +5,6 @@
 """
 from __future__ import annotations
 
-import io
 import tarfile
 from decimal import Decimal
 
@@ -37,7 +36,7 @@ def backup_dir():
 @pytest.fixture()
 def ing(seeded):
     from app.db.session import SessionLocal
-    from app.models import Ingredient, Unit
+    from app.models import Unit
 
     with SessionLocal() as db:
         g = db.query(Unit).filter_by(symbol="g").first()
@@ -97,9 +96,8 @@ def test_backup_path_traversal_rejected(seeded, backup_dir):
 
 
 def test_backup_does_not_change_inventory(seeded, ing, backup_dir):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     def snapshot():
         with SessionLocal() as db:
@@ -155,9 +153,8 @@ def test_tasks_status_and_manual_run(seeded):
     assert r.status_code == 200, r.text
     assert "created" in r.json()["data"]
 
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         n = db.execute(text("select count(*) from audit_logs where action='scheduler_scan'")).scalar()
@@ -170,9 +167,8 @@ def test_manual_run_unknown_job(seeded):
 
 def test_reconcile_job_repairs_cache(seeded, ing):
     """人为制造缓存差异后，对账作业应修复并写审计。"""
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     bid = seeded.get("/api/v1/batches", params={"ingredient_id": ing["id"]}).json()["data"]["items"][0]["id"]
     with SessionLocal() as db:
@@ -204,7 +200,7 @@ def _list_with_item(seeded, ing) -> tuple[str, str]:
 
 
 def test_low_stock_shopping_list(seeded, ing):
-    lid, item_id = _list_with_item(seeded, ing)
+    lid, _item_id = _list_with_item(seeded, ing)
     detail = seeded.get(f"/api/v1/shopping-lists/{lid}").json()["data"]
     assert Decimal(detail["items"][0]["suggested_weight"]) == Decimal("500.000")  # 1000 - 500
 

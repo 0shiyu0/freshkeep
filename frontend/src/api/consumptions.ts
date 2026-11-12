@@ -49,8 +49,11 @@ export const consumptionApi = {
   /** 批量消耗：整批成功或整批回滚（后端同一请求事务） */
   createBatch: (items: Array<Record<string, unknown>>, note = '') =>
     apiPost<{ items: ConsumptionResult[]; total: number }>('/consumptions/batch', { items, note }),
-  list: (params: Record<string, unknown> = {}) => apiGet<PageResult<Consumption>>('/consumptions', params),
+  list: (params: Record<string, unknown> = {}) =>
+    apiGet<PageResult<Consumption>>('/consumptions', params),
   detail: (id: string) => apiGet<Consumption>(`/consumptions/${id}`),
   reverse: (id: string, reason = '') =>
-    apiPost<{ status: string; reverse_transaction_no: string }>(`/consumptions/${id}/reverse`, { reason }),
+    apiPost<{ status: string; reverse_transaction_no: string }>(`/consumptions/${id}/reverse`, {
+      reason,
+    }),
 }

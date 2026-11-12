@@ -9,9 +9,8 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
 from app.schemas.common import Dec2, Dec3, Dec4, ORMBase
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class BatchCreate(BaseModel):
@@ -33,7 +32,7 @@ class BatchCreate(BaseModel):
     note: str = Field(default="", max_length=500)
 
     @model_validator(mode="after")
-    def _check_dates(self) -> "BatchCreate":
+    def _check_dates(self) -> BatchCreate:
         if (
             self.expiry_date
             and self.production_date
@@ -60,7 +59,7 @@ class BatchMetaUpdate(BaseModel):
     note: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
-    def _at_least_one(self) -> "BatchMetaUpdate":
+    def _at_least_one(self) -> BatchMetaUpdate:
         if all(
             v is None
             for v in (

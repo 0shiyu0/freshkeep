@@ -30,7 +30,6 @@ from app.schemas.consumption import (
     BatchConsumptionIn,
     ConsumptionDetail,
     ConsumptionIn,
-    ConsumptionOut,
     ConsumptionResult,
     ReverseIn,
 )

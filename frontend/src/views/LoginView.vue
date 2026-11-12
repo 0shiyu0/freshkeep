@@ -79,7 +79,12 @@ async function doLogin() {
         </n-tab-pane>
 
         <n-tab-pane name="password" tab="账号密码">
-          <n-input v-model:value="username" placeholder="用户名" size="large" style="margin-top: 4px" />
+          <n-input
+            v-model:value="username"
+            placeholder="用户名"
+            size="large"
+            style="margin-top: 4px"
+          />
           <n-input
             v-model:value="password"
             type="password"
@@ -127,7 +132,10 @@ async function doLogin() {
   gap: 12px;
   margin-bottom: 18px;
 }
-.login__head h1 { font-size: 20px; font-weight: 700; }
+.login__head h1 {
+  font-size: 20px;
+  font-weight: 700;
+}
 .login__tip {
   font-size: 12.5px;
   color: var(--text-2);

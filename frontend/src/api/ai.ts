@@ -75,7 +75,7 @@ export const aiApi = {
   confirm: (id: string, target: 'ingredient' | 'batch', ingredientId?: string) =>
     apiPost<{ draft: RecognitionDraft; ingredient_id?: string; batch_id?: string }>(
       `/ai/recognitions/${id}/confirm`,
-      { target, ingredient_id: ingredientId ?? null }
+      { target, ingredient_id: ingredientId ?? null },
     ),
   reject: (id: string) => apiPost<RecognitionDraft>(`/ai/recognitions/${id}/reject`),
   settings: () => apiGet<AiSettings>('/ai/settings'),

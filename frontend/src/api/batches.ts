@@ -45,10 +45,9 @@ export const batchApi = {
   create: (data: BatchCreateInput) =>
     apiPost<{ batch: BatchItem; transaction: { id: string; transaction_no: string } }>(
       '/batches',
-      data
+      data,
     ),
-  list: (params: Record<string, unknown> = {}) =>
-    apiGet<PageResult<BatchItem>>('/batches', params),
+  list: (params: Record<string, unknown> = {}) => apiGet<PageResult<BatchItem>>('/batches', params),
   detail: (id: string) => apiGet<BatchItem>(`/batches/${id}`),
   expiring: (days = 7) => apiGet<{ items: BatchItem[] }>('/batches/expiring', { days }),
   expired: () => apiGet<{ items: BatchItem[] }>('/batches/expired'),

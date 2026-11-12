@@ -12,12 +12,11 @@ from decimal import Decimal
 from urllib.parse import urlparse
 
 import httpx
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.models import Ingredient, IngredientBarcode
 from app.services.ai.config import read_product_source
 from app.services.ai.validate import normalize_barcode
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 PRIVATE_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
@@ -84,7 +83,7 @@ def lookup(db: Session, raw_barcode: str) -> dict:
         .where(IngredientBarcode.barcode == barcode)
     ).first()
     if local is not None:
-        bc, ing = local
+        _, ing = local
         return {
             "found": True,
             "source": "local",

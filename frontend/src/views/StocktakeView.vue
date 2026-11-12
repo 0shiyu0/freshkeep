@@ -26,11 +26,9 @@ const recent = ref<TransactionRow[]>([])
 const options = computed(() => ingredients.value.map((i) => ({ label: i.name, value: i.id })))
 const selected = computed(() => ingredients.value.find((i) => i.id === picked.value) ?? null)
 const available = computed(() =>
-  batches.value.reduce((sum, b) => sum + Number(b.remaining_weight || 0), 0)
+  batches.value.reduce((sum, b) => sum + Number(b.remaining_weight || 0), 0),
 )
-const filledCount = computed(
-  () => Object.values(draft).filter((v) => v.trim() !== '').length
-)
+const filledCount = computed(() => Object.values(draft).filter((v) => v.trim() !== '').length)
 
 async function loadIngredients() {
   const res = await ingredientApi.list({ page_size: 200 })
@@ -42,7 +40,11 @@ async function loadBatches() {
   if (!picked.value) return (batches.value = [])
   loading.value = true
   try {
-    const res = await batchApi.list({ ingredient_id: picked.value, status: 'active', page_size: 100 })
+    const res = await batchApi.list({
+      ingredient_id: picked.value,
+      status: 'active',
+      page_size: 100,
+    })
     batches.value = res.items
     for (const key of Object.keys(draft)) delete draft[key]
     for (const b of res.items) draft[b.id] = trimNum(b.remaining_weight)
@@ -74,7 +76,7 @@ async function submitStocktake() {
   busy.value = true
   try {
     const res = await inventoryApi.stocktake(
-      changed.map((r) => ({ batch_id: r.batch_id, actual_weight: r.value, reason: '盘点' }))
+      changed.map((r) => ({ batch_id: r.batch_id, actual_weight: r.value, reason: '盘点' })),
     )
     notifySuccess(`已盘点 ${res.items.length} 个批次并生成调整流水`)
     await Promise.all([loadBatches(), loadRecent()])
@@ -142,13 +144,23 @@ onMounted(async () => {
   </div>
 
   <div class="tabs card">
-    <button class="tab" :class="{ 'tab--on': tab === 'stocktake' }" @click="tab = 'stocktake'">盘点</button>
-    <button class="tab" :class="{ 'tab--on': tab === 'spoilage' }" @click="tab = 'spoilage'">报损</button>
+    <button class="tab" :class="{ 'tab--on': tab === 'stocktake' }" @click="tab = 'stocktake'">
+      盘点
+    </button>
+    <button class="tab" :class="{ 'tab--on': tab === 'spoilage' }" @click="tab = 'spoilage'">
+      报损
+    </button>
   </div>
 
   <section class="card">
-    <label class="field">食材
-      <NSelect v-model:value="picked" :options="options" filterable placeholder="搜索食材名称 / 拼音" />
+    <label class="field"
+      >食材
+      <NSelect
+        v-model:value="picked"
+        :options="options"
+        filterable
+        placeholder="搜索食材名称 / 拼音"
+      />
     </label>
 
     <!-- 盘点：逐批次提交实际重量 -->
@@ -178,13 +190,16 @@ onMounted(async () => {
     <template v-else>
       <p class="hint">当前可用 {{ available }}g · 按先到期先出扣减，成本按批次单位成本核算。</p>
       <div class="form-row">
-        <label class="field">报损重量（g）
+        <label class="field"
+          >报损重量（g）
           <input v-model="spoil.weight" inputmode="decimal" placeholder="如 200" />
         </label>
-        <label class="field">数量（{{ selected?.quantity_unit?.name || '数量' }}）
+        <label class="field"
+          >数量（{{ selected?.quantity_unit?.name || '数量' }}）
           <input v-model="spoil.quantity" inputmode="decimal" placeholder="可留空" />
         </label>
-        <label class="field">原因
+        <label class="field"
+          >原因
           <input v-model="spoil.reason" placeholder="如 变质 / 过期 / 丢弃" />
         </label>
       </div>
@@ -215,53 +230,194 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.tabs { display: flex; gap: 8px; padding: 8px; margin-bottom: 14px; }
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 14px;
+}
 .tab {
-  padding: 7px 18px; border-radius: 9px; border: 1px solid transparent;
-  background: transparent; font-size: 13.5px; cursor: pointer; color: var(--text-2);
+  padding: 7px 18px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 13.5px;
+  cursor: pointer;
+  color: var(--text-2);
 }
-.tab--on { background: var(--green-weak); color: var(--green); border-color: #cfe3d6; font-weight: 600; }
-.field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-2); }
+.tab--on {
+  background: var(--green-weak);
+  color: var(--green);
+  border-color: #cfe3d6;
+  font-weight: 600;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
 .field input {
-  height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
 }
-.form-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
-.form-row .field { min-width: 150px; flex: 1; }
-.hint { font-size: 11.5px; color: var(--text-3); margin: 10px 0; }
+.form-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.form-row .field {
+  min-width: 150px;
+  flex: 1;
+}
+.hint {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin: 10px 0;
+}
 .st-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 9px 0; border-top: 1px dashed var(--line); flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
 }
-.st-row__info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.st-row__label { font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
-.st-row input { width: 110px; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; text-align: right; }
-.foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--text-3); }
-.muted { color: var(--text-3); font-size: 11.5px; }
-.muted-line { font-size: 13px; color: var(--text-3); padding: 6px 0; }
-.empty-inline { padding: 12px 0; font-size: 13px; }
-.empty-inline a { color: var(--green); cursor: pointer; }
-.expiry { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
-.expiry--ok { background: var(--green-weak); color: var(--green); }
-.expiry--warn { background: #fdf3e2; color: #b8860b; }
-.expiry--danger { background: #fbeae8; color: var(--red); }
-.expiry--expired { background: var(--red); color: #fff; }
-.expiry--muted { background: #f0efe9; color: var(--text-3); }
-.card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.card__head h2 { margin: 0; }
+.st-row__info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.st-row__label {
+  font-size: 12.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.st-row input {
+  width: 110px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-align: right;
+}
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.muted {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.muted-line {
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 6px 0;
+}
+.empty-inline {
+  padding: 12px 0;
+  font-size: 13px;
+}
+.empty-inline a {
+  color: var(--green);
+  cursor: pointer;
+}
+.expiry {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.expiry--ok {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.expiry--warn {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.expiry--danger {
+  background: #fbeae8;
+  color: var(--red);
+}
+.expiry--expired {
+  background: var(--red);
+  color: #fff;
+}
+.expiry--muted {
+  background: #f0efe9;
+  color: var(--text-3);
+}
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.card__head h2 {
+  margin: 0;
+}
 .rec {
-  display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: 12.5px;
-  border-top: 1px dashed var(--line); flex-wrap: wrap; font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 12.5px;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
 }
-.rec__name { font-weight: 600; }
-.tx-tag { font-size: 11.5px; padding: 2px 9px; border-radius: 999px; font-weight: 500; }
-.tx-tag--purchase { background: var(--green-weak); color: var(--green); }
-.tx-tag--consume { background: #eef2fb; color: #3d5a9a; }
-.tx-tag--spoilage { background: #fbeae8; color: var(--red); }
-.tx-tag--adjustment { background: #fdf3e2; color: #b8860b; }
-.tx-tag--reverse { background: #f0efe9; color: var(--text-2); }
+.rec__name {
+  font-weight: 600;
+}
+.tx-tag {
+  font-size: 11.5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.tx-tag--purchase {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.tx-tag--consume {
+  background: #eef2fb;
+  color: #3d5a9a;
+}
+.tx-tag--spoilage {
+  background: #fbeae8;
+  color: var(--red);
+}
+.tx-tag--adjustment {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.tx-tag--reverse {
+  background: #f0efe9;
+  color: var(--text-2);
+}
 @media (max-width: 720px) {
-  .form-row .field { min-width: 100%; }
-  .st-row input { width: 90px; }
+  .form-row .field {
+    min-width: 100%;
+  }
+  .st-row input {
+    width: 90px;
+  }
 }
 </style>

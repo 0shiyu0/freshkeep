@@ -8,9 +8,8 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, model_validator
-
 from app.schemas.common import Dec2, Dec3, ORMBase
+from pydantic import BaseModel, Field, model_validator
 
 
 class InventoryRow(BaseModel):
@@ -70,7 +69,7 @@ class AdjustmentIn(BaseModel):
     reason: str = Field(default="", max_length=200)
 
     @model_validator(mode="after")
-    def _has_measure(self) -> "AdjustmentIn":
+    def _has_measure(self) -> AdjustmentIn:
         if self.actual_weight is None and self.actual_quantity is None:
             raise ValueError("实际重量与实际数量至少填一项")
         return self
@@ -90,7 +89,7 @@ class SpoilageIn(BaseModel):
     batch_ids: list[uuid.UUID] | None = None
 
     @model_validator(mode="after")
-    def _has_measure(self) -> "SpoilageIn":
+    def _has_measure(self) -> SpoilageIn:
         if (self.weight or Decimal(0)) <= 0 and (self.quantity or Decimal(0)) <= 0:
             raise ValueError("重量与数量至少填写一项")
         return self

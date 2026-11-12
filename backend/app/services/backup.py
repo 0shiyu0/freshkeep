@@ -12,18 +12,17 @@ from __future__ import annotations
 
 import hashlib
 import io
-import os
 import json
+import os
 import tarfile
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
 from app.core.config import settings
 from app.core.errors import not_found, validation_error
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 BIZ = ZoneInfo("Asia/Shanghai")
 
@@ -46,13 +45,14 @@ def _dir() -> Path:
 
 def _copy_table_csv(db: Session, table: str) -> bytes:
     conn = db.connection().connection
-    with conn.cursor() as cur:
-        with cur.copy(f"COPY (SELECT * FROM {table}) TO STDOUT WITH (FORMAT csv, HEADER)") as cp:
-            return b"".join(cp)
+    with conn.cursor() as cur, cur.copy(
+        f"COPY (SELECT * FROM {table}) TO STDOUT WITH (FORMAT csv, HEADER)"
+    ) as cp:
+        return b"".join(cp)
 
 
 def _count(db: Session, table: str) -> int:
-    return int(db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar() or 0)  # noqa: S608
+    return int(db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar() or 0)
 
 
 def create_backup(db: Session) -> dict:

@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 import httpx
-
 from app.core.time import biz_today
 
 PROMPT = """你是食品包装信息提取器。只输出一个 JSON 对象，不要解释：

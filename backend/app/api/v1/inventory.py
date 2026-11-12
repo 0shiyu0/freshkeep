@@ -24,14 +24,14 @@ from app.schemas.common import ok
 from app.schemas.common import ok as ok_
 from app.schemas.inventory import (
     AdjustmentIn,
+    AdjustmentOut,
+    InventoryRow,
+    InventorySummary,
     LedgerStockOut,
     LedgerStockRow,
     ReconcileOut,
     ReconcileRepairIn,
     ReconcileRow,
-    AdjustmentOut,
-    InventoryRow,
-    InventorySummary,
     SpoilageIn,
     SpoilageOut,
     StocktakeIn,
@@ -39,7 +39,8 @@ from app.schemas.inventory import (
     TransactionRow,
 )
 from app.services.inventory.engine import is_consistent
-from app.services.inventory.ops import adjust_batch, spoil, stocktake as do_stocktake
+from app.services.inventory.ops import adjust_batch, spoil
+from app.services.inventory.ops import stocktake as do_stocktake
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -115,7 +116,7 @@ def list_inventory(
         "q_raw": keyword.lower() if keyword else None,
     }
 
-    count_sql = f"SELECT COUNT(*) FROM ({_BASE_SELECT}) t"  # noqa: S608 - SQL 为静态串，值全部参数化
+    count_sql = f"SELECT COUNT(*) FROM ({_BASE_SELECT}) t"
     total = db.execute(text(count_sql), params).scalar() or 0
 
     rows = db.execute(
@@ -175,7 +176,7 @@ def inventory_summary(
     )
     expiring = db.execute(
         text(
-            f"SELECT COUNT(*) FROM batches WHERE {alive} "  # noqa: S608 - 静态串
+            f"SELECT COUNT(*) FROM batches WHERE {alive} "
             "AND expiry_date >= :today AND expiry_date <= :until"
         ),
         {"today": today, "until": today + timedelta(days=7)},

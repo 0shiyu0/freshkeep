@@ -8,8 +8,8 @@
 """
 from __future__ import annotations
 
-from decimal import Decimal
 import uuid
+from decimal import Decimal
 
 import pytest
 
@@ -17,10 +17,9 @@ import pytest
 @pytest.fixture()
 def ing(seeded):
     """鸡胸肉（500g 库存）、牛奶（200g 库存，无数量换算）。"""
-    from decimal import Decimal as D
 
     from app.db.session import SessionLocal
-    from app.models import Ingredient, Unit
+    from app.models import Unit
 
     with SessionLocal() as db:
         g = db.query(Unit).filter_by(symbol="g").first()
@@ -47,9 +46,8 @@ def _low_stock_list(seeded, ing) -> str:
 
 
 def psql_count(table: str) -> str:
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
@@ -194,9 +192,8 @@ def test_shopping_list_merges_recipes(seeded, ing):
     assert item["source"] == "recipe"
 
     # 落库且不产生库存变动
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         lists = db.execute(text("select count(*) from shopping_lists")).scalar()
@@ -270,9 +267,8 @@ def test_text_steps_are_parsed_and_stripped(seeded, ing):
 
 def test_legacy_text_fallback(seeded, ing):
     """库里只有 recipes.steps 旧文本、没有步骤行时，详情按行兜底并标 legacy。"""
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     d = _create(seeded, "旧数据菜谱", [{"ingredient_id": ing["chicken"], "weight": "100"}])
     rid = d["id"]

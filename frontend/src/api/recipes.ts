@@ -84,12 +84,29 @@ export const recipeApi = {
   remove: (id: string) => apiDelete<{ deleted: boolean }>(`/recipes/${id}`),
   match: (id: string, servings?: string) =>
     apiGet<RecipeMatch>(`/recipes/${id}/match`, servings ? { servings } : {}),
-  shoppingListFromRecipes: (data: { recipe_ids: string[]; servings_map?: Record<string, string>; name?: string }) =>
-    apiPost<{ id: string; name: string; status: string; items: Array<Record<string, unknown>>; message: string }>(
-      '/shopping-lists/from-recipes',
-      data
-    ),
-  shoppingLists: () => apiGet<PageResult<{ id: string; name: string; status: string; item_count: number; open_count: number; created_at: string }>>('/shopping-lists'),
+  shoppingListFromRecipes: (data: {
+    recipe_ids: string[]
+    servings_map?: Record<string, string>
+    name?: string
+  }) =>
+    apiPost<{
+      id: string
+      name: string
+      status: string
+      items: Array<Record<string, unknown>>
+      message: string
+    }>('/shopping-lists/from-recipes', data),
+  shoppingLists: () =>
+    apiGet<
+      PageResult<{
+        id: string
+        name: string
+        status: string
+        item_count: number
+        open_count: number
+        created_at: string
+      }>
+    >('/shopping-lists'),
   shoppingList: (id: string) => apiGet<ShoppingList>(`/shopping-lists/${id}`),
   toggleItem: (itemId: string, isCompleted: boolean) =>
     request<{ id: string; is_completed: boolean }>({
@@ -97,12 +114,20 @@ export const recipeApi = {
       method: 'PATCH',
       data: { is_completed: isCompleted },
     }),
-  completeList: (id: string) => apiPost<{ id: string; status: string }>(`/shopping-lists/${id}/complete`, {}),
+  completeList: (id: string) =>
+    apiPost<{ id: string; status: string }>(`/shopping-lists/${id}/complete`, {}),
   importList: (id: string) =>
-    apiPost<{ list_id: string; list_name: string; batches: Array<{ batch_id: string; ingredient_name: string; weight: string; cost: string }>; total_cost: string; zero_cost_ingredients: string[]; note: string | null }>(
-      `/shopping-lists/${id}/import`, {}),
+    apiPost<{
+      list_id: string
+      list_name: string
+      batches: Array<{ batch_id: string; ingredient_name: string; weight: string; cost: string }>
+      total_cost: string
+      zero_cost_ingredients: string[]
+      note: string | null
+    }>(`/shopping-lists/${id}/import`, {}),
   fromLowStock: (name = '') =>
     apiPost<{ id: string; name: string; items: Array<Record<string, unknown>>; message: string }>(
-      `/shopping-lists/from-low-stock${name ? `?name=${encodeURIComponent(name)}` : ''}`, {}
+      `/shopping-lists/from-low-stock${name ? `?name=${encodeURIComponent(name)}` : ''}`,
+      {},
     ),
 }

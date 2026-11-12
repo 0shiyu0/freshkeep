@@ -52,9 +52,8 @@ def ingredient(seeded):
 
 
 def _db_one(sql: str):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(sql)).first()
@@ -144,9 +143,8 @@ def test_create_batch_dual_measurement(seeded, ingredient):
 
 def test_create_batch_numbering_increments(seeded, ingredient):
     """同日两次入库：批次号 -01、-02，流水号也递增。"""
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     for _ in range(2):
         res = seeded.post(

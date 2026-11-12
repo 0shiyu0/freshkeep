@@ -9,7 +9,17 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, SmallInteger, Text, text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    SmallInteger,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -93,7 +103,7 @@ class Category(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = _now()
 
-    parent: Mapped["Category | None"] = relationship(remote_side="Category.id", lazy="joined")
+    parent: Mapped[Category | None] = relationship(remote_side="Category.id", lazy="joined")
 
 
 class Unit(Base):
@@ -165,10 +175,10 @@ class Ingredient(Base):
     created_at: Mapped[datetime] = _now()
     updated_at: Mapped[datetime] = _now()
 
-    barcodes: Mapped[list["IngredientBarcode"]] = relationship(
+    barcodes: Mapped[list[IngredientBarcode]] = relationship(
         back_populates="ingredient", cascade="all, delete-orphan", lazy="selectin"
     )
-    nutrition: Mapped[list["IngredientNutrition"]] = relationship(
+    nutrition: Mapped[list[IngredientNutrition]] = relationship(
         back_populates="ingredient", cascade="all, delete-orphan", lazy="selectin"
     )
 

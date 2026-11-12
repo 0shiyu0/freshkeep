@@ -10,10 +10,9 @@
 """
 from __future__ import annotations
 
+from pypinyin import Style, lazy_pinyin
 from sqlalchemy import case, func, or_
 from sqlalchemy.sql import ColumnElement
-
-from pypinyin import Style, lazy_pinyin
 
 
 def to_pinyin(name: str) -> tuple[str, str]:

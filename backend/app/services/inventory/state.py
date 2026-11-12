@@ -14,10 +14,9 @@
 """
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
-
 from app.core.errors import conflict
 from app.models import Batch
+from sqlalchemy.orm import Session
 
 _ALLOWED = {("active", "depleted"), ("depleted", "active")}
 

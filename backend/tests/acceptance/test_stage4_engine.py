@@ -56,18 +56,16 @@ def _batch(client, ing_id: str, weight: str, cost: str, expiry_days: int | None 
 
 
 def _one(sql: str):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(sql)).first()
 
 
 def _rows(sql: str):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(sql)).all()
@@ -144,9 +142,8 @@ def test_3_batch_consume_rolls_back_all_on_one_failure(seeded, ing):
 
 
 def test_4_concurrent_consumption_no_negative_stock(seeded, ing):
-    from fastapi.testclient import TestClient
-
     from app.main import app
+    from fastapi.testclient import TestClient
 
     iid = ing["鸡胸肉"]
     _batch(seeded, iid, "500", "18.00")
@@ -160,8 +157,10 @@ def test_4_concurrent_consumption_no_negative_stock(seeded, ing):
                             json={"ingredient_id": iid, "weight": "400"}).status_code)
 
     ts = [threading.Thread(target=worker) for _ in range(2)]
-    for t in ts: t.start()
-    for t in ts: t.join(timeout=30)
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join(timeout=30)
 
     assert sorted(codes) == [201, 422], codes
     left = _one(f"select remaining_weight from batches where ingredient_id='{iid}'")[0]
@@ -278,9 +277,8 @@ def test_4_1_ledger_stock_matches_cached(seeded, ing):
 
 def test_4_12_reconcile_detects_and_repairs_cache_drift(seeded, ing):
     """4.12：绕过流水篡改缓存后，对账能发现并按流水修复，且写审计。"""
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     iid = ing["鸡胸肉"]
     b = _batch(seeded, iid, "500", "18.00")

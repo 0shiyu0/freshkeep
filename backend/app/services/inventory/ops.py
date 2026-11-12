@@ -13,15 +13,14 @@ from __future__ import annotations
 import uuid
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.core.errors import not_found, validation_error
 from app.core.time import biz_today
 from app.models import Batch, InventoryTransaction, TransactionAllocation
 from app.services.consumption import resolve_measure
 from app.services.inventory import fefo_order
 from app.services.inventory.state import refresh_batch_status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 Q2, Q3, Q4 = Decimal("0.01"), Decimal("0.001"), Decimal("0.0001")
 

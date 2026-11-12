@@ -10,15 +10,13 @@
 """
 from __future__ import annotations
 
-import uuid
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
+from app.core.time import biz_today
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
-from app.core.time import biz_today
 
 BIZ_TZ = ZoneInfo("Asia/Shanghai")
 Q2, Q3, Q4 = Decimal("0.01"), Decimal("0.001"), Decimal("0.0001")
@@ -89,7 +87,7 @@ def summary(db: Session, *, from_date: date | None = None, to_date: date | None 
     alive = "status='active' AND (remaining_weight > 0 OR remaining_quantity > 0) AND expiry_date IS NOT NULL"
     expiring = db.execute(
         text(
-            f"SELECT COUNT(*) FROM batches WHERE {alive} "  # noqa: S608 - 静态串
+            f"SELECT COUNT(*) FROM batches WHERE {alive} "
             "AND expiry_date >= :today AND expiry_date <= :until"
         ),
         {"today": today, "until": today + timedelta(days=7)},

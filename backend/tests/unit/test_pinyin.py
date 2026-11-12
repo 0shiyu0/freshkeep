@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import pytest
-
 from app.services.search import search_filter, to_pinyin
 
 
@@ -39,8 +38,8 @@ def test_to_pinyin_keeps_digits_and_latin():
 
 def test_search_filter_covers_three_paths():
     """搜索必须同时匹配中文名、全拼、首字母 —— 三条 OR 缺一不可。"""
-    from sqlalchemy.dialects import postgresql
     from sqlalchemy import column
+    from sqlalchemy.dialects import postgresql
 
     expr = search_filter(column("name"), column("name_pinyin"), column("name_initials"), "jxr")
     sql = str(expr.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))

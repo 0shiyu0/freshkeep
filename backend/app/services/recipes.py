@@ -11,11 +11,10 @@ from __future__ import annotations
 import uuid
 from decimal import ROUND_HALF_UP, Decimal
 
+from app.core.errors import ApiError, not_found, validation_error
+from app.models import Ingredient, Recipe, RecipeItem, RecipeStep
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
-
-from app.core.errors import ApiError, not_found, validation_error
-from app.models import Ingredient, Recipe, RecipeItem, RecipeStep, Unit
 
 Q2, Q3, Q4 = Decimal("0.01"), Decimal("0.001"), Decimal("0.0001")
 

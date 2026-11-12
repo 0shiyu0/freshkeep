@@ -45,9 +45,8 @@ def _days(n: int) -> str:
 
 
 def _one(sql: str):
-    from sqlalchemy import text
-
     from app.db.session import SessionLocal
+    from sqlalchemy import text
 
     with SessionLocal() as db:
         return db.execute(text(sql)).first()

@@ -9,11 +9,8 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
-
-from sqlalchemy import select, text
-from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError, not_found, validation_error
 from app.core.time import biz_today
@@ -30,6 +27,8 @@ from app.services import files as file_svc
 from app.services.ai.config import read_ai
 from app.services.ai.provider import AIProviderError, recognize
 from app.services.ai.validate import normalize_barcode, validate_dates
+from sqlalchemy import select, text
+from sqlalchemy.orm import Session
 
 
 def _warn(code: str, message: str, field: str = "") -> dict:
@@ -82,7 +81,7 @@ def _normalize(db: Session, raw: dict, warnings: list[dict]) -> dict:
         try:
             value = Decimal(str(item.get("value")))
             basis = Decimal(str(item.get("basis_amount") or 100))
-        except Exception:  # noqa: BLE001 - 单个营养项格式错误不应整单失败
+        except Exception:
             warnings.append(_warn("NUTRITION_ITEM_INVALID", f"营养项 {code or '?'} 数值无法解析，已跳过"))
             continue
         if not code or value < 0 or basis <= 0:
@@ -227,7 +226,7 @@ def confirm(
     row.status = "confirmed"
     row.confirmed_entity_type = target
     row.confirmed_entity_id = entity_id
-    row.confirmed_at = datetime.now(timezone.utc)
+    row.confirmed_at = datetime.now(UTC)
     db.execute(
         text(
             "INSERT INTO audit_logs (action, object_type, object_id, before_json, after_json, device_id) "

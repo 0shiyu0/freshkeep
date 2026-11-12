@@ -4,7 +4,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NButton } from 'naive-ui'
 
-import { alertsApi, type AlertSummary, type NotificationRow, type PurchaseSuggestion } from '@/api/alerts'
+import {
+  alertsApi,
+  type AlertSummary,
+  type NotificationRow,
+  type PurchaseSuggestion,
+} from '@/api/alerts'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import { browserNotifications } from '@/utils/notifications'
 
@@ -29,7 +34,11 @@ const typeLabel: Record<string, string> = {
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
 
 async function loadSummary() {
-  try { summary.value = await alertsApi.summary() } catch { /* 非关键 */ }
+  try {
+    summary.value = await alertsApi.summary()
+  } catch {
+    /* 非关键 */
+  }
 }
 
 async function loadList() {
@@ -59,7 +68,11 @@ async function scanNow() {
     const res = await alertsApi.scan(7)
     notifySuccess(res.created > 0 ? `新增 ${res.created} 条提醒` : '没有新的提醒')
     if (res.created > 0) {
-      browserNotifications.show('鲜度 · 临期提醒', `新增 ${res.created} 条提醒，请查看通知中心。`, 'freshkeep-alerts')
+      browserNotifications.show(
+        '鲜度 · 临期提醒',
+        `新增 ${res.created} 条提醒，请查看通知中心。`,
+        'freshkeep-alerts',
+      )
     }
     await Promise.all([loadSummary(), loadList()])
   } catch (err) {
@@ -133,8 +146,16 @@ onMounted(async () => {
   </div>
 
   <div class="tabs card">
-    <button class="tab" :class="{ 'tab--on': tab === 'notifications' }" @click="tab = 'notifications'">通知</button>
-    <button class="tab" :class="{ 'tab--on': tab === 'purchase' }" @click="tab = 'purchase'">采购建议</button>
+    <button
+      class="tab"
+      :class="{ 'tab--on': tab === 'notifications' }"
+      @click="tab = 'notifications'"
+    >
+      通知
+    </button>
+    <button class="tab" :class="{ 'tab--on': tab === 'purchase' }" @click="tab = 'purchase'">
+      采购建议
+    </button>
   </div>
 
   <!-- 通知 -->
@@ -157,8 +178,12 @@ onMounted(async () => {
           </div>
           <div class="notice__meta">
             <span v-if="n.payload?.expiry_date">到期 {{ n.payload.expiry_date }}</span>
-            <span v-if="n.payload?.remaining_weight != null">剩余 {{ n.payload.remaining_weight }}g</span>
-            <span v-if="n.payload?.minimum_weight != null">最低 {{ n.payload.minimum_weight }}g</span>
+            <span v-if="n.payload?.remaining_weight != null"
+              >剩余 {{ n.payload.remaining_weight }}g</span
+            >
+            <span v-if="n.payload?.minimum_weight != null"
+              >最低 {{ n.payload.minimum_weight }}g</span
+            >
             <span class="muted">{{ fmtTime(n.created_at) }}</span>
           </div>
         </div>
@@ -186,15 +211,23 @@ onMounted(async () => {
         <div class="suggest__main">
           <div class="suggest__name">{{ s.name }}</div>
           <div class="suggest__meta">
-            现有 {{ Number(s.total_weight) }}{{ s.weight_symbol }} · 最低 {{ Number(s.minimum_weight) }}{{ s.weight_symbol }}
+            现有 {{ Number(s.total_weight) }}{{ s.weight_symbol }} · 最低
+            {{ Number(s.minimum_weight) }}{{ s.weight_symbol }}
             <span class="reason">{{ s.reason }}</span>
           </div>
         </div>
         <div class="suggest__num">
-          <strong>{{ s.suggested_weight ? Number(s.suggested_weight) + s.weight_symbol : '—' }}</strong>
+          <strong>{{
+            s.suggested_weight ? Number(s.suggested_weight) + s.weight_symbol : '—'
+          }}</strong>
           <small v-if="s.estimated_cost">≈ ¥{{ s.estimated_cost }}</small>
         </div>
-        <button class="btn btn--tiny" @click="router.push(`/purchase?ingredient=${s.ingredient_id}`)">去入库</button>
+        <button
+          class="btn btn--tiny"
+          @click="router.push(`/purchase?ingredient=${s.ingredient_id}`)"
+        >
+          去入库
+        </button>
       </div>
       <p class="muted note">
         建议量 = 最低库存 − 现有库存；未设最低库存时按近 30 天用量估算 7 天覆盖量。仅作参考。
@@ -204,46 +237,198 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 14px; }
-.stat { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; }
-.stat span { font-size: 11.5px; color: var(--text-3); }
-.stat strong { font-size: 20px; font-variant-numeric: tabular-nums; }
-.stat.warn { border-color: #f0dfb8; background: #fdf9ef; }
-.stat.danger { border-color: #f2c9c6; background: #fdf2f1; }
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.stat span {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.stat strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.stat.warn {
+  border-color: #f0dfb8;
+  background: #fdf9ef;
+}
+.stat.danger {
+  border-color: #f2c9c6;
+  background: #fdf2f1;
+}
 
-.tabs { display: flex; gap: 8px; padding: 8px; margin-bottom: 14px; }
-.tab { padding: 7px 18px; border-radius: 9px; border: 1px solid transparent; background: transparent; font-size: 13.5px; cursor: pointer; color: var(--text-2); }
-.tab--on { background: var(--green-weak); color: var(--green); border-color: #cfe3d6; font-weight: 600; }
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 14px;
+}
+.tab {
+  padding: 7px 18px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 13.5px;
+  cursor: pointer;
+  color: var(--text-2);
+}
+.tab--on {
+  background: var(--green-weak);
+  color: var(--green);
+  border-color: #cfe3d6;
+  font-weight: 600;
+}
 
-.card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.card__head h2 { margin: 0; }
-.muted-line { font-size: 13px; color: var(--text-3); padding: 8px 0; }
-.muted { color: var(--text-3); font-size: 11.5px; }
-.mono { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--text-3); }
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.card__head h2 {
+  margin: 0;
+}
+.muted-line {
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 8px 0;
+}
+.muted {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
 
-.notice { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px dashed var(--line); flex-wrap: wrap; }
-.notice__main { flex: 1; min-width: 160px; }
-.notice__title { font-size: 14px; font-weight: 500; display: flex; gap: 8px; align-items: baseline; }
-.notice__meta { display: flex; gap: 12px; margin-top: 3px; font-size: 11.5px; color: var(--text-3); flex-wrap: wrap; }
-.nt { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
-.nt--expiring { background: #fdf3e2; color: #b8860b; }
-.nt--expired { background: #fbeae8; color: var(--red); }
-.nt--low_stock { background: #eef2fb; color: #3d5a9a; }
-.nt--backup { background: #f0efe9; color: var(--text-2); }
-.btn--tiny { padding: 3px 9px; font-size: 11.5px; border-radius: 6px; }
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+.notice__main {
+  flex: 1;
+  min-width: 160px;
+}
+.notice__title {
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.notice__meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  flex-wrap: wrap;
+}
+.nt {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.nt--expiring {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.nt--expired {
+  background: #fbeae8;
+  color: var(--red);
+}
+.nt--low_stock {
+  background: #eef2fb;
+  color: #3d5a9a;
+}
+.nt--backup {
+  background: #f0efe9;
+  color: var(--text-2);
+}
+.btn--tiny {
+  padding: 3px 9px;
+  font-size: 11.5px;
+  border-radius: 6px;
+}
 
-.suggest { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px dashed var(--line); flex-wrap: wrap; }
-.suggest__main { flex: 1; min-width: 160px; }
-.suggest__name { font-size: 14px; font-weight: 600; }
-.suggest__meta { font-size: 11.5px; color: var(--text-3); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
-.reason { font-family: ui-monospace, monospace; font-size: 10.5px; opacity: .75; }
-.suggest__num { text-align: right; display: flex; flex-direction: column; gap: 2px; }
-.suggest__num strong { font-size: 15px; font-variant-numeric: tabular-nums; }
-.suggest__num small { font-size: 11px; color: var(--text-3); }
-.pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 0 4px; }
-.note { margin-top: 10px; }
+.suggest {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+.suggest__main {
+  flex: 1;
+  min-width: 160px;
+}
+.suggest__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.suggest__meta {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 3px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.reason {
+  font-family: ui-monospace, monospace;
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+.suggest__num {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.suggest__num strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.suggest__num small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 0 4px;
+}
+.note {
+  margin-top: 10px;
+}
 @media (max-width: 720px) {
-  .cards { grid-template-columns: repeat(2, 1fr); }
-  .suggest__num { text-align: left; }
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .suggest__num {
+    text-align: left;
+  }
 }
 </style>

@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy.orm import Session
-
 from app.core.errors import conflict
 from app.models import ConsumptionRecord
+from sqlalchemy.orm import Session
 
 
 def mark_reversed(db: Session, record: ConsumptionRecord, reverse_tx_id: uuid.UUID) -> None:

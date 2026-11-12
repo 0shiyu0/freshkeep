@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, or_, select
@@ -23,7 +22,6 @@ from app.models import Batch, StorageLocation
 from app.schemas.batch import (
     BatchCreate,
     BatchMetaUpdate,
-    BatchOut,
     TransactionBrief,
 )
 from app.schemas.common import ok

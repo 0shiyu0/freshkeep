@@ -1,0 +1,51 @@
+[tool.ruff]
+# Python 代码检查与格式化统一配置（ruff 0.17+）
+line-length = 100
+target-version = "py312"
+src = ["app", "tests"]
+extend-exclude = ["migrations/versions", ".venv", "__pycache__"]
+
+[tool.ruff.lint]
+# 核心集合：语法错误、未使用、导入顺序、现代化、常见 bug、可简化写法
+select = [
+    "E",    # pycodestyle 错误
+    "F",    # pyflakes（未使用变量/导入、未定义名）
+    "I",    # isort 导入排序
+    "UP",   # pyupgrade（旧语法现代化）
+    "B",    # flake8-bugbear（易错写法）
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff 自有规则
+]
+
+ignore = [
+    "E501",    # 行宽由 formatter 控制，不在 lint 阶段逐行报错
+    "RUF001",  # 中文全角标点（文档字符串与提示语，属预期）
+    "RUF002",
+    "RUF003",
+    "B008",    # FastAPI 的 Depends()/Query() 默认值是标准写法
+    "SIM108",  # 三元表达式可读性取舍，不强制
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 测试里允许 assert 与长函数、允许未使用 fixture 参数
+"tests/**" = ["B011", "SIM117", "F841"]
+# 迁移脚本由 alembic 生成，不参与业务规范
+"migrations/**" = ["E", "F", "I", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/main.py", "app/cli.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

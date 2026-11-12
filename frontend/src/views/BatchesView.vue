@@ -66,10 +66,20 @@ onMounted(async () => {
   </div>
 
   <section class="card filters">
-    <input v-model="keyword" class="filters__input" placeholder="搜索食材：鸡胸肉 / jixiongrou / jxr" />
+    <input
+      v-model="keyword"
+      class="filters__input"
+      placeholder="搜索食材：鸡胸肉 / jixiongrou / jxr"
+    />
     <NSelect v-model:value="status" :options="statusOptions" size="small" style="width: 130px" />
-    <NSelect v-model:value="locationId" :options="locationOptions" placeholder="全部位置"
-             clearable size="small" style="width: 140px" />
+    <NSelect
+      v-model:value="locationId"
+      :options="locationOptions"
+      placeholder="全部位置"
+      clearable
+      size="small"
+      style="width: 140px"
+    />
   </section>
 
   <div v-if="loading" class="card empty"><p>加载中…</p></div>
@@ -83,7 +93,12 @@ onMounted(async () => {
   </section>
 
   <template v-else>
-    <section v-for="b in items" :key="b.id" class="card batch" @click="router.push(`/batches/${b.id}`)">
+    <section
+      v-for="b in items"
+      :key="b.id"
+      class="card batch"
+      @click="router.push(`/batches/${b.id}`)"
+    >
       <div class="batch__head">
         <span class="mono">{{ b.batch_no }}</span>
         <span class="expiry" :class="`expiry--${expiryClass(b)}`">{{ expiryText(b) }}</span>
@@ -92,7 +107,9 @@ onMounted(async () => {
       <div class="batch__body">
         <div class="batch__name">{{ b.ingredient_name }}</div>
         <div class="batch__nums">
-          <span>剩余 <b>{{ trimNum(b.remaining_weight) }}g</b></span>
+          <span
+            >剩余 <b>{{ trimNum(b.remaining_weight) }}g</b></span
+          >
           <span>成本 ¥{{ b.remaining_cost }} / {{ b.purchase_cost }}</span>
           <span v-if="b.unit_cost">单位 {{ b.unit_cost }} 元/g</span>
         </div>
@@ -107,26 +124,94 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .filters__input {
-  flex: 1; min-width: 200px; height: 32px; padding: 0 10px;
-  border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px;
+  flex: 1;
+  min-width: 200px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13.5px;
   background: var(--bg-card, #fff);
 }
-.empty { text-align: center; padding: 26px 0; }
-.batch { cursor: pointer; transition: border-color .15s ease; }
-.batch:hover { border-color: var(--green); }
-.batch__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.batch__body { margin-top: 8px; }
-.batch__name { font-size: 15px; font-weight: 600; }
-.batch__nums { display: flex; gap: 16px; margin-top: 5px; font-size: 13px; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
-.batch__nums b { font-size: 14px; }
-.batch__meta { display: flex; gap: 14px; margin-top: 5px; font-size: 11.5px; color: var(--text-3); flex-wrap: wrap; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-3); }
-.expiry { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
-.expiry--ok { background: var(--green-weak); color: var(--green); }
-.expiry--warn { background: #fdf3e2; color: #b8860b; }
-.expiry--danger { background: #fbeae8; color: var(--red); }
-.expiry--expired { background: var(--red); color: #fff; }
-.expiry--muted { background: #f0efe9; color: var(--text-3); }
+.empty {
+  text-align: center;
+  padding: 26px 0;
+}
+.batch {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.batch:hover {
+  border-color: var(--green);
+}
+.batch__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.batch__body {
+  margin-top: 8px;
+}
+.batch__name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.batch__nums {
+  display: flex;
+  gap: 16px;
+  margin-top: 5px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+.batch__nums b {
+  font-size: 14px;
+}
+.batch__meta {
+  display: flex;
+  gap: 14px;
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  flex-wrap: wrap;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.expiry {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.expiry--ok {
+  background: var(--green-weak);
+  color: var(--green);
+}
+.expiry--warn {
+  background: #fdf3e2;
+  color: #b8860b;
+}
+.expiry--danger {
+  background: #fbeae8;
+  color: var(--red);
+}
+.expiry--expired {
+  background: var(--red);
+  color: #fff;
+}
+.expiry--muted {
+  background: #f0efe9;
+  color: var(--text-3);
+}
 </style>

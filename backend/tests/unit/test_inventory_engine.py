@@ -14,14 +14,13 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-
 from app.services.inventory.engine import (
     FefoBatch,
     InsufficientStockError,
     cost_total,
     plan_deduction,
-    reconcile_diff,
     recalc_from_ledger,
+    reconcile_diff,
 )
 
 D = Decimal

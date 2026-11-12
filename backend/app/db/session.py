@@ -11,11 +11,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session, sessionmaker
-
 from app.core.config import settings
 from app.core.logging import get_logger
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session, sessionmaker
 
 log = get_logger(__name__)
 
@@ -60,7 +59,7 @@ def ping() -> bool:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         return True
-    except Exception as exc:  # noqa: BLE001 - 健康检查不区分错误类型
+    except Exception as exc:
         log.warning("数据库探活失败：%s", exc)
         return False
 
@@ -81,7 +80,7 @@ def db_info() -> dict:
             ).scalar_one()
             try:
                 info["migration"] = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            except Exception:  # noqa: BLE001 - 版本表可能尚未创建
+            except Exception:
                 info["migration"] = None
             info["pool"] = {
                 # size = 常驻连接数；max_overflow = 允许的临时超出上限；checked_out = 当前借出数
@@ -91,6 +90,6 @@ def db_info() -> dict:
                 "checked_out": engine.pool.checkedout(),
             }
             info["connected"] = True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         info["error"] = f"{type(exc).__name__}: {exc}"
     return info
