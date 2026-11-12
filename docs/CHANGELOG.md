@@ -918,6 +918,42 @@
 
 ---
 
+## 2026-11-12 · v1.0.0 镜像构建与发布打包
+
+### 发布前核对
+
+- 远程 `git@github.com:0shiyu0/freshkeep.git`，分支 `main`，本地与远程 **0 领先 / 0 落后**。
+- 仓库可见性：**public**（GitHub API 实测）。
+- **14 条危险路径全部被 `.gitignore` 命中**（pgdata / storage/uploads / logs / certs / backups /
+  `.env*` / dist / node_modules / .venv / coverage.xml / .DS_Store / android build）。
+- 已跟踪文件最大 136KB（图标），无异常大文件；`git add -A` 只纳入 `docs/state/commits.log`。
+- 提交历史 50 条，前缀规范（feat 17 / docs 12 / chore 18 / test 1 / fix 1）。
+  **1 条使用了组合前缀 `docs+chore:``**，为不重写历史保留原样并在本节记录。
+
+### 镜像构建
+
+- `freshkeep-api:1.0.0` = `683a79575c17`，**77.6MB**（阶段 2 的 `.dockerignore` 补齐 + 阶段 3 的层分离，
+  使镜像从 337MB 降到 77.6MB）。
+- `freshkeep-web:1.0.0` = `3e74d5ade098`，21.4MB。两者均 `linux/amd64`。
+- 发布包 `releases/freshkeep-1.0.0-amd64.tar.gz`（94MB），SHA-256
+  `982ae6a4cc55538aaadd390fee826cf13a785a6b0ff37b132a138b3b9eae134a`，`docker load` 可载入 2 个镜像。
+
+### 验证
+
+- api 镜像：`fastapi 0.162.2` / `sqlalchemy 2.1.8` / `psycopg 3.3.8` 导入正常，`import app.main` 成功（85 路由）。
+- web 镜像：`index.html`、`manifest.webmanifest`、`offline.html`、`icons/`、45 个 assets 齐备；
+  静态资源 `/`、`/sw.js`、`/manifest.webmanifest`、`/offline.html`、`/icons/icon-192.png` 全部 **200**。
+- **定位并记录一处属性**：nginx 在启动时解析 upstream `api`，无 api 主机时容器 `exit 1`
+  （`host not found in upstream "api"`）。compose 有 `depends_on: api(healthy)`，正常部署不受影响；
+  单独验证静态资源可加 `--add-host api:127.0.0.1`。
+
+### 未完成
+
+- **GHCR 推送**：当前环境无 `gh` CLI、无 `GITHUB_TOKEN`、未登录 `ghcr.io`，无法执行
+  `docker push`。推送命令与后续 compose 改造方式已写入 `releases/README.md` §6。
+
+---
+
 ## [Unreleased]
 
 ### 新增

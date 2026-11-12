@@ -235,6 +235,18 @@ pytest **232 项通过**（含清单一键入库），NAS 三容器 healthy，�
 | 恢复演练 | `scripts/restore_drill.py` | 临时库恢复 27 表、逐表行数一致、演练库自动删除；修复了 schema 路径与 COMMIT 两个缺陷 |
 | 安全与性能 | `scripts/stage9_acceptance.py` | 凭据 0 命中、HTTPS 安全头、API 401 鉴权、p95 延迟、容器健康 |
 
+### 2.19 v1.0.0 镜像构建与打包（2026-11-12）
+
+| 项 | 结果 |
+| --- | --- |
+| 镜像 | `freshkeep-api:1.0.0` = `683a79575c17`（**77.6MB**，原 337MB → 瘦身 77%）；`freshkeep-web:1.0.0` = `3e74d5ade098`（21.4MB）；均 `linux/amd64` |
+| 发布包 | `releases/freshkeep-1.0.0-amd64.tar.gz` 94MB，SHA-256 `982ae6a4…134a`，`docker load` 可载入 2 个镜像 |
+| api 可用性 | 依赖导入正常（fastapi/sqlalchemy/psycopg 版本已核）；`import app.main` 成功，OpenAPI **85 路径** |
+| web 可用性 | 产物含 index/manifest/offline/icons + **45 个 assets**；静态资源全部 **200** |
+| 已知属性 | web 的 nginx 在**启动时**硬解析 upstream `api`，脱离 api 单独 `docker run` 会 exit 1（compose 有 `depends_on`，正常部署无影响） |
+| GHCR | ⬜ **未推送**：环境无 `gh` CLI / `GITHUB_TOKEN` / ghcr 登录；推送命令已写入 `releases/README.md` §6 |
+| 仓库可见性 | GitHub 仓库已为 **public**，本地与远程同步（0/0） |
+
 ### 2.18 阶段 3：文档与部署配置、代码质量规范化（2026-11-12）
 
 | 项 | 交付 | 证据 |
@@ -392,7 +404,9 @@ psql -d freshkeep -tAc "select version_num from alembic_version"   # 两库应�
 | --- | --- | --- |
 | 1 | 项目现状审计与备份 | ✅ 完成（§2.17） |
 | 2 | GitHub 仓库整理与安全检查 | ✅ 完成 |
-| 3 | 文档与部署配置、代码质量规范化 | 🔄 进行中 |
+| 3 | 文档与部署配置、代码质量规范化 | ✅ 完成 |
+| 4 | Docker 镜像构建与打包 | ✅ 完成（GHCR 推送待 PAT） |
+| 5 | GitHub Actions CI/CD | ⬜ |
 | 3 | 代码质量与测试规范化 | ⬜ |
 | 4 | Docker 镜像与 GHCR 发布 | ⬜ |
 | 5 | GitHub Actions CI/CD | ⬜ |
