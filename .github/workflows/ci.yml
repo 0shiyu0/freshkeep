@@ -69,7 +69,13 @@ jobs:
       - name: 数据库验收用例
         run: psql postgresql://postgres:postgres@127.0.0.1:5432/freshkeep -v ON_ERROR_STOP=1 -f database/002_acceptance_check.sql 2>&1 | grep -E "NOTICE|ERROR"
 
-      - name: pytest
+      - name: 代码质量（ruff）
+        working-directory: backend
+        run: |
+          pip install ruff==0.17.4
+          ruff check app tests
+
+      - name: pytest（含覆盖率门槛 80%）
         working-directory: backend
         run: pytest -v
 
