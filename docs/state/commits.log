@@ -45,3 +45,4 @@
 2026-11-12 16:39 | c176be8 | chore: 删除 .nojekyll（GitHub Pages 时代遗留） |  2 文件 | none | main
 2026-11-12 16:53 | 34db905 | ci(release): 新增 tag 触发的自动发布 workflow |  4 文件 | docs | main
 2026-11-12 16:56 | 873021d | fix(ci): 补 pytest-cov 依赖并增加 ruff 检查步骤 |  4 文件 | api docs | main
+2026-11-12 16:57 | 25a2856 | fix(ci): 补 pytest-cov 依赖并增加 ruff 检查步骤 |  3 文件 | api docs | main

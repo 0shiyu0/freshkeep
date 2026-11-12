@@ -33,9 +33,22 @@ def _alembic_head() -> str:
 
 
 def _base_url() -> str:
-    """测试库连接串：默认用本机 PG（用户名为当前登录用户、无密码）。"""
+    """测试库连接串。
+
+    优先级：
+    1. `TEST_DATABASE_URL` —— 显式指定；
+    2. `DATABASE_URL` —— CI 里由 workflow 注入（含正确用户名与密码），
+       复用它但把库名换成测试库。**这条分支是 CI 能跑测试的前提**：
+       早期只认 $USER，CI 的 runner 用户不在 postgres 里，导致连库失败、
+       所有用例被 skip、覆盖率跌破门槛而失败；
+    3. 本机默认 —— 当前登录用户、无密码。
+    """
     if os.environ.get("TEST_DATABASE_URL"):
         return os.environ["TEST_DATABASE_URL"]
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        base = database_url.rsplit("/", 1)[0]
+        return f"{base}/{TEST_DB}"
     user = os.environ.get("USER", "postgres")
     return f"postgresql+psycopg://{user}@127.0.0.1:5432/{TEST_DB}"
 
