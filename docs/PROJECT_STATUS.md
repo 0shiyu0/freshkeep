@@ -34,7 +34,7 @@ pytest **232 项通过**（含清单一键入库），NAS 三容器 healthy，�
 | **M7 备份导出与定时任务** | ✅ **完成** | 逻辑备份 + CSV + APScheduler 三作业；证据见 §2.13 |
 | **M8 前端页面** | ✅ **完成** | 13 个视图：登录/首页/库存总览/食材详情与编辑/批次列表与详情/采购入库/消耗录入/盘点报损/记录/设置；401 由全局 handler 跳登录 |
 | **阶段 9 部署上线** | ✅ **完成** | 9/9：PWA/移动端/离线/通知/HTTPS/NAS/备份/演练/验收；证据见 §2.16 |
-| M9 原生 App | 🔄 **大半完成** | `android/` 平台已生成并配置权限（App ID 修正为 com.shiyu.freshkeep）；缺 APK 出包与 iOS 工程；证据见 §2.14 |
+| M9 原生 App | ✅ **完成** | APK 已出（debug 4.4MB）；iOS 真机构建签名通过（Personal Team 6H3GBQA9X6）；证据见 §2.14 |
 | M10 联调验收 | ✅ **完成** | 本次在 NAS 完成部署联调与安全/性能验收；证据见 §2.16 |
 
 整体进度：**阶段 0~9 全部完成，M0~M8、M10 完成；M9 仅剩原生平台目录与 APK/IPA 出包（需联网）**。按人日约 35.5/36。
@@ -218,7 +218,7 @@ pytest **232 项通过**（含清单一键入库），NAS 三容器 healthy，�
 | 插件 | core/app/network/preferences/splash-screen/status-bar/local-notifications + secure-storage；平台包 `@capacitor/android|ios@8.6.0` 已装 |
 | 平台 | ✅ `frontend/android/` 已生成入库；`AndroidManifest.xml` 已加 `usesCleartextTraffic` 与 `CAMERA` 权限；`cap sync` 通过 |
 | iOS | ⬜ 需 Xcode（本机仅 CLT）；生成后补 `NSCameraUsageDescription` + `NSAllowsArbitraryLoads` |
-| 出包 | ⬜ `cd frontend/android && ./gradlew assembleDebug` 出 APK，真机配对记账后验收 |
+| 出包 | ✅ APK：`gradlew assembleDebug` → app-debug.apk 4.4MB（用户已装 Android 真机）；iOS：真机构建签名通过，App ID com.shiyu.freshkeep |
 | 脚本 | `scripts/cap-add-platforms.sh` 保留（iOS 复用） |
 
 ### 2.16 阶段 9 部署上线（本轮）

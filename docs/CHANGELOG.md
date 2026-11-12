@@ -799,6 +799,16 @@
 
 ---
 
+## 2026-11-11 · M9 收尾：iOS 真机构建签名
+
+- `project.pbxproj` 写入 `DEVELOPMENT_TEAM = 6H3GBQA9X6`（Personal Team，雨杰 时），
+  解决命令行构建报 `Signing for "App" requires a development team`。
+- 用户终端 `xcodebuild` 真机构建成功（SPM 包依赖全部解析，无需 CocoaPods）。
+- Android：`gradlew assembleDebug` 出 app-debug.apk 4.4MB，已交付桌面并装真机。
+- 剩余运维：iOS 免费签名 7 天有效期，到期在 Xcode 重跑续签；APK 出 release 版需正式签名时再说。
+
+---
+
 ## [Unreleased]
 
 ### 新增

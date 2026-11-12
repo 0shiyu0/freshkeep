@@ -440,7 +440,7 @@ dashboard 五组接口 → 营养定义/目标 → 日汇总（区分"无记录"
 | 一键脚本 | ✅ `scripts/cap-add-platforms.sh`：install 平台包 → build → `cap add android/ios` → `cap sync` |
 | 原生配置 | ✅ Android：`AndroidManifest.xml` 已加 `usesCleartextTraffic` 与 `CAMERA` 权限；iOS 待生成后补 `NSCameraUsageDescription` + `NSAllowsArbitraryLoads` |
 | App ID | ✅ 修正为 `com.shiyu.freshkeep`（原 `com.0shiyu0.*` 段以数字开头，Android 校验不通过） |
-| 出包验收 | ⬜ 需 Android SDK / Xcode 环境：`cd frontend/android && ./gradlew assembleDebug` 产 APK；真机配对记账后验收 |
+| 出包验收 | ✅ APK（4.4MB）与 iOS 真机构建均完成；iOS 签名 Personal Team 6H3GBQA9X6，7 天有效期需 Xcode 续签 |
 
 **为什么平台包不进 `package.json`**：加进 `dependencies` 会让 `docker compose build web` 在构建时
 联网安装这两个包，而镜像构建环境无外网，实测直接失败。平台包属于「打包期依赖」，
