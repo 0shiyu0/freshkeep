@@ -2,7 +2,7 @@
 
 > 本文是**环境变量的唯一权威说明**。部署流程见 [DEPLOYMENT.md](DEPLOYMENT.md)，
 > 备份见 [BACKUP_RESTORE.md](BACKUP_RESTORE.md)，回滚见 [ROLLBACK.md](ROLLBACK.md)，
-> 本机安装排障见 [environment.md](environment.md)。
+> 本机安装排障见 [ENV_SETUP.md](ENV_SETUP.md)。
 
 ## 1. 配置加载顺序
 
@@ -124,7 +124,7 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 测试库 `freshkeep_test` 由 `tests/conftest.py` 自动创建并每次重建（从 `database/001_init.sql` 建表），
 `alembic_version` 写入**当前迁移 head**（不再硬编码）。
 
-安装排障（Homebrew 装 PG、pip 镜像、Docker/Xcode 路径）见 [environment.md](environment.md)。
+安装排障（Homebrew 装 PG、pip 镜像、Docker/Xcode 路径）见 [ENV_SETUP.md](ENV_SETUP.md)。
 
 ## 5. 常见配置错误
 

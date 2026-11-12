@@ -28,7 +28,7 @@
 | `docs/er-diagram.md` | ER 图（mermaid）、关系清单、状态机 |
 | `docs/api.md` | 完整接口契约、请求响应样例、错误码 |
 | `docs/final-plan.md` | 8 处冲突的论证过程（决策溯源） |
-| `docs/environment.md` | 环境搭建与验证手册（PG 安装、pip 加速、排障） |
+| `docs/ENV_SETUP.md` | 环境搭建与验证手册（PG 安装、pip 加速、排障） |
 | `docs/state/README.md` | 状态留痕机制：哪些自动、哪些手动 |
 
 **归档文档**（`docs/archive/`，仅作历史参考，不得作为实现依据）：
@@ -161,7 +161,7 @@ npm i --no-save @electric-sql/pglite && node scripts/verify-db.mjs
 ```
 
 `pip` 必须走镜像或 uv（默认源在本机实测要 6 分钟，镜像 25 秒，uv 1.3 秒），
-细节与排障见 `docs/environment.md`。禁止用 SQLite 跑测试（无 NUMERIC、无行锁，会掩盖真实缺陷）；
+细节与排障见 `docs/ENV_SETUP.md`。禁止用 SQLite 跑测试（无 NUMERIC、无行锁，会掩盖真实缺陷）；
 禁止 mock 掉数据库做"集成测试"。
 
 ---

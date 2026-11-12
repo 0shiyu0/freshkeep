@@ -57,7 +57,7 @@ if command -v psql >/dev/null 2>&1; then
   echo "跑数据库自检（期望最后一行 NOTICE 为全部通过）…"
   psql -d freshkeep -f "${ROOT}/database/002_acceptance_check.sql" 2>&1 | grep -E "NOTICE|ERROR" | sed 's/^NOTICE:  /  /'
 else
-  echo "未找到 psql，跳过建库。安装方式见 docs/environment.md §2"
+  echo "未找到 psql，跳过建库。安装方式见 docs/ENV_SETUP.md §2"
 fi
 
 say "完成"

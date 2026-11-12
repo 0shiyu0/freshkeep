@@ -44,7 +44,7 @@ if command -v psql >/dev/null 2>&1; then
     warn "PostgreSQL" "${VER}，但库 freshkeep 不存在 → createdb freshkeep"
   fi
 else
-  warn "PostgreSQL" "未安装 → 见 docs/environment.md §2（或装 Docker 用容器版）"
+  warn "PostgreSQL" "未安装 → 见 docs/ENV_SETUP.md §2（或装 Docker 用容器版）"
 fi
 
 # Docker
@@ -73,4 +73,4 @@ if [ -x "${ROOT}/backend/.venv/bin/python" ]; then
 fi
 
 echo
-echo "完整安装与验证步骤：docs/environment.md"
+echo "完整安装与验证步骤：docs/ENV_SETUP.md"
